@@ -138,6 +138,7 @@ def main():
     ap.add_argument("--cut-date")
     ap.add_argument("--run-id", nargs="+", help="one or more runs; per keyword the run with the most rows wins")
     ap.add_argument("--per-keyword", type=int, default=60)
+    ap.add_argument("--max-usd", type=float, default=0.45, help="abort the run if Apify usage passes this")
     a = ap.parse_args()
     cut = a.cut_date or latest_cut()
     kws = keywords_for(cut)
@@ -147,13 +148,46 @@ def main():
                "fillLazyCards": True, "sort": "relevance", "source": "etsypulse-site",
                "proxyConfiguration": {"useApifyProxy": True, "apifyProxyGroups": ["RESIDENTIAL"],
                                       "apifyProxyCountry": "US"}}
-        run = api(f"/acts/{ACTOR}/runs?timeout=900&memory=2048", inp)["data"]
-        print("started", run["id"])
-        while run["status"] in ("READY", "RUNNING"):
-            time.sleep(15)
-            run = api(f"/actor-runs/{run['id']}")["data"]
+        runs, spent = [], 0.0
+
+        def go(queries, cap_usd):
+            inp2 = dict(inp, queries=queries, maxItems=a.per_keyword * len(queries))
+            r = api(f"/acts/{ACTOR}/runs?timeout=900&memory=2048", inp2)["data"]
+            print("started", r["id"], queries)
+            while r["status"] in ("READY", "RUNNING"):
+                time.sleep(15)
+                r = api(f"/actor-runs/{r['id']}")["data"]
+                if (r.get("usageTotalUsd") or 0) > cap_usd and r["status"] == "RUNNING":
+                    api(f"/actor-runs/{r['id']}/abort", {})
+                    print("aborted: usage over cap", r.get("usageTotalUsd"))
+            return r
+
+        run = go(inp["queries"], a.max_usd)
+        runs.append(run)
+        spent = run.get("usageTotalUsd") or 0
         items = api(f"/datasets/{run['defaultDatasetId']}/items?clean=1&limit=5000")
-        runs = [run]
+        cnt = {}
+        for i in items:
+            cnt[i.get("query")] = cnt.get(i.get("query"), 0) + 1
+        low = [q for q in inp["queries"] if cnt.get(q, 0) < 20]
+        if low and spent < a.max_usd * 0.6:
+            r2 = go(low, a.max_usd - spent)
+            runs.append(r2)
+            more = api(f"/datasets/{r2['defaultDatasetId']}/items?clean=1&limit=5000")
+            for q in low:
+                new_rows = [i for i in more if i.get("query") == q]
+                if len(new_rows) > cnt.get(q, 0):
+                    items = [i for i in items if i.get("query") != q] + new_rows
+        if len(runs) > 1:
+            run = dict(runs[0])
+            run["usageTotalUsd"] = sum(x.get("usageTotalUsd") or 0 for x in runs)
+            run["extra_run_ids"] = [x["id"] for x in runs[1:]]
+            run["finishedAt"] = max(x.get("finishedAt") or "" for x in runs)
+            ce = {}
+            for x in runs:
+                for k, v in (x.get("chargedEventCounts") or {}).items():
+                    ce[k] = ce.get(k, 0) + v
+            run["chargedEventCounts"] = ce
     else:
         cats = [r["category"] for r in csv.DictReader(
             open(os.path.join(ROOT, "data", "panel", cut, "categories.csv"), encoding="utf-8"))]
