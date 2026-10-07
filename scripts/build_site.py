@@ -789,7 +789,7 @@ def build(out_dir):
 <section class="how-sec"><h2>How it works</h2><p class="sub">Three steps. Your data and your spend stay in your own Apify account.</p>
 <div class="how">
 <div><b>Sign in with Apify (free)</b><p>Apify is the platform our tools run on. New accounts are free, no credit card, and the free plan includes $5 of usage every month.</p></div>
-<div><b>Press Run</b><p>The report runs on your account. Keyword reports cost $0.006 per listing plus $0.005 per run (20 listings ≈ $0.13); shop reports $0.003 per shop plus $0.005. We show the estimate and cap it before you start.</p></div>
+<div><b>Press Run</b><p>The report runs on your account. Keyword reports cost $0.006 per listing plus $0.005 per keyword (20 listings ≈ $0.13, Apify platform usage included); shop reports $0.003 per shop plus $0.005 (plus Apify platform usage, usually under $0.02 a run). The price updates as you change options, and you see “about $X, at most $Y” before you start.</p></div>
 <div><b>Read it, download it</b><p>Takeaways, charts and a sortable table appear right here. Download the spreadsheet (CSV), or print / save as PDF. Your runs and data also stay in your Apify account.</p></div>
 </div>
 <p class="note">Sign-in uses Apify's own OAuth screen; we never see your password. Apify offers one permission level (full account access): this page uses it only to start the report you asked for and read its results. The key stays in this browser tab and is gone when you close it. Remove the approval any time in Apify Console → Settings → API &amp; Integrations.</p></section>"""

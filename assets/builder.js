@@ -17,7 +17,7 @@
     search: { id: "JbNpPvG1Z7YtM9onP", name: "Etsy Search Scraper", store: "https://apify.com/publicrecords/etsy-search-scraper",
       start: 0.005, unit: 0.006, unitName: "listing" },
     tracker: { id: "iSqAcbENkn1ZdUMm1", name: "Etsy Shop Sales Tracker", store: "https://apify.com/publicrecords/etsy-shop-velocity",
-      start: 0.005, unit: 0.003, unitName: "shop" },
+      start: 0.005, unit: 0.003, unitName: "shop", platform: 0.02 },
   };
   var BLOCKS = {
     kpis: "Headline numbers", takeaways: "Plain-English takeaways", prices: "Price bands chart", badges: "Badges chart",
@@ -75,7 +75,7 @@
   };
   var MONEY_COLS = { price: 1 }, BOOL_HINT = /^(bestseller|star_seller|popular_now|etsys_pick|free_shipping|is_ad|breakout|vintage_event|snapshot_stale|review_count_approx)$/;
   var CATS = [];
-  var state = { type: "niche", blocks: null, cols: null, result: null, sort: null, user: null };
+  var state = { type: "niche", blocks: null, cols: null, result: null, sort: null, user: null, refine: { by: "", dir: "top", n: "", filters: [] } };
   var $ = function (s, r) { return (r || document).querySelector(s); };
   var $$ = function (s, r) { return Array.prototype.slice.call((r || document).querySelectorAll(s)); };
   var esc = function (s) { return String(s == null ? "" : s).replace(/[&<>"']/g, function (c) { return { "&": "&amp;", "<": "&lt;", ">": "&gt;", '"': "&quot;", "'": "&#39;" }[c]; }); };
@@ -115,18 +115,32 @@
     m = s.match(/^https?:\/\/([A-Za-z0-9-]+)\.etsy\.com/i); if (m && m[1].toLowerCase() !== "www") return m[1];
     return s.replace(/[^A-Za-z0-9_-]/g, "");
   }
-  var PER_KW = { 12: { fill: false, pages: 1 }, 20: { fill: true, pages: 1 }, 60: { fill: true, pages: 1 }, 120: { fill: true, pages: 2 }, 240: { fill: true, pages: 4 } };
   function val(id) { var el = document.getElementById(id); if (!el) return ""; return el.type === "checkbox" ? el.checked : el.value.trim(); }
   function int(id) { var v = val(id); return v === "" ? null : Math.max(0, parseInt(v, 10) || 0); }
+  function clamp(x, lo, hi) { return Math.max(lo, Math.min(hi, x)); }
+  var LIMITS = { perKwMax: 1200, perKwMaxFast: 240, pages: 20, perPage: 48, perPageFast: 12, inputsMax: 100, shopsMax: 20000, confirmUsd: 5 };
+  // Cap passed to Apify (maxTotalChargeUsd) = this run's maximum possible event charges + 10% + $0.02, rounded up to the cent.
+  // maxItems / maxShops bound the row events exactly, so the cap can never cut a report short.
+  function capFor(maxEvents) { return Math.ceil((maxEvents * 1.1 + 0.02) * 100) / 100; }
 
-  /* Returns {actor, jobs:[{label,input}], combined, est, cap, errors[]} */
+  /* Returns {actor, jobs:[{label,input,cap,memory,timeout}], combined, est, max, rows, errors[], warns[]} */
   function buildPlan() {
-    var t = TYPES[state.type], errors = [], plan = { actor: t.actor, jobs: [], errors: errors };
+    var t = TYPES[state.type], errors = [], warns = [], plan = { actor: t.actor, jobs: [], errors: errors, warns: warns };
+    var mem = parseInt(val("f-memory"), 10) || (t.actor === "search" ? 2048 : 1024);
+    var tmin = int("f-timeout");
     if (t.actor === "search") {
       var kws = lines(val("f-queries")), mps = lines(val("f-market")), cats = lines(val("f-caturls"));
-      var n = parseInt(val("f-perkw"), 10) || 20, pk = PER_KW[n] || PER_KW[20];
-      var base = { sort: val("f-sort") || "relevance", maxPages: pk.pages, fillLazyCards: pk.fill, source: "etsypulse-site-builder",
-        proxyConfiguration: { useApifyProxy: true, apifyProxyGroups: ["RESIDENTIAL"], apifyProxyCountry: val("f-region") || "US" } };
+      var fill = val("f-fill") !== false && document.getElementById("f-fill") ? val("f-fill") : true;
+      var maxN = fill ? LIMITS.perKwMax : LIMITS.perKwMaxFast;
+      var n = int("f-perkw"); if (n == null || n < 1) { n = 20; if (val("f-perkw") !== "") errors.push("Listings per keyword must be at least 1."); }
+      if (n > maxN) { warns.push("Etsy shows at most 20 pages per search, so " + num(maxN) + " is the most one keyword can return" + (fill ? "" : " in fast mode") + ". Using " + num(maxN) + "."); n = maxN; }
+      var pages = int("f-pages"); var autoPages = clamp(Math.ceil(n / (fill ? LIMITS.perPage : LIMITS.perPageFast)), 1, LIMITS.pages);
+      pages = pages ? clamp(pages, 1, LIMITS.pages) : autoPages;
+      var base = { sort: val("f-sort") || "relevance", maxPages: pages, fillLazyCards: !!fill, source: val("f-source") || "etsypulse-site-builder" };
+      var purls = lines(val("f-proxyurls"));
+      base.proxyConfiguration = val("f-proxymode") === "own" && purls.length ? { useApifyProxy: false, proxyUrls: purls }
+        : { useApifyProxy: true, apifyProxyGroups: ["RESIDENTIAL"], apifyProxyCountry: val("f-region") || "US" };
+      if (val("f-proxymode") === "own" && !purls.length) errors.push("Add at least one proxy URL, or switch back to Apify's proxy.");
       var mn = int("f-minprice"), mx = int("f-maxprice"), days = int("f-days");
       if (mn != null) base.minPrice = mn; if (mx != null) base.maxPrice = mx; if (days != null && days > 0) base.max_processing_days = days;
       if (val("f-shipto")) base.ship_to = val("f-shipto");
@@ -134,48 +148,57 @@
       if (mn != null && mx != null && mx > 0 && mx < mn) errors.push("The highest price is below the lowest price.");
       cats = cats.filter(function (u) { if (!/^https?:\/\/(www\.)?etsy\.com\/c\//i.test(u)) { errors.push("Category links must look like https://www.etsy.com/c/jewelry/necklaces"); return false; } return true; })
         .map(function (u) { return u.split("?")[0]; });
-      kws.forEach(function (k) { plan.jobs.push({ label: k, input: Object.assign({}, base, { queries: [k], maxItems: n }) }); });
-      mps.forEach(function (k) { plan.jobs.push({ label: k + " (market page)", input: Object.assign({}, base, { marketPhrases: [k], maxItems: n }) }); });
-      cats.forEach(function (u) { plan.jobs.push({ label: u.replace(/^https?:\/\/(www\.)?etsy\.com\/c\//, "category: "), input: Object.assign({}, base, { categoryUrls: [u], maxItems: n }) }); });
+      var timeout = tmin ? clamp(tmin, 1, 1440) * 60 : clamp(600 + pages * 90, 900, 3600);
+      var cap = capFor(ACTORS.search.start + n * ACTORS.search.unit);
+      var mk = function (label, extra) { plan.jobs.push({ label: label, input: Object.assign({}, base, extra, { maxItems: n }), cap: cap, memory: mem, timeout: timeout }); };
+      kws.forEach(function (k) { mk(k, { queries: [k] }); });
+      mps.forEach(function (k) { mk(k + " (market page)", { marketPhrases: [k] }); });
+      cats.forEach(function (u) { mk(u.replace(/^https?:\/\/(www\.)?etsy\.com\/c\//, "category: "), { categoryUrls: [u] }); });
       if (!plan.jobs.length) errors.push("Type at least one keyword.");
-      if (plan.jobs.length > 5) errors.push("Up to 5 keywords per report, please (you have " + plan.jobs.length + ").");
-      if (state.type === "compare" && plan.jobs.length < 2) errors.push("Comparing needs 2 to 5 keywords, one per line.");
+      if (plan.jobs.length > LIMITS.inputsMax) errors.push("Up to " + LIMITS.inputsMax + " keywords per report (you have " + plan.jobs.length + "). Split it into two reports.");
+      if (state.type === "compare" && plan.jobs.length < 2) errors.push("Comparing needs at least 2 keywords, one per line.");
       plan.combined = Object.assign({}, base, { maxItems: n * Math.max(1, plan.jobs.length) });
       if (kws.length) plan.combined.queries = kws; if (mps.length) plan.combined.marketPhrases = mps; if (cats.length) plan.combined.categoryUrls = cats;
-      plan.rows = n * plan.jobs.length;
+      plan.perKw = n; plan.rows = n * plan.jobs.length;
       plan.est = plan.jobs.length * ACTORS.search.start + plan.rows * ACTORS.search.unit;
-      plan.capEach = Math.ceil((ACTORS.search.start + n * ACTORS.search.unit) * 100 + 1) / 100;
+      plan.max = plan.jobs.reduce(function (s, j) { return s + j.cap; }, 0);
+      plan.platform = 0;
+      if (plan.jobs.length > 1) warns.push(plan.jobs.length + " keywords run as " + plan.jobs.length + " separate Apify runs (each gets exactly " + num(n) + " listings and its own $0.005 start fee).");
     } else {
       var named = state.type === "velocity" || state.type === "rivals";
       var shops = lines(val(named ? "f-shops" : "f-shops2")).map(shopName).filter(Boolean), inp = {};
-      var maxShops = parseInt(val("f-maxshops"), 10) || 20;
-      if (shops.length) { inp.shops = shops; maxShops = Math.min(200, shops.length); }
+      var maxShops = int("f-maxshops"); if (!maxShops) maxShops = shops.length || 20;
+      if (maxShops > LIMITS.shopsMax) { warns.push("The tracker returns at most " + num(LIMITS.shopsMax) + " shops per run. Using " + num(LIMITS.shopsMax) + "."); maxShops = LIMITS.shopsMax; }
+      if (shops.length) { inp.shops = shops; maxShops = Math.min(maxShops, shops.length); }
       var kw = lines(val("f-shopkw")); if (kw.length) inp.keywords = kw;
       var catv = val(named ? "f-category2" : "f-category"); if (catv) inp.category = catv;
       var ms = int("f-minsales"), mr = int("f-minrate"); if (ms) inp.minSales = ms; if (mr) inp.minRate = mr;
       if (val("f-since")) inp.since = val("f-since");
-      if ((val("f-breakout") && state.type !== "breakouts") || state.type === "breakouts") inp.breakoutOnly = true;
+      if (state.type === "breakouts" || val("f-breakout")) inp.breakoutOnly = true;
       inp.maxShops = maxShops;
-      if ((state.type === "velocity" || state.type === "rivals") && !shops.length) errors.push("Add at least one shop name or link.");
-      if (state.type === "rivals" && shops.length === 1) errors.push("Comparing needs 2 to 10 shops.");
-      if (shops.length > 50) errors.push("Up to 50 shops per report, please.");
-      if (state.type === "category" && !inp.category && !kw.length) errors.push("Pick a category (or add shop-name words under Advanced).");
-      plan.jobs.push({ label: shops.length ? shops.length + " shops" : (inp.category ? unesc(inp.category) : "panel"), input: inp });
-      plan.combined = inp; plan.rows = maxShops;
-      plan.est = ACTORS.tracker.start + maxShops * ACTORS.tracker.unit;
-      plan.capEach = Math.ceil(plan.est * 100 + 1) / 100;
+      if (named && !shops.length) errors.push("Add at least one shop name or link.");
+      if (state.type === "rivals" && shops.length === 1) errors.push("Comparing needs at least 2 shops.");
+      if (shops.length > LIMITS.shopsMax) errors.push("Up to " + num(LIMITS.shopsMax) + " shops per report.");
+      if (state.type === "category" && !inp.category && !kw.length && !shops.length) errors.push("Pick a category (or add shop-name words under Advanced options).");
+      var trows = maxShops, tcap = capFor(ACTORS.tracker.start + trows * ACTORS.tracker.unit);
+      plan.jobs.push({ label: shops.length ? shops.length + " shops" : (inp.category ? unesc(inp.category) : "panel"), input: inp, cap: tcap, memory: mem, timeout: tmin ? clamp(tmin, 1, 1440) * 60 : 900 });
+      plan.combined = inp; plan.rows = trows;
+      plan.est = ACTORS.tracker.start + trows * ACTORS.tracker.unit;
+      plan.max = tcap; plan.platform = ACTORS.tracker.platform;
     }
+    plan.bigConfirm = plan.max + plan.platform > LIMITS.confirmUsd;
     return plan;
   }
 
   /* ------------------------------------------------------------------ form UI */
   function opt(v, l, sel) { return '<option value="' + esc(v) + '"' + (sel ? " selected" : "") + ">" + esc(l) + "</option>"; }
   function field(id, label, html, hint) { return '<label class="fld" for="' + id + '"><span>' + label + "</span>" + html + (hint ? "<small>" + hint + "</small>" : "") + "</label>"; }
-  function check(id, label) { return '<label class="chk"><input type="checkbox" id="' + id + '"> <span>' + label + "</span></label>"; }
+  function check(id, label, on) { return '<label class="chk"><input type="checkbox" id="' + id + '"' + (on ? " checked" : "") + "> <span>" + label + "</span></label>"; }
+  function sub(t) { return '<h3 class="asub">' + t + "</h3>"; }
 
   function renderForm(q) {
     var app = $("#builder");
-    var groups = [["search", "About a keyword or niche", "Live page-1 Etsy search, via our Etsy Search Scraper"],
+    var groups = [["search", "About a keyword or niche", "Live Etsy search, via our Etsy Search Scraper"],
       ["tracker", "About specific shops", "Daily public sales counters, via our Etsy Shop Sales Tracker"]];
     var cards = groups.map(function (g) {
       return '<div class="tgroup"><div class="tgh"><b>' + g[1] + "</b><small>" + g[2] + '</small></div><div class="tcards">' +
@@ -185,49 +208,71 @@
         }).join("") + "</div></div>";
     }).join("");
     var catOpts = opt("", "Any category") + CATS.map(function (c) { return opt(c.v, c.l); }).join("");
-    var countries = [["US", "United States"], ["GB", "United Kingdom"], ["CA", "Canada"], ["AU", "Australia"], ["DE", "Germany"], ["FR", "France"], ["NL", "Netherlands"], ["IT", "Italy"], ["ES", "Spain"]];
+    var countries = [["US", "United States"], ["GB", "United Kingdom"], ["CA", "Canada"], ["AU", "Australia"], ["DE", "Germany"], ["FR", "France"], ["NL", "Netherlands"], ["IT", "Italy"], ["ES", "Spain"], ["IE", "Ireland"], ["NZ", "New Zealand"], ["SE", "Sweden"], ["DK", "Denmark"], ["NO", "Norway"], ["CH", "Switzerland"], ["AT", "Austria"], ["BE", "Belgium"], ["PL", "Poland"], ["JP", "Japan"], ["IN", "India"]];
     app.innerHTML =
       '<div class="bstep"><div class="bh"><i>1</i><h2>Pick a report</h2></div>' + cards + "</div>" +
-      '<div class="bstep"><div class="bh"><i>2</i><h2>Tell it what to look at</h2></div>' +
+      '<div class="bstep" id="step2"><div class="bh"><i>2</i><h2>Tell it what to look at</h2></div>' +
       '<div data-for="search">' +
-        field("f-queries", "Keywords <em>(one per line, up to 5)</em>", '<textarea id="f-queries" rows="2" placeholder="ceramic mug&#10;personalized dog collar"></textarea>') +
+        field("f-queries", "Keywords <em>(one per line)</em>", '<textarea id="f-queries" rows="2" placeholder="ceramic mug&#10;personalized dog collar"></textarea>') +
         '<div class="frow">' +
-        field("f-perkw", "Listings per keyword", "<select id=f-perkw>" + opt(12, "12 (quick look)") + opt(20, "20", true) + opt(60, "60 (all of page 1)") + opt(120, "120 (pages 1–2)") + opt(240, "240 (pages 1–4)") + "</select>") +
-        field("f-sort", "Order", "<select id=f-sort>" + opt("relevance", "Etsy's best match") + opt("top_reviews", "Most reviews") + opt("newest", "Newest") + opt("price_asc", "Lowest price") + opt("price_desc", "Highest price") + "</select>") +
+        field("f-perkw", "Listings per keyword", '<input id="f-perkw" type="number" min="1" max="1200" step="1" inputmode="numeric" value="20">' +
+          '<span class="quick" data-target="f-perkw"><button type="button" data-v="20">20</button><button type="button" data-v="60">60</button><button type="button" data-v="200">200</button><button type="button" data-v="500">500</button><button type="button" data-v="1200">max</button></span>', "Any number from 1 to 1,200 (Etsy shows at most 20 pages per search).") +
+        field("f-sort", "Which listings Etsy returns", "<select id=f-sort>" + opt("relevance", "Etsy's best match (default)") + opt("top_reviews", "Most reviewed") + opt("newest", "Newest") + opt("price_asc", "Cheapest first") + opt("price_desc", "Most expensive first") + "</select>") +
         "</div></div>" +
       '<div data-for="tracker">' +
         '<div data-show="velocity rivals">' + field("f-shops", "Shop names or links <em>(one per line)</em>", '<textarea id="f-shops" rows="3" placeholder="CaitlynMinimalist&#10;https://www.etsy.com/shop/OrelCeramics"></textarea>', "A shop that isn't in our panel yet is added today and shows up from the next daily read.") + "</div>" +
         '<div class="frow">' +
         '<div data-show="category breakouts">' + field("f-category", "Category", "<select id=f-category>" + catOpts + "</select>") + "</div>" +
-        '<div data-show="category breakouts">' + field("f-maxshops", "How many shops", "<select id=f-maxshops>" + opt(10, "10") + opt(20, "20", true) + opt(50, "50") + opt(100, "100") + opt(200, "200") + "</select>") + "</div>" +
-        "</div></div>" +
-      '<details class="adv" id="adv"><summary>Advanced options</summary><div class="advin">' +
+        '<div data-show="category breakouts">' + field("f-maxshops", "How many shops (at most)", '<input id="f-maxshops" type="number" min="1" max="20000" inputmode="numeric" value="20">' +
+          '<span class="quick" data-target="f-maxshops"><button type="button" data-v="20">20</button><button type="button" data-v="100">100</button><button type="button" data-v="500">500</button><button type="button" data-v="2000">2,000</button></span>', "Any number up to 20,000. You only pay for shops returned.") + "</div>" +
+        "</div></div></div>" +
+      '<details class="adv bstep" id="adv"><summary>Advanced options <small>filters, ranking, columns, every Actor setting</small></summary><div class="advin">' +
         '<div data-for="search">' +
-          '<div class="frow">' + field("f-minprice", "Lowest price", '<input id="f-minprice" type="number" min="0" inputmode="numeric" placeholder="any">') +
-          field("f-maxprice", "Highest price", '<input id="f-maxprice" type="number" min="0" inputmode="numeric" placeholder="any">') + "</div>" +
+          sub("Search filters (applied by Etsy)") +
+          '<div class="frow">' + field("f-minprice", "Lowest price", '<input id="f-minprice" type="number" min="0" inputmode="numeric" placeholder="any">', "Whole units of the shopper's currency.") +
+          field("f-maxprice", "Highest price", '<input id="f-maxprice" type="number" min="0" inputmode="numeric" placeholder="any">') +
+          field("f-days", "Ready to ship within (days)", '<input id="f-days" type="number" min="1" max="60" inputmode="numeric" placeholder="any">') + "</div>" +
           '<div class="chks">' + check("f-is_best_seller", "Bestsellers only") + check("f-is_star_seller", "Star Seller shops only") + check("f-free_shipping", "Free shipping only") +
           check("f-is_discounted", "On sale only") + check("f-instant_download", "Digital downloads only") + check("f-is_handmade_only", "Handmade only") + check("f-is_personalizable", "Personalizable only") + "</div>" +
-          '<div class="frow">' + field("f-days", "Ready to ship within (days)", '<input id="f-days" type="number" min="1" max="30" inputmode="numeric" placeholder="any">') +
-          field("f-shipto", "Ships to", "<select id=f-shipto>" + opt("", "Anywhere") + countries.map(function (c) { return opt(c[0], c[1]); }).join("") + "</select>") +
-          field("f-region", "See prices as a shopper in", "<select id=f-region>" + countries.map(function (c) { return opt(c[0], c[1], c[0] === "US"); }).join("") + "</select>", "Etsy shows prices in the shopper's currency.") + "</div>" +
-          field("f-market", "Etsy market pages <em>(optional, one per line)</em>", '<textarea id="f-market" rows="2" placeholder="personalized dog collar"></textarea>', "Etsy's /market/ pages for a phrase. Each counts as one of the 5.") +
-          field("f-caturls", "Etsy category links <em>(optional, one per line)</em>", '<textarea id="f-caturls" rows="2" placeholder="https://www.etsy.com/c/jewelry/necklaces"></textarea>', "Read in Etsy's default order. Each counts as one of the 5.") +
+          sub("What to search besides keywords") +
+          field("f-market", "Etsy market pages <em>(one phrase per line)</em>", '<textarea id="f-market" rows="2" placeholder="personalized dog collar"></textarea>', "Etsy's /market/ page for a phrase. Each line is one more run.") +
+          field("f-caturls", "Etsy category links <em>(one per line)</em>", '<textarea id="f-caturls" rows="2" placeholder="https://www.etsy.com/c/jewelry/necklaces"></textarea>', "Read in Etsy's default order. Each line is one more run.") +
+          sub("Where and how Etsy is read") +
+          '<div class="frow">' + field("f-shipto", "Only listings that ship to", "<select id=f-shipto>" + opt("", "Anywhere") + countries.map(function (c) { return opt(c[0], c[1]); }).join("") + "</select>") +
+          field("f-region", "See prices as a shopper in", "<select id=f-region>" + countries.map(function (c) { return opt(c[0], c[1], c[0] === "US"); }).join("") + "</select>", "Sets the proxy country; Etsy shows that country's currency.") +
+          field("f-pages", "Pages per keyword", '<input id="f-pages" type="number" min="1" max="20" inputmode="numeric" placeholder="auto">', "Leave empty: worked out from the listing count.") + "</div>" +
+          check("f-fill", "Return every listing on each page (recommended; off = 12 per page, faster)", true) +
+          '<div class="frow">' + field("f-proxymode", "Proxy", "<select id=f-proxymode>" + opt("apify", "Apify residential (recommended)") + opt("own", "My own proxy URLs") + "</select>", "Etsy blocks datacenter IPs. Apify's proxy cost is included in the price.") +
+          field("f-source", "Label for this run", '<input id="f-source" placeholder="etsypulse-site-builder">', "Copied onto every row; handy for filtering later.") + "</div>" +
+          '<div data-show-proxy>' + field("f-proxyurls", "Proxy URLs <em>(one per line)</em>", '<textarea id="f-proxyurls" rows="2" placeholder="http://user:pass@host:port"></textarea>') + "</div>" +
         "</div>" +
         '<div data-for="tracker">' +
-          '<div data-show="category breakouts">' + field("f-shops2", "Only these shops <em>(optional)</em>", '<textarea id="f-shops2" rows="2" placeholder="leave empty for the whole category"></textarea>') + "</div>" +
-          field("f-shopkw", "Words in the shop name or headline <em>(optional)</em>", '<input id="f-shopkw" placeholder="e.g. ceramics, wedding">') +
+          sub("Which shops") +
+          '<div data-show="category breakouts">' + field("f-shops2", "Only these shops <em>(optional, one per line)</em>", '<textarea id="f-shops2" rows="2" placeholder="leave empty for the whole category"></textarea>') + "</div>" +
+          '<div data-show="velocity rivals">' + field("f-category2", "Only shops in this category <em>(optional)</em>", "<select id=f-category2>" + catOpts + "</select>") + "</div>" +
+          field("f-shopkw", "Words in the shop name or headline <em>(optional)</em>", '<input id="f-shopkw" placeholder="e.g. ceramics, wedding">', "Any of the words matches.") +
           '<div class="frow">' + field("f-minsales", "At least this many lifetime sales", '<input id="f-minsales" type="number" min="0" inputmode="numeric" placeholder="0">') +
-          field("f-minrate", "At least this many sales a day (est.)", '<input id="f-minrate" type="number" min="0" inputmode="numeric" placeholder="0">') +
-          field("f-since", "Numbers changed since", '<input id="f-since" type="date">') + "</div>" +
-          '<div data-show="velocity rivals category">' + check("f-breakout", "Breakout shops only") + "</div>" +
-          '<div data-show="velocity rivals">' + field("f-category2", "Category <em>(optional)</em>", "<select id=f-category2>" + catOpts + "</select>") + "</div>" +
-        "</div></div></details></div>" +
-      '<div class="bstep"><div class="bh"><i>3</i><h2>Choose what goes in your report</h2></div>' +
-        '<div class="blocks" id="blockpick"></div>' +
-        '<details class="adv" id="colwrap"><summary>Columns in the table and spreadsheet</summary><div class="advin"><div class="chks" id="colpick"></div></div></details></div>' +
+          field("f-minrate", "At least this many sales a day (estimated)", '<input id="f-minrate" type="number" min="0" inputmode="numeric" placeholder="0">') +
+          field("f-since", "Numbers changed on or after", '<input id="f-since" type="date">') + "</div>" +
+          '<div data-show="velocity rivals category">' + check("f-breakout", "Breakout shops only (last 7 days far above their usual pace)") + "</div>" +
+          '<div data-show="velocity rivals">' + field("f-maxshops2", "How many shops (at most)", '<input id="f-maxshops2" type="number" min="1" max="20000" inputmode="numeric" placeholder="all you listed">') + "</div>" +
+        "</div>" +
+        sub("After the run: rank and filter the results") +
+        '<p class="hint">Applied to what comes back, so you can keep e.g. the 10 cheapest, the 25 with the most reviews, or only shops gaining 50+ sales a week. You can change this on the report too.</p>' +
+        '<div id="refine-b"></div>' +
+        sub("Report sections") + '<div class="blocks" id="blockpick"></div>' +
+        sub("Columns in the table and spreadsheet") + '<div class="chks" id="colpick"></div>' +
+        sub("Run settings") +
+        '<div class="frow">' + field("f-memory", "Memory per run", "<select id=f-memory>" + opt("", "Auto") + opt("1024", "1 GB") + opt("2048", "2 GB") + opt("4096", "4 GB") + "</select>", "Auto is fine. More memory doesn't change the Actor price.") +
+        field("f-timeout", "Stop a run after (minutes)", '<input id="f-timeout" type="number" min="1" max="1440" inputmode="numeric" placeholder="auto">', "Auto: 15–60 min depending on size. Rows read before a stop are kept.") +
+        field("f-parallel", "Keywords running at once", "<select id=f-parallel>" + opt("1", "1") + opt("2", "2") + opt("3", "3", true) + opt("4", "4") + opt("5", "5") + "</select>", "Apify's free plan allows 5 runs at a time.") + "</div>" +
+      "</div></details>" +
       '<div class="brun" id="brun"></div>';
     $$(".tcard", app).forEach(function (b) { b.onclick = function () { setType(b.dataset.type); }; });
-    app.addEventListener("input", refresh); app.addEventListener("change", refresh);
+    $$(".quick button", app).forEach(function (b) { b.onclick = function () { var el = document.getElementById(b.parentNode.dataset.target); el.value = b.dataset.v; refresh(); }; });
+    var m2 = $("#f-maxshops2"); m2.oninput = function () { $("#f-maxshops").value = m2.value; };
+    app.addEventListener("input", function (e) { if (!e.target.closest("#refine-b")) refresh(); });
+    app.addEventListener("change", function (e) { if (!e.target.closest("#refine-b")) refresh(); });
     if (q) { $("#f-queries").value = q; }
   }
 
@@ -236,54 +281,138 @@
     $$(".tcard").forEach(function (b) { b.setAttribute("aria-pressed", b.dataset.type === k ? "true" : "false"); });
     $$("[data-for]").forEach(function (el) { el.hidden = el.dataset.for !== t.actor; });
     $$("[data-show]").forEach(function (el) { el.hidden = el.dataset.show.split(" ").indexOf(k) < 0; });
-    if (!keepPicks) { state.blocks = t.blocks.slice(); state.cols = t.cols.slice(); }
+    if (!keepPicks) { state.blocks = t.blocks.slice(); state.cols = t.cols.slice(); if (TYPES[prev] && TYPES[prev].actor !== t.actor) state.refine = { by: "", dir: "top", n: "", filters: [] }; }
     if (prev === "breakouts" && k !== "breakouts") $("#f-breakout").checked = false;
-    var ph = { compare: "ceramic mug&#10;stoneware mug&#10;handmade mug" }[k];
-    if (ph) $("#f-queries").placeholder = unesc(ph); else $("#f-queries").placeholder = "ceramic mug\npersonalized dog collar";
-    renderPicks(); refresh();
+    // named-shop reports: default "how many" = number of shops listed
+    if ((k === "velocity" || k === "rivals") && (prev === "category" || prev === "breakouts")) $("#f-maxshops").value = $("#f-maxshops2").value || "";
+    if ((k === "category" || k === "breakouts") && !$("#f-maxshops").value) $("#f-maxshops").value = 20;
+    $("#f-queries").placeholder = k === "compare" ? "ceramic mug\nstoneware mug\nhandmade mug" : "ceramic mug\npersonalized dog collar";
+    renderPicks(); renderRefine(); refresh();
   }
 
   function knownCols(actor) {
     return actor === "search"
-      ? ["position", "title", "price", "currency", "shop_name", "rating_value", "review_count", "bestseller", "popular_now", "star_seller", "etsys_pick", "free_shipping", "is_ad", "query", "page", "total_results", "url", "shop_url", "listing_id"]
-      : ["shop", "title", "headline", "category", "sales_count", "sales_per_day", "delta_last", "delta_7d", "delta_28d", "units_day", "units_lo", "units_hi", "lift_7d", "breakout", "breakout_p", "reviews_count", "rating", "admirers", "listings_active", "as_of", "first_seen", "last_changed", "history_days", "shop_url"];
+      ? ["position", "title", "price", "currency", "shop_name", "rating_value", "review_count", "review_count_approx", "bestseller", "popular_now", "star_seller", "etsys_pick", "free_shipping", "is_ad", "query", "page", "total_results", "url", "shop_url", "listing_id", "shop_id", "surface", "source"]
+      : ["shop", "title", "headline", "category", "sales_count", "sales_precision", "sales_per_day", "delta_last", "delta_7d", "delta_28d", "units_day", "units_lo", "units_hi", "lift_7d", "breakout", "breakout_p", "reviews_count", "rating", "admirers", "listings_active", "as_of", "read_interval_days", "first_seen", "last_changed", "history_days", "vintage_event", "snapshot_date", "snapshot_stale", "shop_url"];
+  }
+  function blocksFor(actor) {
+    var s = { prices: 1, badges: 1, bestprice: 1, shops: 1, shoptable: 1, compare: 1 }, tr = { velocity: 1, rivals: 1 };
+    return Object.keys(BLOCKS).filter(function (b) { return actor === "search" ? !tr[b] : !s[b]; });
   }
   function renderPicks() {
     var t = TYPES[state.type];
-    var avail = Object.keys(BLOCKS).filter(function (b) {
-      var s = { prices: 1, badges: 1, bestprice: 1, shops: 1, shoptable: 1, compare: 1 }, tr = { velocity: 1, rivals: 1 };
-      return t.actor === "search" ? !tr[b] : !s[b];
-    });
-    $("#blockpick").innerHTML = avail.map(function (b) {
+    $("#blockpick").innerHTML = blocksFor(t.actor).map(function (b) {
       return '<label class="pill"><input type="checkbox" value="' + b + '"' + (state.blocks.indexOf(b) >= 0 ? " checked" : "") + "><span>" + BLOCKS[b] + "</span></label>";
     }).join("");
     $$("#blockpick input").forEach(function (i) { i.onchange = function () { state.blocks = $$("#blockpick input:checked").map(function (x) { return x.value; }); if (state.result) renderReport(); }; });
-    var cols = knownCols(t.actor);
-    $("#colpick").innerHTML = cols.map(function (c) {
+    $("#colpick").innerHTML = knownCols(t.actor).map(function (c) {
       return '<label class="chk"><input type="checkbox" value="' + c + '"' + (state.cols.indexOf(c) >= 0 ? " checked" : "") + "> <span>" + esc(LABELS[c] || c) + "</span></label>";
     }).join("");
-    $$("#colpick input").forEach(function (i) { i.onchange = function () { state.cols = $$("#colpick input:checked").map(function (x) { return x.value; }); }; });
+    $$("#colpick input").forEach(function (i) { i.onchange = function () { state.cols = $$("#colpick input:checked").map(function (x) { return x.value; }); if (state.result) renderReport(); }; });
+  }
+
+  /* ------------------------------------------------------------------ rank & filter (client-side, after the run) */
+  var NUMERIC = { position: 1, price: 1, rating_value: 1, review_count: 1, page: 1, total_results: 1, sales_count: 1, sales_per_day: 1, delta_last: 1, delta_7d: 1, delta_28d: 1,
+    units_day: 1, units_lo: 1, units_hi: 1, lift_7d: 1, breakout_p: 1, reviews_count: 1, rating: 1, admirers: 1, listings_active: 1, history_days: 1, read_interval_days: 1 };
+  var RANKABLE = {
+    search: ["price", "review_count", "rating_value", "position", "total_results"],
+    tracker: ["sales_per_day", "delta_7d", "delta_28d", "sales_count", "units_day", "lift_7d", "reviews_count", "admirers", "listings_active", "rating", "delta_last"] };
+  var RANK_WORD = { price: "Price", review_count: "Reviews", rating_value: "Rating", position: "Etsy rank (1 = top)", total_results: "Etsy results for the search",
+    sales_per_day: "Sales per day", delta_7d: "Sales gained, last 7 days", delta_28d: "Sales gained, last 28 days", sales_count: "Lifetime sales", units_day: "Estimated sales per day",
+    lift_7d: "7-day lift vs usual", reviews_count: "Reviews", admirers: "Followers (favorites)", listings_active: "Active listings", rating: "Rating", delta_last: "Sales since last read" };
+  function ftype(f) { return NUMERIC[f] ? "num" : BOOL_HINT.test(f) ? "bool" : "text"; }
+  function renderRefine() {
+    if (state.inRefine) return; state.inRefine = true;
+    try { renderRefine2(); } finally { state.inRefine = false; }
+  }
+  function renderRefine2() {
+    var actor = TYPES[state.type].actor, R = state.refine;
+    var fields = knownCols(actor).filter(function (f) { return !/url$|_id$|^surface$|^source$/.test(f); });
+    var html = '<div class="refine"><div class="frow rank">' +
+      field("rf-by", "Rank by", "<select id=\"rf-by\">" + opt("", "Don't rank (keep Etsy's order)") + RANKABLE[actor].map(function (f) { return opt(f, RANK_WORD[f] || LABELS[f], R.by === f); }).join("") + "</select>") +
+      field("rf-dir", "Keep", "<select id=\"rf-dir\">" + opt("top", "Top (highest first)", R.dir === "top") + opt("bottom", "Bottom (lowest first)", R.dir === "bottom") + "</select>") +
+      field("rf-n", "How many", '<input id="rf-n" type="number" min="1" inputmode="numeric" placeholder="all" value="' + esc(R.n) + '">') + "</div>" +
+      '<div class="flist">' + R.filters.map(function (fl, i) {
+        var ty = ftype(fl.f), ops = ty === "num" ? [[">=", "at least"], ["<=", "at most"], [">", "more than"], ["<", "less than"], ["=", "exactly"], ["!=", "not"]]
+          : ty === "bool" ? [["yes", "is yes"], ["no", "is no"]] : [["has", "contains"], ["not", "doesn't contain"], ["is", "is exactly"]];
+        return '<div class="fl" data-i="' + i + '"><select class="rf-f" aria-label="Field">' + fields.map(function (f) { return opt(f, LABELS[f] || f, fl.f === f); }).join("") + "</select>" +
+          '<select class="rf-op" aria-label="Condition">' + ops.map(function (o) { return opt(o[0], o[1], fl.op === o[0]); }).join("") + "</select>" +
+          (ty === "bool" ? "" : '<input class="rf-v" aria-label="Value" ' + (ty === "num" ? 'type="number" inputmode="decimal"' : "") + ' value="' + esc(fl.v) + '">') +
+          '<button type="button" class="rf-x" aria-label="Remove filter">✕</button></div>';
+      }).join("") + '</div><button type="button" class="btn2" id="rf-add">+ Add a filter</button></div>';
+    ["#refine-b", "#refine-r"].forEach(function (sel) { var box = $(sel); if (box) box.innerHTML = html.replace(/id="rf-/g, 'id="' + sel.slice(1) + "-rf-").replace(/for="rf-/g, 'for="' + sel.slice(1) + "-rf-"); });
+    $$(".refine").forEach(function (box) {
+      var pre = box.parentNode.id + "-rf-";
+      var upd = function () {
+        state.refine.by = $("#" + pre + "by", box).value; state.refine.dir = $("#" + pre + "dir", box).value; state.refine.n = $("#" + pre + "n", box).value;
+        state.refine.filters = $$(".fl", box).map(function (d) { var v = $(".rf-v", d); return { f: $(".rf-f", d).value, op: $(".rf-op", d).value, v: v ? v.value : "" }; });
+      };
+      box.addEventListener("change", function (e) {
+        upd(); if (e.target.classList.contains("rf-f")) { var fl = state.refine.filters[+e.target.closest(".fl").dataset.i]; fl.op = ftype(fl.f) === "num" ? ">=" : ftype(fl.f) === "bool" ? "yes" : "has"; fl.v = ""; }
+        setTimeout(function () { renderRefine(); if (state.result) renderReport(true); }, 0);
+      });
+      box.addEventListener("input", function (e) { if (e.target.matches("input")) { upd(); if (state.result) { clearTimeout(state.rt); state.rt = setTimeout(function () { renderReport(true); }, 350); } } });
+      $("#rf-add", box) || null;
+      $$("button", box).forEach(function (b) {
+        if (b.id === "rf-add" || b.textContent.indexOf("Add a filter") >= 0) b.onclick = function () { upd(); var f0 = RANKABLE[actor][0]; state.refine.filters.push({ f: f0, op: ">=", v: "" }); renderRefine(); };
+        if (b.classList.contains("rf-x")) b.onclick = function () { upd(); state.refine.filters.splice(+b.closest(".fl").dataset.i, 1); renderRefine(); if (state.result) renderReport(); };
+      });
+    });
+  }
+  function applyRefine(rows) {
+    var R = state.refine || {}, out = rows.slice();
+    (R.filters || []).forEach(function (fl) {
+      var ty = ftype(fl.f), v = fl.v;
+      if (ty !== "bool" && (v === "" || v == null)) return;
+      out = out.filter(function (r) {
+        var x = r[fl.f];
+        if (ty === "bool") return fl.op === "yes" ? x === true : x !== true;
+        if (ty === "num") { if (x == null || !isFinite(x)) return false; var y = parseFloat(v); return { ">=": x >= y, "<=": x <= y, ">": x > y, "<": x < y, "=": x === y, "!=": x !== y }[fl.op]; }
+        var s = String(fl.f === "category" ? unesc(x) : x == null ? "" : x).toLowerCase(), w = String(v).toLowerCase();
+        return fl.op === "has" ? s.indexOf(w) >= 0 : fl.op === "not" ? s.indexOf(w) < 0 : s === w;
+      });
+    });
+    if (R.by) {
+      var d = R.dir === "bottom" ? 1 : -1;
+      out.sort(function (a, b) { var x = a[R.by], y = b[R.by]; if (x == null) return 1; if (y == null) return -1; return (x - y) * d; });
+    }
+    var n = parseInt(R.n, 10); if (n > 0) out = out.slice(0, n);
+    return out;
+  }
+  function refineWords() {
+    var R = state.refine || {}, w = [];
+    if (R.by) w.push((R.dir === "bottom" ? "lowest" : "highest") + " " + (RANK_WORD[R.by] || LABELS[R.by]).toLowerCase() + " first" + (parseInt(R.n, 10) > 0 ? ", " + R.dir + " " + R.n : ""));
+    else if (parseInt(R.n, 10) > 0) w.push("first " + R.n);
+    (R.filters || []).forEach(function (f) { if (ftype(f.f) === "bool" || f.v !== "") w.push((LABELS[f.f] || f.f) + " " + ({ ">=": "≥", "<=": "≤", ">": ">", "<": "<", "=": "=", "!=": "≠", yes: "= yes", no: "= no", has: "contains", not: "doesn't contain", is: "is" }[f.op]) + (ftype(f.f) === "bool" ? "" : " " + f.v)); });
+    return w.join(" · ");
   }
 
   function refresh() {
     var plan = buildPlan(), t = TYPES[state.type], a = ACTORS[t.actor], tok = ss.get("ep_tok");
-    var nUnits = t.actor === "search" ? plan.rows + " listings" : "up to " + plan.rows + " shops";
+    var mx = $("#f-proxymode"); $$("[data-show-proxy]").forEach(function (el) { el.hidden = !mx || mx.value !== "own"; });
+    var empty = !plan.jobs.length || !plan.rows;
+    var nUnits = t.actor === "search" ? num(plan.rows) + " listings" : "up to " + num(plan.rows) + " shops";
     var errs = plan.errors.length && state.tried ? '<div class="berr">' + plan.errors.map(esc).join("<br>") + "</div>" : "";
+    var warns = plan.warns.length ? '<div class="bwarn">' + plan.warns.map(esc).join("<br>") + "</div>" : "";
     var who = state.user ? '<div class="who">Signed in to Apify as <b>' + esc(state.user.username) + '</b> · <a href="#" id="signout">sign out</a></div>' : "";
-    var fallbackHref = CFG.worker + "/r/site-run?a=" + t.actor + "&t=" + state.type + (t.actor === "search" && plan.combined.queries ? "&q=" + encodeURIComponent(plan.combined.queries.join(", ")) : "") + utmPass();
-    $("#brun").innerHTML = errs +
-      '<div class="cost"><b>Estimated cost: about ' + usd(plan.est) + '</b> <span>(' + nUnits + " × " + usd(a.unit) + " + " + usd(a.start) + " per run" + (plan.jobs.length > 1 ? " × " + plan.jobs.length + " runs" : "") +
-      ", charged by Apify to your account; capped at " + usd(plan.capEach * plan.jobs.length) + "). Apify's free plan includes $5 of usage every month, no card needed.</span></div>" +
+    var fallbackHref = CFG.worker + "/r/site-run?a=" + t.actor + "&t=" + state.type + (t.actor === "search" && plan.combined.queries ? "&q=" + encodeURIComponent(plan.combined.queries.slice(0, 5).join(", ")) : "") + utmPass();
+    var plat = plan.platform ? " + Apify platform usage, usually under " + usd(plan.platform) + " per run (billed separately for this tool)" : " (Apify platform usage included)";
+    var conf = plan.bigConfirm ? '<label class="bigconf"><input type="checkbox" id="bigok"' + (state.bigok === plan.max ? " checked" : "") + "> Yes, run it: this report can cost up to <b>" + usd(plan.max + plan.platform) + "</b> on my Apify account.</label>" : "";
+    $("#brun").innerHTML = errs + warns +
+      (empty ? '<div class="cost"><b>' + (t.actor === "search" ? "Add a keyword above to see the price" : "Add a shop above to see the price") + '</b><span>' + usd(a.unit) + " per " + (t.actor === "search" ? "listing" : "shop") + " + " + usd(a.start) + " per run" + plat + ".</span></div>" :
+      '<div class="cost"><b>About ' + usd(plan.est) + ", at most " + usd(plan.max) + '</b><span>' + nUnits + " × " + usd(a.unit) + " + " + usd(a.start) + " start fee" + (plan.jobs.length > 1 ? " × " + plan.jobs.length + " runs" : "") + plat +
+      ". You pay only for rows delivered; Apify stops the run at the maximum. Apify's free plan includes $5 of usage every month, no card needed.</span></div>") + conf +
       '<button type="button" class="runbtn" id="runbtn">' + (tok ? "Run my report →" : "Sign in with Apify &amp; run →") + "</button>" + who +
       (tok ? "" : '<p class="perm">Apify will ask you to approve <b>Etsy Pulse by publicrecords</b>. Apify only offers one permission level (full account access), so here is exactly what we do with it: start this report on your account and read its results, from this page. The key stays in this browser tab, is deleted when you close it, and never touches our servers. You can remove the approval any time in Apify Console → Settings → API &amp; Integrations.</p>') +
       '<p class="alt"><a href="#" id="demo">See an example report first</a> · <a href="#" id="showfb">Rather run it inside Apify?</a></p>' +
-      '<div id="fb" class="fb" hidden><ol><li><a class="btn2" href="' + esc(fallbackHref) + '" target="_blank" rel="noopener">Open the ' + a.name + " on Apify</a> (free sign-up if you're new).</li>" +
+      '<div id="fb" class="fb"' + (state.fbOpen ? "" : " hidden") + '><ol><li><a class="btn2" href="' + esc(fallbackHref) + '" target="_blank" rel="noopener">Open the ' + a.name + " on Apify</a> (free sign-up if you're new).</li>" +
       "<li>Above the form, switch the input view from <b>Manual</b> to <b>JSON</b>, then paste these settings:<pre id=fbjson>" + esc(JSON.stringify(plan.combined, null, 2)) + '</pre><button type="button" class="btn2" id="copyjson">Copy settings</button></li>' +
       "<li>Press <b>Start</b>. When it finishes, open <b>Export</b> to download a spreadsheet (CSV or Excel).</li></ol></div>";
-    $("#runbtn").onclick = function () { go(plan); };
-    var sb = $("#stickyrun"); if (sb) sb.innerHTML = '<span>' + esc(t.title) + " · about " + usd(plan.est) + '</span><button type="button">Run ↓</button>';
+    $("#runbtn").onclick = function () { go(buildPlan()); };
+    var bk = $("#bigok"); if (bk) bk.onchange = function () { state.bigok = bk.checked ? plan.max : null; };
+    var sb = $("#stickyrun"); if (sb) sb.innerHTML = "<span>" + esc(t.title) + (empty ? "" : " · about " + usd(plan.est)) + "</span><button type=\"button\">Run ↓</button>";
     $("#demo").onclick = function (e) { e.preventDefault(); demo(); };
-    $("#showfb").onclick = function (e) { e.preventDefault(); $("#fb").hidden = !$("#fb").hidden; if (!$("#fb").hidden) beacon("fallback-open"); };
+    $("#showfb").onclick = function (e) { e.preventDefault(); state.fbOpen = !state.fbOpen; $("#fb").hidden = !state.fbOpen; if (state.fbOpen) beacon("fallback-open"); };
     $("#copyjson").onclick = function () { navigator.clipboard && navigator.clipboard.writeText(JSON.stringify(plan.combined, null, 2)); this.textContent = "Copied ✓"; beacon("fallback-copy"); };
     var so = $("#signout"); if (so) so.onclick = function (e) { e.preventDefault(); ss.del("ep_tok"); state.user = null; refresh(); };
   }
@@ -296,7 +425,7 @@
   async function signIn(autorun) {
     var verifier = rand(48), st = rand(16);
     var challenge = b64url(await crypto.subtle.digest("SHA-256", new TextEncoder().encode(verifier)));
-    ss.set("ep_pending", { verifier: verifier, state: st, type: state.type, blocks: state.blocks, cols: state.cols, form: snapshotForm(), autorun: !!autorun, at: Date.now() });
+    ss.set("ep_pending", { verifier: verifier, state: st, type: state.type, blocks: state.blocks, cols: state.cols, refine: state.refine, bigok: state.bigok, form: snapshotForm(), autorun: !!autorun, at: Date.now() });
     beacon("signin-start");
     location.href = CFG.authUrl + "?" + new URLSearchParams({ response_type: "code", client_id: CFG.clientId, redirect_uri: redirectUri(),
       scope: "full_api_access", state: st, code_challenge: challenge, code_challenge_method: "S256" }).toString();
@@ -336,66 +465,83 @@
 
   /* ------------------------------------------------------------------ runs */
   function go(plan) {
-    if (plan.errors.length) { state.tried = true; refresh(); var f = $("#builder .bstep:nth-child(2)"); if (f) f.scrollIntoView({ behavior: "smooth", block: "start" }); return; }
+    if (plan.errors.length) { state.tried = true; refresh(); var f = $("#step2"); if (f) f.scrollIntoView({ behavior: "smooth", block: "start" }); return; }
+    if (plan.bigConfirm && state.bigok !== plan.max) { state.tried = true; refresh(); var c = $(".bigconf"); if (c) { c.classList.add("shake"); c.scrollIntoView({ behavior: "smooth", block: "center" }); } return; }
     if (!ss.get("ep_tok")) { signIn(true); return; }
     runPlan(plan);
   }
   function sleep(ms) { return new Promise(function (r) { setTimeout(r, ms); }); }
+  async function allItems(dsId, onPage) {
+    var out = [], off = 0, lim = 1000;
+    for (;;) {
+      var page = await api("/datasets/" + dsId + "/items?clean=1&format=json&offset=" + off + "&limit=" + lim);
+      if (!page || !page.length) break; out = out.concat(page); off += page.length; if (onPage) onPage(out.length);
+      if (page.length < lim) break;
+    }
+    return out;
+  }
   async function runPlan(plan) {
     var t = TYPES[state.type], a = ACTORS[t.actor];
     var prog = $("#progress"), rep = $("#report");
     rep.hidden = true; prog.hidden = false; prog.scrollIntoView({ behavior: "smooth", block: "start" });
-    var jobs = plan.jobs.map(function (j) { return { label: j.label, input: j.input, status: "starting", rows: 0 }; });
+    var jobs = plan.jobs.map(function (j) { return Object.assign({ status: "waiting", rows: 0 }, j); });
+    var par = clamp(parseInt(val("f-parallel"), 10) || 3, 1, 5), t0 = Date.now();
     var draw = function (msg) {
-      prog.innerHTML = '<div class="pcard"><h2>Running your report…</h2><p class="sub">' + (msg || "This usually takes 1–3 minutes. Keep this tab open.") + "</p>" +
-        jobs.map(function (j) {
-          var done = j.status === "SUCCEEDED", bad = /FAILED|ABORTED|TIMED|error/i.test(j.status);
-          return '<div class="pj' + (done ? " ok" : bad ? " bad" : "") + '"><span class="dot"></span><b>' + esc(j.label) + "</b><span>" + esc(statusWord(j)) + "</span></div>";
-        }).join("") + "</div>";
+      var done = jobs.filter(function (j) { return /SUCCEEDED|FAILED|ABORTED|TIMED|error/.test(j.status); }).length, rows = jobs.reduce(function (s, j) { return s + (j.rows || 0); }, 0);
+      var list = jobs.length > 12 ? jobs.filter(function (j) { return !/waiting|SUCCEEDED/.test(j.status); }).slice(0, 12) : jobs;
+      prog.innerHTML = '<div class="pcard"><h2>Running your report…</h2><p class="sub">' + (msg || (jobs.length > 1 ? done + " of " + jobs.length + " runs finished · " + num(rows) + " rows so far. " : "") + "Keep this tab open. Small reports take 1–3 minutes; big ones longer.") + "</p>" +
+        list.map(function (j) {
+          var ok = j.status === "SUCCEEDED", bad = /FAILED|ABORTED|TIMED|error/i.test(j.status);
+          return '<div class="pj' + (ok ? " ok" : bad ? " bad" : j.status === "waiting" ? " wait" : "") + '"><span class="dot"></span><b>' + esc(j.label) + "</b><span>" + esc(statusWord(j)) + "</span></div>";
+        }).join("") + (jobs.length > 12 ? '<p class="note">Showing runs in progress; ' + jobs.filter(function (j) { return j.status === "waiting"; }).length + " waiting.</p>" : "") + "</div>";
     };
-    draw(); beacon("run-start", "n=" + jobs.length);
-    var started = await Promise.all(jobs.map(async function (j, i) {
-      await sleep(i * 400);
-      try {
-        var run = await api("/acts/" + a.id + "/runs?memory=2048&timeout=900&maxTotalChargeUsd=" + plan.capEach, { method: "POST", body: j.input });
-        j.run = run; j.status = run.status; draw();
-      } catch (e) { j.status = "error"; j.err = e.message; draw(); }
-      return j;
-    }));
-    if (started.every(function (j) { return j.status === "error"; })) {
-      prog.innerHTML = '<div class="pcard bad"><h2>That didn\'t start</h2><p>' + esc(started[0].err) + '</p><p><button type="button" class="btn2" id="retry">Try again</button></p></div>';
-      $("#retry").onclick = function () { runPlan(buildPlan()); }; beacon("run-fail-start"); refresh(); return;
-    }
-    var t0 = Date.now();
-    while (jobs.some(function (j) { return j.run && /READY|RUNNING/.test(j.status); })) {
-      await sleep(4000);
-      await Promise.all(jobs.filter(function (j) { return j.run && /READY|RUNNING/.test(j.status); }).map(async function (j) {
+    draw(); beacon("run-start", "n=" + jobs.length + "&rows=" + plan.rows);
+    async function startJob(j) {
+      for (var attempt = 0; attempt < 30; attempt++) {
         try {
-          var r = await api("/actor-runs/" + j.run.id); j.run = r; j.status = r.status;
-          var ds = await api("/datasets/" + r.defaultDatasetId); j.rows = ds.itemCount || 0;
-        } catch (e) { /* transient: keep polling */ }
-      }));
-      draw(Date.now() - t0 > 240000 ? "Taking longer than usual. Etsy sometimes slows our reads down; it will still finish (we stop at 15 minutes)." : null);
+          j.run = await api("/acts/" + a.id + "/runs?memory=" + j.memory + "&timeout=" + j.timeout + "&maxTotalChargeUsd=" + j.cap, { method: "POST", body: j.input });
+          j.status = j.run.status; return;
+        } catch (e) {
+          if (/already running other jobs|memory|concurren/i.test(e.message) && attempt < 29) { j.status = "waiting"; j.wait = "waiting for a free slot on your Apify account"; draw(); await sleep(15000); continue; }
+          j.status = "error"; j.err = e.message; return;
+        }
+      }
+    }
+    async function watch(j) {
+      while (j.run && /READY|RUNNING/.test(j.status)) {
+        await sleep(4000);
+        try { var r = await api("/actor-runs/" + j.run.id); j.run = r; j.status = r.status; var ds = await api("/datasets/" + r.defaultDatasetId); j.rows = ds.itemCount || 0; } catch (e) {}
+        draw(Date.now() - t0 > 300000 && jobs.length === 1 ? "Still reading Etsy. Big reports and Etsy slow-downs take longer; it will finish or stop at your time limit, and you keep every row read." : null);
+      }
+    }
+    var queue = jobs.slice();
+    async function worker() { while (queue.length) { var j = queue.shift(); j.status = "starting"; draw(); await startJob(j); draw(); await watch(j); draw(); } }
+    var workers = []; for (var w = 0; w < Math.min(par, jobs.length); w++) { workers.push(worker()); await sleep(300); }
+    await Promise.all(workers);
+    if (jobs.every(function (j) { return j.status === "error"; })) {
+      prog.innerHTML = '<div class="pcard bad"><h2>That didn\'t start</h2><p>' + esc(jobs[0].err) + '</p><p><button type="button" class="btn2" id="retry">Try again</button></p></div>';
+      $("#retry").onclick = function () { runPlan(buildPlan()); }; beacon("run-fail-start"); refresh(); return;
     }
     var rows = [], runs = [];
     for (var i = 0; i < jobs.length; i++) {
       var j = jobs[i]; if (!j.run) continue;
-      runs.push({ id: j.run.id, label: j.label, status: j.status, usd: j.run.usageTotalUsd });
+      runs.push({ id: j.run.id, label: j.label, status: j.status });
       try {
-        var items = await api("/datasets/" + j.run.defaultDatasetId + "/items?clean=1&format=json&limit=5000");
-        (items || []).forEach(function (r) { if (t.actor === "search" && !r.query) r.query = j.label; rows.push(r); });
+        draw("Collecting results… " + num(rows.length) + " rows");
+        var items = await allItems(j.run.defaultDatasetId);
+        items.forEach(function (r) { if (t.actor === "search" && !r.query) r.query = j.label; rows.push(r); });
       } catch (e) {}
     }
     var bad = jobs.filter(function (j) { return j.status !== "SUCCEEDED"; });
     state.result = { type: state.type, actor: t.actor, rows: rows, runs: runs, at: new Date().toISOString(), live: true,
-      warn: bad.length ? bad.map(function (j) { return j.label + ": " + statusWord(j); }).join("; ") : "" };
-    ss.set("ep_last", state.result);
+      warn: bad.length ? bad.slice(0, 5).map(function (j) { return j.label + ": " + statusWord(j); }).join("; ") + (bad.length > 5 ? " (+" + (bad.length - 5) + " more)" : "") : "" };
+    try { if (rows.length <= 3000) ss.set("ep_last", state.result); else ss.del("ep_last"); } catch (e) {}
     beacon(rows.length ? "run-ok" : "run-empty", "rows=" + rows.length);
-    prog.hidden = true; renderReport(); refresh();
+    prog.hidden = true; state.page = 1; rep.dataset.shown = ""; renderReport(); refresh();
   }
   function statusWord(j) {
-    return { starting: "starting…", READY: "queued…", RUNNING: "reading Etsy… " + (j.rows ? j.rows + " rows so far" : ""), SUCCEEDED: "done · " + j.rows + " rows",
-      FAILED: "failed. You are only charged for rows delivered; please try again in a few minutes", "TIMED-OUT": "stopped at 15 minutes · " + j.rows + " rows kept", ABORTED: "stopped", error: "didn't start: " + (j.err || "") }[j.status] || j.status;
+    return { waiting: j.wait || "waiting its turn", starting: "starting…", READY: "queued at Apify…", RUNNING: "reading Etsy… " + (j.rows ? num(j.rows) + " rows so far" : ""), SUCCEEDED: "done · " + num(j.rows) + " rows",
+      FAILED: "failed. You are only charged for rows delivered; please try again in a few minutes", "TIMED-OUT": "hit the time limit · " + num(j.rows) + " rows kept", ABORTED: "stopped · " + num(j.rows) + " rows kept", error: "didn't start: " + (j.err || "") }[j.status] || j.status;
   }
 
   async function demo() {
@@ -404,7 +550,7 @@
     if (t.actor === "search" && state.type !== "compare") rows = rows.filter(function (r) { return r.query === "aprons"; });
     state.result = { type: state.type, actor: t.actor, rows: rows, runs: [], at: j.captured, live: false,
       demo: t.actor === "search" ? "Example: a real run of our Etsy Search Scraper captured " + j.captured + " (Apify run " + j.run + ")." : "Example: real rows from our Etsy Shop Sales Tracker, snapshot " + j.captured + ". Today's numbers will differ." };
-    beacon("demo"); renderReport();
+    $("#report").dataset.shown = ""; state.page = 1; beacon("demo"); renderReport();
   }
 
   /* ------------------------------------------------------------------ report */
@@ -521,11 +667,13 @@
     var c = state.cols.filter(function (k) { return have[k]; }); return c.length ? c : Object.keys(have).slice(0, 8);
   }
   function tableHtml(rows) {
-    var cs = cols(rows), s = state.sort;
+    var cs = cols(rows), s = state.sort, per = 200, shown = (state.page || 1) * per;
     if (s) rows = rows.slice().sort(function (a, b) { var x = a[s.c], y = b[s.c]; if (x == null) return 1; if (y == null) return -1; return (x > y ? 1 : x < y ? -1 : 0) * s.d; });
-    return '<div class="tscroll"><table class="dt sortable"><thead><tr>' + cs.map(function (c) {
+    var head = '<div class="tscroll"><table class="dt sortable"><thead><tr>' + cs.map(function (c) {
       return '<th data-c="' + c + '" aria-sort="' + (s && s.c === c ? (s.d > 0 ? "ascending" : "descending") : "none") + '">' + esc(LABELS[c] || c) + (s && s.c === c ? (s.d > 0 ? " ▲" : " ▼") : "") + "</th>";
-    }).join("") + "</tr></thead><tbody>" + rows.map(function (r) { return "<tr>" + cs.map(function (c) { return fmtCell(c, r[c], r); }).join("") + "</tr>"; }).join("") + "</tbody></table></div>";
+    }).join("") + "</tr></thead><tbody>";
+    return head + rows.slice(0, shown).map(function (r) { return "<tr>" + cs.map(function (c) { return fmtCell(c, r[c], r); }).join("") + "</tr>"; }).join("") + "</tbody></table></div>" +
+      (rows.length > shown ? '<p class="more"><button type="button" class="btn2" id="more">Show ' + num(Math.min(per, rows.length - shown)) + " more (" + num(rows.length - shown) + ' left)</button> <span class="note">The spreadsheet always has every row.</span></p>' : "");
   }
   function csv(rows, all) {
     var cs = all ? Object.keys(rows.reduce(function (o, r) { Object.keys(r).forEach(function (k) { o[k] = 1; }); return o; }, {})) : cols(rows);
@@ -537,32 +685,45 @@
     setTimeout(function () { URL.revokeObjectURL(a.href); a.remove(); }, 500);
   }
 
-  function renderReport() {
+  function renderReport(quiet) {
     var R = state.result, rep = $("#report"); if (!R) return;
     var t = TYPES[R.type], B = {}; state.blocks.forEach(function (b) { B[b] = 1; });
-    var rows = R.rows || [], parts = R.actor === "search" ? searchReport(rows, B) : trackerReport(rows, B);
-    var subj = R.actor === "search" ? Object.keys(groupBy(rows, "query")).map(function (q) { return "“" + esc(q) + "”"; }).join(", ") : rows.length + " shops";
-    var when = R.live ? new Date(R.at).toLocaleString([], { dateStyle: "medium", timeStyle: "short" }) : R.at;
-    var colsAvail = Object.keys(rows.reduce(function (o, r) { Object.keys(r).forEach(function (k) { o[k] = 1; }); return o; }, {}));
-    rep.innerHTML = '<div class="rhead"><div class="eyebrow">Etsy Pulse · Custom report</div><h2>' + esc(t.title) + ": " + subj + '</h2><p class="sub">' + esc(when) + " · " + rows.length + " rows · " + esc(ACTORS[R.actor].name) + " by publicrecords on Apify</p>" +
-      (R.demo ? '<div class="demo">' + esc(R.demo) + ' <a href="#builder">Run it on your own ' + (R.actor === "search" ? "keyword" : "shops") + " →</a></div>" : "") +
-      (R.warn ? '<div class="berr">Some parts didn\'t finish: ' + esc(R.warn) + ". You were only charged for rows delivered.</div>" : "") +
-      '<div class="ract"><button type="button" class="btn2 pri" id="dlcsv">⬇ Spreadsheet (CSV)</button><button type="button" class="btn2" id="dlall">⬇ All fields</button><button type="button" class="btn2" id="print">🖨 Print / save PDF</button>' +
-      (R.runs && R.runs.length ? R.runs.map(function (r) { return '<a class="btn2" target="_blank" rel="noopener" href="https://console.apify.com/view/runs/' + esc(r.id) + '">Open run in Apify</a>'; }).slice(0, 1).join("") : "") +
-      '<a class="btn2" href="#builder">New report</a></div>' +
-      '<details class="adv noprint"><summary>Change what\'s shown</summary><div class="advin"><div class="blocks" id="rblocks">' + Object.keys(BLOCKS).filter(function (b) { return t.blocks.concat(["table", "takeaways", "kpis"]).indexOf(b) >= 0 || (R.actor === "search" ? /prices|badges|bestprice|shops|shoptable|compare/.test(b) : /velocity|rivals/.test(b)); }).map(function (b) {
-        return '<label class="pill"><input type="checkbox" value="' + b + '"' + (B[b] ? " checked" : "") + "><span>" + BLOCKS[b] + "</span></label>"; }).join("") + '</div><div class="chks" id="rcols">' +
+    var all = R.rows || [], rows = applyRefine(all), rw = refineWords();
+    if (!quiet || !$("#rbody")) {
+      var when = R.live ? new Date(R.at).toLocaleString([], { dateStyle: "medium", timeStyle: "short" }) : R.at;
+      var colsAvail = Object.keys(all.reduce(function (o, r) { Object.keys(r).forEach(function (k) { o[k] = 1; }); return o; }, {}));
+      rep.innerHTML = '<div class="rhead"><div class="eyebrow">Etsy Pulse · Custom report</div><h2 id="rtitle"></h2><p class="sub" id="rsub"></p>' +
+        (R.demo ? '<div class="demo">' + esc(R.demo) + ' <a href="#builder">Run it on your own ' + (R.actor === "search" ? "keyword" : "shops") + " →</a></div>" : "") +
+        (R.warn ? '<div class="berr">Some parts didn\'t finish: ' + esc(R.warn) + ". You were only charged for rows delivered.</div>" : "") +
+        '<div class="ract"><button type="button" class="btn2 pri" id="dlcsv">⬇ Spreadsheet (CSV)</button><button type="button" class="btn2" id="dlall">⬇ All fields</button><button type="button" class="btn2" id="print">🖨 Print / save PDF</button>' +
+        (R.runs && R.runs.length ? '<a class="btn2" target="_blank" rel="noopener" href="https://console.apify.com/view/runs/' + esc(R.runs[0].id) + '">Open run in Apify</a>' : "") +
+        '<a class="btn2" href="#builder">New report</a></div>' +
+        '<details class="adv noprint" id="rctl"' + (state.rctlOpen ? " open" : "") + '><summary>Rank, filter and choose what\'s shown</summary><div class="advin">' +
+        sub("Rank and filter") + '<div id="refine-r"></div>' +
+        sub("Sections") + '<div class="blocks" id="rblocks">' + blocksFor(R.actor).map(function (b) {
+          return '<label class="pill"><input type="checkbox" value="' + b + '"' + (B[b] ? " checked" : "") + "><span>" + BLOCKS[b] + "</span></label>"; }).join("") + "</div>" +
+        sub("Columns") + '<div class="chks" id="rcols">' +
         colsAvail.map(function (c) { return '<label class="chk"><input type="checkbox" value="' + c + '"' + (state.cols.indexOf(c) >= 0 ? " checked" : "") + "> <span>" + esc(LABELS[c] || c) + "</span></label>"; }).join("") + "</div></div></details></div>" +
-      (rows.length ? parts.join("") : '<div class="insights"><h3>No rows came back</h3><ul><li>' + (R.actor === "search" ? "Etsy returned no listings for this search with these filters, or blocked our reads this time (blocked pages are never charged). Try fewer filters or run again." : "No shops matched these settings. Shops you named that aren't in our panel yet are added now and appear from the next daily read.") + "</li></ul></div>") +
-      (B.table && rows.length ? card("All rows", tableHtml(rows), "Tap a column name to sort. Pick columns under “Change what's shown”.") : "") +
+        '<div id="rbody"></div>';
+      rep.hidden = false;
+      $("#rctl").ontoggle = function () { state.rctlOpen = $("#rctl").open; };
+      $("#dlcsv").onclick = function () { download("etsy-pulse-" + R.type + "-" + String(R.at).slice(0, 10) + ".csv", csv(applyRefine(R.rows))); beacon("csv"); };
+      $("#dlall").onclick = function () { download("etsy-pulse-" + R.type + "-" + String(R.at).slice(0, 10) + "-all-fields.csv", csv(applyRefine(R.rows), true)); beacon("csv"); };
+      $("#print").onclick = function () { beacon("print"); window.print(); };
+      $$("#rblocks input").forEach(function (i) { i.onchange = function () { state.blocks = $$("#rblocks input:checked").map(function (x) { return x.value; }); renderPicks(); renderReport(true); }; });
+      $$("#rcols input").forEach(function (i) { i.onchange = function () { state.cols = $$("#rcols input:checked").map(function (x) { return x.value; }); renderPicks(); renderReport(true); }; });
+      renderRefine();
+    }
+    var parts = R.actor === "search" ? searchReport(rows, B) : trackerReport(rows, B);
+    var subj = R.actor === "search" ? Object.keys(groupBy(all, "query")).slice(0, 6).map(function (q) { return "“" + q + "”"; }).join(", ") + (Object.keys(groupBy(all, "query")).length > 6 ? "…" : "") : all.length + " shops";
+    $("#rtitle").textContent = t.title + ": " + subj;
+    var when2 = R.live ? new Date(R.at).toLocaleString([], { dateStyle: "medium", timeStyle: "short" }) : R.at;
+    $("#rsub").innerHTML = esc(when2) + " · " + (rows.length !== all.length ? "<b>" + num(rows.length) + " of " + num(all.length) + " rows</b>" : num(all.length) + " rows") + " · " + esc(ACTORS[R.actor].name) + " by publicrecords on Apify" + (rw ? '<br><span class="rw">Showing: ' + esc(rw) + "</span>" : "");
+    $("#rbody").innerHTML = (rows.length ? parts.join("") : '<div class="insights"><h3>No rows to show</h3><ul><li>' + (all.length ? "Your filters remove every row. Loosen them under “Rank, filter and choose what's shown”." : R.actor === "search" ? "Etsy returned no listings for this search with these filters, or blocked our reads this time (blocked pages are never charged). Try fewer filters or run again." : "No shops matched these settings. Shops you named that aren't in our panel yet are added now and appear from the next daily read.") + "</li></ul></div>") +
+      (B.table && rows.length ? card("All rows", tableHtml(rows), "Tap a column name to sort. Pick columns under “Rank, filter and choose what's shown”.") : "") +
       '<p class="note">Data: public Etsy pages read by our ' + esc(ACTORS[R.actor].name) + " (publicrecords). Not affiliated with Etsy, Inc." + (R.actor === "search" ? " Prices are what Etsy shows a shopper in the chosen country." : " Sales come from each shop's public sales counter; pace is measured between our reads.") + "</p>";
-    rep.hidden = false;
-    $("#dlcsv").onclick = function () { download("etsy-pulse-" + R.type + "-" + String(R.at).slice(0, 10) + ".csv", csv(rows)); beacon("csv"); };
-    $("#dlall").onclick = function () { download("etsy-pulse-" + R.type + "-" + String(R.at).slice(0, 10) + "-all-fields.csv", csv(rows, true)); beacon("csv"); };
-    $("#print").onclick = function () { beacon("print"); window.print(); };
-    $$("#rblocks input").forEach(function (i) { i.onchange = function () { state.blocks = $$("#rblocks input:checked").map(function (x) { return x.value; }); renderReport(); }; });
-    $$("#rcols input").forEach(function (i) { i.onchange = function () { state.cols = $$("#rcols input:checked").map(function (x) { return x.value; }); renderReport(); }; });
-    $$("th[data-c]", rep).forEach(function (th) { th.onclick = function () { var c = th.dataset.c; state.sort = state.sort && state.sort.c === c ? { c: c, d: -state.sort.d } : { c: c, d: /^(position|rank|title|shop|shop_name|query)$/.test(c) ? 1 : -1 }; renderReport(); var tb = $(".sortable", rep); if (tb) tb.scrollIntoView({ block: "nearest" }); }; });
+    $$("th[data-c]", rep).forEach(function (th) { th.onclick = function () { var c = th.dataset.c; state.sort = state.sort && state.sort.c === c ? { c: c, d: -state.sort.d } : { c: c, d: /^(position|rank|title|shop|shop_name|query)$/.test(c) ? 1 : -1 }; renderReport(true); var tb = $(".sortable", rep); if (tb) tb.scrollIntoView({ block: "nearest" }); }; });
+    var mb = $("#more"); if (mb) mb.onclick = function () { state.page = (state.page || 1) + 1; renderReport(true); };
     if (!rep.dataset.shown) { rep.dataset.shown = 1; rep.scrollIntoView({ behavior: "smooth", block: "start" }); }
   }
 
@@ -588,7 +749,7 @@
     var pending = null;
     if (params.get("code") || params.get("error")) {
       var fin = await finishSignIn(params); pending = fin.pending;
-      if (pending) { restoreForm(pending.form); state.blocks = pending.blocks; state.cols = pending.cols; setType(pending.type, true); restoreForm(pending.form); }
+      if (pending) { restoreForm(pending.form); state.blocks = pending.blocks; state.cols = pending.cols; state.refine = pending.refine || state.refine; state.bigok = pending.bigok; setType(pending.type, true); restoreForm(pending.form); renderRefine(); refresh(); }
       if (fin.error) { var e = document.createElement("div"); e.className = "berr"; e.textContent = fin.error; $("#brun").prepend(e); pending = null; }
     }
     if (ss.get("ep_tok")) { await loadUser(); refresh(); }
