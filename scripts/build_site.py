@@ -782,7 +782,7 @@ answers right in the chat, and turns it into a report when you ask.</p>
 <ol class="steps3"><li>Click Connect</li><li>Sign in with Apify (free)</li><li>Ask your AI</li></ol>
 <div class="hcta"><a class="hbtn" href="#connect">Connect your AI →</a><small>Runs on your own Apify account. Pay per search: from 13¢ for 1 keyword, top 20 listings.</small></div></div>
 <div><video autoplay muted loop playsinline preload="metadata" poster="assets/ai/etsypulse-ai-wide-poster.png" width="1200" height="676"
-aria-label="Demo: connect Etsy Pulse, sign in with Apify, ask about 5 Etsy niches, get answers and a report">
+aria-label="Demo: connect Etsy Pulse, sign in with Apify, ask who the top sellers are in 5 Etsy niches and how Bestsellers price, then get a report">
 <source src="assets/ai/etsypulse-ai-wide.webm" type="video/webm"><source src="assets/ai/etsypulse-ai-wide.mp4" type="video/mp4">
 <img class="poster" src="assets/ai/etsypulse-ai-wide-poster.png" alt="Demo of the Etsy Pulse AI connection"></video></div>
 </div></div>"""
