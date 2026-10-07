@@ -866,7 +866,7 @@ These are not all of Etsy: they are the shops in our panel that we could measure
 <p class="note">Sign-in uses Apify's own OAuth screen; we never see your password. Apify offers one permission level (full account access): this page uses it only to start the report you asked for and read its results. The key stays in this browser tab and is gone when you close it. Remove the approval any time in Apify Console → Settings → API &amp; Integrations.</p></section>"""
     w(BUILDER, page(BUILDER, "Build your own Etsy report: prices, bestsellers, top shops, shop sales | Etsy Pulse",
                     "Type a niche or a few Etsy shops and get a live report: price bands, Bestseller share, top shops, sales pace, CSV. Free Apify sign-in, no code.",
-                    body, ctx, builder_hero, scripts=f'<script src="assets/builder.js?v={cut}-b4" defer></script>'))
+                    body, ctx, builder_hero, scripts=f'<script src="assets/builder.js?v={cut}-b5" defer></script>'))
 
     # ---- seo files
     with open(os.path.join(out_dir, "robots.txt"), "w") as fh:

@@ -199,7 +199,7 @@
   function renderForm(q) {
     var app = $("#builder");
     var groups = [["search", "About a keyword or niche", "Live Etsy search, via our Etsy Search Scraper"],
-      ["tracker", "About specific shops", "Daily public sales counters, via our Etsy Shop Sales Tracker"]];
+      ["tracker", "About specific shops", "Public sales counters from our shop panel, via our Etsy Shop Sales Tracker"]];
     var cards = groups.map(function (g) {
       return '<div class="tgroup"><div class="tgh"><b>' + g[1] + "</b><small>" + g[2] + '</small></div><div class="tcards">' +
         Object.keys(TYPES).filter(function (k) { return TYPES[k].actor === g[0]; }).map(function (k) {
@@ -641,7 +641,7 @@
     var rounded = rows.filter(function (r) { return r.sales_precision === "rounded"; }).length;
     if (rounded) tk.push(rounded + " shop" + (rounded > 1 ? "s show" : " shows") + " a rounded sales counter on Etsy (e.g. 12.3k), so small daily changes can hide until the counter ticks over.");
     var stale = rows.filter(function (r) { return r.snapshot_stale; }).length; if (stale) tk.push("Heads-up: " + stale + " rows come from a snapshot older than 48 hours.");
-    if (!rows.length) tk.push("No shops matched. If you named shops that aren't in our panel yet, they're added now and appear from the next daily read.");
+    if (!rows.length) tk.push("No shops matched. Only shops in our panel return rows; shops you named that aren't in it return nothing (and cost nothing).");
     if (B.takeaways) out.push('<div class="insights"><h3>What this means for you</h3><ul>' + tk.map(function (x) { return "<li>" + x + "</li>"; }).join("") + "</ul></div>");
     if (B.velocity && rows.length) out.push(card("Sales pace", bars(byPace.slice(0, 20).map(function (r) { return [r.shop, pace(r)]; }), function (v, x) { return v == null ? "–" : num(v, 1) + "/day"; }), "Measured sales per day between the last two reads (model estimate where no measured pace yet)."));
     if (B.rivals && rows.length > 1) {
