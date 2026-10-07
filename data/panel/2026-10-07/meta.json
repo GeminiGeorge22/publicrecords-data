@@ -19,5 +19,5 @@
     "categories": 46
   },
   "method": "7-day gain = latest public sales counter minus the read 7+ days earlier; when a shop has fewer than 7 days of reads, the gain over the observed days is scaled to 7. Shops with lifetime sales >= 500 only.",
-  "generated_at": "2026-10-07T19:24:16+00:00"
+  "generated_at": "2026-10-07T19:39:42+00:00"
 }
