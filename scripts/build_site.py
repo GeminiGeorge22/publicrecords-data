@@ -257,7 +257,7 @@ nav.tabs a:hover{text-decoration:none}
 .hero p.lede{font-size:clamp(16px,2.6vw,19px);margin:0;max-width:680px;opacity:.95}
 .chips{display:flex;flex-wrap:wrap;gap:8px;margin-top:16px}
 .chips span{background:rgba(255,255,255,.18);border:1px solid rgba(255,255,255,.28);border-radius:999px;padding:4px 11px;font-size:13px;font-weight:600}
-.kpis{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:10px;margin-top:-22px;position:relative}
+.kpis{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:10px;margin-top:14px;position:relative}
 @media(min-width:760px){.kpis{grid-template-columns:repeat(4,minmax(0,1fr));gap:14px}}
 .kpi{background:var(--card);border:1px solid var(--line);border-radius:16px;padding:14px 14px 12px;box-shadow:0 6px 24px rgba(0,0,0,.06)}
 .kpi .v{overflow-wrap:anywhere;font-size:clamp(22px,5.4vw,30px);font-weight:850;letter-spacing:-.02em;line-height:1.1;color:var(--o)}
@@ -315,6 +315,10 @@ h2{font-size:clamp(21px,4.4vw,27px);letter-spacing:-.02em;margin:0 0 6px;font-we
 .cta{margin:36px 0;border-radius:20px;background:#17171a;color:#fff;padding:26px 20px;position:relative;overflow:hidden}
 @media (prefers-color-scheme:dark){.cta{background:#1d1d22;border:1px solid var(--line)}}
 .cta h2{color:#fff}.cta p{color:#d4d4d8;margin:6px 0 16px;max-width:640px}
+.fresh{margin:16px 0 0;background:var(--card);border:1px solid var(--line);border-radius:14px;padding:12px 14px;font-size:15px}
+.fresh a{font-weight:800;white-space:nowrap}
+.fresh .snap{margin-top:6px;font-size:13px;color:var(--mut);font-variant-numeric:tabular-nums}
+.fresh .snap b{color:var(--ink)}
 .hcta{margin-top:18px;display:flex;flex-wrap:wrap;align-items:center;gap:8px 14px}
 .hbtn{display:inline-flex;align-items:center;gap:8px;background:#fff;color:#c2410c;font-weight:850;font-size:17px;padding:14px 20px;border-radius:14px;box-shadow:0 8px 24px rgba(80,20,0,.28);letter-spacing:-.01em}
 .hbtn:hover{text-decoration:none;transform:translateY(-1px)}
@@ -419,6 +423,34 @@ def report_btn(slug, actor_label, text):
     return (f'<div class="rbtn"><span>{text}</span>'
             f'<a href="{R}{slug}" rel="noopener">Run this report yourself →</a></div>'
             f'<p class="note" style="margin-top:6px">Opens our {actor_label} on Apify (publicrecords, pay per result).</p>')
+
+
+def publish_cfg():
+    try:
+        return json.load(open(os.path.join(ROOT, "config", "publish.json"), encoding="utf-8"))
+    except FileNotFoundError:
+        return {"cadence_days": 7, "publish_weekday": "Mon"}
+
+
+def next_refresh(cut):
+    c = publish_cfg()
+    days = ["Mon", "Tue", "Wed", "Thu", "Fri", "Sat", "Sun"]
+    d = dt.date.fromisoformat(cut) + dt.timedelta(days=max(c["cadence_days"] - 3, 1))
+    while days[d.weekday()] != c["publish_weekday"]:
+        d += dt.timedelta(days=1)
+    return d
+
+
+def cadence_word():
+    n = publish_cfg()["cadence_days"]
+    return "weekly" if n == 7 else ("every 2 weeks" if n == 14 else f"every {n} days")
+
+
+def fresh_box(snapshot_label, rows_label, cut):
+    return (f'<div class="fresh"><div><b>Free reports refresh {cadence_word()}.</b> Need today\'s numbers for your niche? '
+            f'<a href="{CTA_URL}" rel="noopener">Run a live report →</a></div>'
+            f'<div class="snap">Snapshot <b>{E(snapshot_label)}</b> · <b>{E(rows_label)}</b> · next free refresh '
+            f'{next_refresh(cut).strftime("%a %b %-d")}</div></div>')
 
 
 def insights_block(items, title="What this means for sellers"):
@@ -638,7 +670,8 @@ def build(out_dir):
     cards_html = "".join(f'<a class="rcard" href="{h}"><div class="t">{t}<span>{k}</span></div><div class="d">{d}</div>{mn}</a>'
                          for h, t, k, d, mn in cards)
     over_ins = mi[:3] + ci[1:2] + (ni[:1] if ni else [])
-    body = f"""{kpis}
+    body = f"""{fresh_box(nice_date(snap), f"{n(meta['shops_with_gain_ge_min'])} shops measured · {len(m)} movers · {len(c)} categories · {len(r)} rising", cut)}
+{kpis}
 <section>{insights_block(over_ins, "This week's takeaways")}</section>
 <section><h2>Reports</h2><p class="sub">Each report has its own page, a plain-English read and a CSV.</p>
 <div class="grid">{cards_html}</div></section>
@@ -663,7 +696,7 @@ def build(out_dir):
                 f'<span>{E(span_note)}</span></div></div></div>')
 
     # ---- movers
-    body = f"""<section>{insights_block(mi)}{report_btn("site-movers", "Etsy Shop Sales Tracker", "Track 7-day sales for any shops you choose: yours, competitors, or the ones above.")}</section>
+    body = f"""{fresh_box(nice_date(snap), f"{len(m)} rows of {n(meta['shops_with_gain_ge_min'])} shops measured", cut)}<section>{insights_block(mi)}{report_btn("site-movers", "Etsy Shop Sales Tracker", "Track 7-day sales for any shops you choose: yours, competitors, or the ones above.")}</section>
 <section><h2>Top {len(m)} shops by 7-day sales gain</h2><p class="sub">Shops with at least {meta['min_lifetime_sales']} lifetime sales. Tap a shop to open it on Etsy.</p>
 {shop_rows(m, m[0]['sales_7d_delta'], None)}
 {dl(files['movers'], f'Download CSV ({len(m)} rows, cut {cut})')}{src_line}</section>"""
@@ -672,7 +705,7 @@ def build(out_dir):
                           body, ctx, simple_hero("Report · Top Movers", "Top Movers", "The Etsy shops with the biggest 7-day sales gain, from public sales counters.")))
 
     # ---- categories
-    body = f"""<section>{insights_block(ci)}{report_btn("site-categories", "Etsy Shop Sales Tracker", "Feed in the shops of any category and see who is gaining sales week to week.")}</section>
+    body = f"""{fresh_box(nice_date(snap), f"{len(c)} categories", cut)}<section>{insights_block(ci)}{report_btn("site-categories", "Etsy Shop Sales Tracker", "Feed in the shops of any category and see who is gaining sales week to week.")}</section>
 <section><h2>Categories ranked by combined 7-day gain</h2><p class="sub">Sum of 7-day sales gains of every measured shop in the category. Showing the top 20 of {len(c)}; all are in the CSV.</p>
 {cat_rows(c[:20])}
 {dl(files['categories'], f'Download CSV ({len(c)} rows, cut {cut})')}{src_line}</section>"""
@@ -681,7 +714,7 @@ def build(out_dir):
                               body, ctx, simple_hero("Report · Hot Categories", "Hot Categories", "Where this week's Etsy sales gains are piling up.")))
 
     # ---- rising
-    body = f"""<section>{insights_block(ri)}{report_btn("site-rising", "Etsy Shop Sales Tracker", "Watch small shops in your niche and catch the next riser early.")}</section>
+    body = f"""{fresh_box(nice_date(snap), f"{len(r)} rows", cut)}<section>{insights_block(ri)}{report_btn("site-rising", "Etsy Shop Sales Tracker", "Watch small shops in your niche and catch the next riser early.")}</section>
 <section><h2>Fastest shops under 1,000 lifetime sales</h2><p class="sub">Same 7-day gain, smaller shops ({meta['min_lifetime_sales']}–999 lifetime sales). These are the ones to learn from if you're early.</p>
 {shop_rows(r, r[0]['sales_7d_delta'] if r else 1, None)}
 {dl(files['rising'], f'Download CSV ({len(r)} rows, cut {cut})')}{src_line}</section>"""
@@ -726,7 +759,7 @@ def build(out_dir):
         kws = [k["keyword"] for k in N["meta"]["keywords"]]
         missing = [k for k in kws if k not in [x["keyword"] for x in nr]]
         miss_note = (f" Not shown (fewer than 20 listings captured this run): {', '.join(missing)}." if missing else "")
-        body = f"""<section>{insights_block(ni)}{report_btn("site-niche", "Etsy Search Scraper", "Get this price breakdown for your own keyword: every page-1 listing as a CSV.")}</section>
+        body = f"""{fresh_box(nice_date((N['meta'].get('captured_at') or N['cut'])[:10]), f"{N['meta']['rows']['listings']} listings · {len(nr)} niches", cut)}<section>{insights_block(ni)}{report_btn("site-niche", "Etsy Search Scraper", "Get this price breakdown for your own keyword: every page-1 listing as a CSV.")}</section>
 <section><h2>Page-1 prices in this week's hottest niches</h2><p class="sub">Keywords are the categories of this week's leading Top Movers shops. Prices are what Etsy shows US shoppers on page 1 (relevance sort).</p>
 <div class="niche">{''.join(cards)}</div>
 {dl(files['niche_summary'], f"Download summary CSV ({len(N['rows'])} keywords)")} {dl(files['niche_listings'], f"Download listings CSV ({N['meta']['rows']['listings']} rows)")}

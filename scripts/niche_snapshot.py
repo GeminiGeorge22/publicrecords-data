@@ -169,7 +169,7 @@ def main():
         cnt = {}
         for i in items:
             cnt[i.get("query")] = cnt.get(i.get("query"), 0) + 1
-        low = [q for q in inp["queries"] if cnt.get(q, 0) < 20]
+        low = [q for q in inp["queries"] if cnt.get(q, 0) < min(20, a.per_keyword)]
         if low and spent < a.max_usd * 0.6:
             r2 = go(low, a.max_usd - spent)
             runs.append(r2)

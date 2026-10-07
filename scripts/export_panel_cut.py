@@ -112,6 +112,8 @@ def write_csv(path, fields, rows):
 def main():
     ap = argparse.ArgumentParser()
     ap.add_argument("--cut-date", default=dt.datetime.now(ZoneInfo("America/Toronto")).date().isoformat())
+    ap.add_argument("--out-root", default=os.path.join(ROOT, "data", "panel"),
+                    help="where <cut>/ is written (box-only internal exports use a path outside the repo)")
     ap.add_argument("--snapshot"); ap.add_argument("--state"); ap.add_argument("--latest")
     a = ap.parse_args()
 
@@ -152,7 +154,7 @@ def main():
     for i, r in enumerate(crow, 1):
         r["rank"] = i
 
-    out = os.path.join(ROOT, "data", "panel", a.cut_date)
+    out = os.path.join(a.out_root, a.cut_date)
     os.makedirs(out, exist_ok=True)
     mf = ["rank", "shop_name", "shop_url", "category", "sales_7d_delta", "sales_total",
           "gain_pct_of_lifetime", "days_observed"]
