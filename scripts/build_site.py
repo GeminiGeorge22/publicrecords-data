@@ -421,7 +421,7 @@ def cta(ctx):
 <p>Every number here comes from public Etsy data our tools collect. Build the same report for your own keyword or your
 competitors' shops, right here: charts, plain-English takeaways and a spreadsheet in a few minutes. No code, no API keys.</p>
 <a class="btn" href="{BUILDER}?type=niche&amp;from=cta">Build a niche report</a><a class="btn ghost" href="{BUILDER}?type=rivals&amp;from=cta">Compare competitor shops</a>
-<div class="disc">Runs our tools (publicrecords on Apify) on your own Apify account after a free sign-in. Pay per result; Apify's free plan includes $5 of usage a month.</div>
+<div class="disc">Runs our tools (publicrecords on Apify) on your own Apify account after a free sign-in. Pay per result. Etsy Search: $6 per 1,000 listings + 0.5¢ per run. Blocked pages charge nothing. Apify's free plan includes $5 of usage a month.</div>
 </section>"""
 
 
@@ -779,7 +779,7 @@ def ai_page(ctx, files):
 <p class="lede">Connect our Etsy tools to Claude, ChatGPT or Cursor. Ask in plain words about any keyword or niche: your AI pulls fresh public Etsy search and shop data,
 answers right in the chat, and turns it into a report when you ask.</p>
 <ol class="steps3"><li>Click Connect</li><li>Sign in with Apify (free)</li><li>Ask your AI</li></ol>
-<div class="hcta"><a class="hbtn" href="#connect">Connect your AI →</a><small>Runs on your own Apify account. Pay per search: from 13¢ for 1 keyword, top 20 listings.</small></div></div>
+<div class="hcta"><a class="hbtn" href="#connect">Connect your AI →</a><small>Runs on your own Apify account. Etsy Search: $6 per 1,000 listings + 0.5¢ per run. Blocked pages charge nothing.</small></div></div>
 <div><video autoplay muted loop playsinline preload="metadata" poster="assets/ai/etsypulse-ai-wide-poster.png" width="1200" height="676"
 aria-label="Demo: connect Etsy Pulse, sign in with Apify, ask AI who the top sellers are in a few Etsy niches and how Bestsellers price, using public Etsy search data, then get a report">
 <source src="assets/ai/etsypulse-ai-wide.webm" type="video/webm"><source src="assets/ai/etsypulse-ai-wide.mp4" type="video/mp4">
@@ -850,7 +850,7 @@ Answers in your chat will be worded by your AI and use the data from your own ru
     costs = f"""<section><h2>How it works, and what it costs</h2>
 <div class="costs">
 <div><b>Runs through Apify</b><p>Apify is the platform our tools run on. The link is Apify's MCP server with our two Etsy tools picked. You sign in with your own Apify account: free to create, and the free plan includes $5 of usage a month.</p></div>
-<div><b>Pay per search</b><p>Etsy Search: from 13¢ for 1 keyword and the top 20 listings ($0.005 per run + $0.006 per listing, Apify usage included). Shop Sales Tracker: $0.005 per run + $0.003 per shop, plus Apify usage.</p></div>
+<div><b>Pay per result</b><p>Etsy Search: $6 per 1,000 listings + 0.5¢ per run. Blocked pages charge nothing. Apify usage included. Shop Sales Tracker: $0.005 per run + $0.003 per shop, plus Apify usage.</p></div>
 <div><b>Your account, your results</b><p>Every run and its results stay in your Apify account. Sign-in happens on Apify's own screen; we never see your password. Remove access any time in Apify Console → Settings → API &amp; Integrations.</p></div>
 </div></section>"""
 
@@ -864,13 +864,16 @@ Rather not use AI? <a href="{BUILDER}?from=ai">Build a report here</a> or <a hre
     body = (f"<style>{AI_CSS}</style>{apps}<section><h2>What you can do</h2><p class=\"sub\">Six things to ask once you're connected. "
             f"Copy a prompt, swap in your own niche.</p><div class=\"uses\">{uses_html}</div></section>{convo}{costs}{tryit}")
     return page("ai.html", "Ask AI about any Etsy niche: connect Etsy Pulse to Claude, ChatGPT or Cursor | Etsy Pulse",
-                "Connect our Etsy tools to your AI through Apify's MCP server. Ask about any Etsy keyword or niche and get answers and reports from fresh public Etsy market data. Pay per search, from 13¢ for 1 keyword and the top 20 listings.",
+                "Connect our Etsy tools to your AI through Apify's MCP server. Ask about any Etsy keyword or niche and get answers and reports from fresh public Etsy market data. Etsy Search: $6 per 1,000 listings + 0.5¢ per run. Blocked pages charge nothing.",
                 body, ctx, hero, scripts=AI_JS)
 
 
 # ---------------------------------------------------------------- public checks
 import re as _re
 BANNED = _re.compile(r"\bmedian\b|middle half|\bpage[ -]1\b|7-day pace|\biqr\b", _re.I)
+# PRICE-1 (t566u): a price on a page must be what the default buyer path charges. Search defaults have no listing cap
+# until MCP-2 (default cap 20) reads back, so no "13¢ / top 20" or "63¢" price lines anywhere.
+BANNED_PRICE = _re.compile(r"\b13\s?¢|\b13 cents\b|\b63\s?¢|\b63 cents\b|≈\s?\$0\.13\b|\$0\.13\b|\$0\.63\b|top 20 listings\)?\s*(?:for|=|≈|:)|\b20 listings\s*(?:for|=|≈|:)", _re.I)
 
 
 def unesc_link(d):
@@ -894,8 +897,11 @@ def check_public(out_dir):
             p = os.path.join(root, f)
             rel = os.path.relpath(p, out_dir)
             if f.endswith(".html"):
-                for mt in BANNED.finditer(visible_text(open(p, encoding="utf-8").read())):
+                vt = visible_text(open(p, encoding="utf-8").read())
+                for mt in BANNED.finditer(vt):
                     bad.append(f"{rel}: banned word '{mt.group(0)}'")
+                for mt in BANNED_PRICE.finditer(vt):
+                    bad.append(f"{rel}: stale price line '{mt.group(0)}' (PRICE-1)")
             elif f.endswith(".csv"):
                 rows = list(csv.reader(open(p, encoding="utf-8")))
                 if rows and BANNED.search(",".join(rows[0])):
@@ -1157,7 +1163,7 @@ These are not all of Etsy: they are the shops in our panel that we could measure
 <section class="how-sec"><h2>How it works</h2><p class="sub">Three steps. Your results and your spend stay in your own Apify account.</p>
 <div class="how">
 <div><b>Sign in with Apify (free)</b><p>Apify is the platform our tools run on. New accounts are free, no credit card, and the free plan includes $5 of usage every month.</p></div>
-<div><b>Press Run</b><p>The report runs on your account. Keyword reports cost $0.006 per listing plus $0.005 per keyword (20 listings ≈ $0.13, Apify platform usage included); shop reports $0.003 per shop plus $0.005 (plus Apify platform usage, usually under $0.02 a run). The price updates as you change options, and you see “about $X, at most $Y” before you start.</p></div>
+<div><b>Press Run</b><p>The report runs on your account. Keyword reports: $6 per 1,000 listings + 0.5¢ per run. Blocked pages charge nothing. Apify platform usage is included. Shop reports: $0.003 per shop plus $0.005, plus Apify platform usage (usually under $0.02 a run). The price updates as you change options, and you see “about $X, at most $Y” for the exact number of listings you ask for before you start.</p></div>
 <div><b>Read it, download it</b><p>Takeaways, charts and a sortable table appear right here. Download the spreadsheet (CSV), or print / save as PDF. Your runs and data also stay in your Apify account.</p></div>
 </div>
 <p class="note">Sign-in uses Apify's own OAuth screen; we never see your password. Apify offers one permission level (full account access): this page uses it only to start the report you asked for and read its results. The key stays in this browser tab and is gone when you close it. Remove the approval any time in Apify Console → Settings → API &amp; Integrations.</p></section>"""
