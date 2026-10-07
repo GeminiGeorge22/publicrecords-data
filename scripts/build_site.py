@@ -421,7 +421,7 @@ def cta(ctx):
 <p>Every number here comes from public Etsy data our tools collect. Build the same report for your own keyword or your
 competitors' shops, right here: charts, plain-English takeaways and a spreadsheet in a few minutes. No code, no API keys.</p>
 <a class="btn" href="{BUILDER}?type=niche&amp;from=cta">Build a niche report</a><a class="btn ghost" href="{BUILDER}?type=rivals&amp;from=cta">Compare competitor shops</a>
-<div class="disc">Runs our tools (publicrecords on Apify) on your own Apify account after a free sign-in. Pay per result. Etsy Search: $6 per 1,000 listings + 0.5¢ per run. Blocked pages charge nothing. Apify's free plan includes $5 of usage a month.</div>
+<div class="disc">Runs our tools (publicrecords on Apify) on your own Apify account after a free sign-in. Pay per result. From 13¢ for 1 keyword (top 20 listings). $6 per 1,000 listings + 0.5¢ per run. Blocked pages charge nothing. Apify's free plan includes $5 of usage a month.</div>
 </section>"""
 
 
@@ -779,7 +779,7 @@ def ai_page(ctx, files):
 <p class="lede">Connect our Etsy tools to Claude, ChatGPT or Cursor. Ask in plain words about any keyword or niche: your AI pulls fresh public Etsy search and shop data,
 answers right in the chat, and turns it into a report when you ask.</p>
 <ol class="steps3"><li>Click Connect</li><li>Sign in with Apify (free)</li><li>Ask your AI</li></ol>
-<div class="hcta"><a class="hbtn" href="#connect">Connect your AI →</a><small>Runs on your own Apify account. Etsy Search: $6 per 1,000 listings + 0.5¢ per run. Blocked pages charge nothing.</small></div></div>
+<div class="hcta"><a class="hbtn" href="#connect">Connect your AI →</a><small>Runs on your own Apify account. From 13¢ for 1 keyword (top 20 listings). $6 per 1,000 listings + 0.5¢ per run. Blocked pages charge nothing.</small></div></div>
 <div><video autoplay muted loop playsinline preload="metadata" poster="assets/ai/etsypulse-ai-wide-poster.png" width="1200" height="676"
 aria-label="Demo: connect Etsy Pulse, sign in with Apify, ask AI who the top sellers are in a few Etsy niches and how Bestsellers price, using public Etsy search data, then get a report">
 <source src="assets/ai/etsypulse-ai-wide.webm" type="video/webm"><source src="assets/ai/etsypulse-ai-wide.mp4" type="video/mp4">
@@ -850,7 +850,7 @@ Answers in your chat will be worded by your AI and use the data from your own ru
     costs = f"""<section><h2>How it works, and what it costs</h2>
 <div class="costs">
 <div><b>Runs through Apify</b><p>Apify is the platform our tools run on. The link is Apify's MCP server with our two Etsy tools picked. You sign in with your own Apify account: free to create, and the free plan includes $5 of usage a month.</p></div>
-<div><b>Pay per result</b><p>Etsy Search: $6 per 1,000 listings + 0.5¢ per run. Blocked pages charge nothing. Apify usage included. Shop Sales Tracker: $0.005 per run + $0.003 per shop, plus Apify usage.</p></div>
+<div><b>Pay per result</b><p>Etsy Search: From 13¢ for 1 keyword (top 20 listings). $6 per 1,000 listings + 0.5¢ per run. Blocked pages charge nothing. Apify usage included. On default settings one search returns the top 20 listings in total, even for several keywords; your AI can ask for more at the same rate. Shop Sales Tracker: $0.005 per run + $0.003 per shop, plus Apify usage.</p></div>
 <div><b>Your account, your results</b><p>Every run and its results stay in your Apify account. Sign-in happens on Apify's own screen; we never see your password. Remove access any time in Apify Console → Settings → API &amp; Integrations.</p></div>
 </div></section>"""
 
@@ -864,16 +864,19 @@ Rather not use AI? <a href="{BUILDER}?from=ai">Build a report here</a> or <a hre
     body = (f"<style>{AI_CSS}</style>{apps}<section><h2>What you can do</h2><p class=\"sub\">Six things to ask once you're connected. "
             f"Copy a prompt, swap in your own niche.</p><div class=\"uses\">{uses_html}</div></section>{convo}{costs}{tryit}")
     return page("ai.html", "Ask AI about any Etsy niche: connect Etsy Pulse to Claude, ChatGPT or Cursor | Etsy Pulse",
-                "Connect our Etsy tools to your AI through Apify's MCP server. Ask about any Etsy keyword or niche and get answers and reports from fresh public Etsy market data. Etsy Search: $6 per 1,000 listings + 0.5¢ per run. Blocked pages charge nothing.",
+                "Connect our Etsy tools to your AI through Apify's MCP server. Ask about any Etsy keyword or niche and get answers and reports from fresh public Etsy market data. From 13¢ for 1 keyword (top 20 listings). $6 per 1,000 listings + 0.5¢ per run. Blocked pages charge nothing.",
                 body, ctx, hero, scripts=AI_JS)
 
 
 # ---------------------------------------------------------------- public checks
 import re as _re
 BANNED = _re.compile(r"\bmedian\b|middle half|\bpage[ -]1\b|7-day pace|\biqr\b", _re.I)
-# PRICE-1 (t566u): a price on a page must be what the default buyer path charges. Search defaults have no listing cap
-# until MCP-2 (default cap 20) reads back, so no "13¢ / top 20" or "63¢" price lines anywhere.
-BANNED_PRICE = _re.compile(r"\b13\s?¢|\b13 cents\b|\b63\s?¢|\b63 cents\b|≈\s?\$0\.13\b|\$0\.13\b|\$0\.63\b|top 20 listings\)?\s*(?:for|=|≈|:)|\b20 listings\s*(?:for|=|≈|:)", _re.I)
+# PRICE-1 (t566u): a price on a page must be what the default buyer path charges. MCP-2 is live (Etsy Search 0.2.10
+# LRdhNvPXU8Yei84J8, default maxItems 20, owner run 5jf38ytVjcPMi7nm3 = 20 rows = $0.125), so "13¢" is allowed ONLY as
+# "13¢ for 1 keyword" with the top-20-listings scope (PRICE_OK is removed before BANNED_PRICE runs). maxItems caps the whole
+# run, not each keyword: "13¢ per keyword", "20 per keyword", any ¢/$ "per keyword" price, 63¢ and a bare 13¢ stay banned.
+PRICE_OK = _re.compile(r"(?:from\s+)?13\s?¢ for 1 keyword\s*(?:\(top 20 listings\)|,?\s*(?:and\s+)?(?:the\s+)?top 20 listings)", _re.I)
+BANNED_PRICE = _re.compile(r"(?:[¢$]|cents?)\s*[\d.,]*\s*(?:per|/|a|for each|each)\s+keyword|\b20 (?:listings )?(?:per|/|for each|each) keyword|\b13\s?¢|\b13 cents\b|\b63\s?¢|\b63 cents\b|≈\s?\$0\.13\b|\$0\.13\b|\$0\.63\b|top 20 listings\)?\s*(?:for|=|≈|:)|\b20 listings\s*(?:for|=|≈|:)", _re.I)
 
 
 def unesc_link(d):
@@ -900,7 +903,7 @@ def check_public(out_dir):
                 vt = visible_text(open(p, encoding="utf-8").read())
                 for mt in BANNED.finditer(vt):
                     bad.append(f"{rel}: banned word '{mt.group(0)}'")
-                for mt in BANNED_PRICE.finditer(vt):
+                for mt in BANNED_PRICE.finditer(PRICE_OK.sub(" ", vt)):
                     bad.append(f"{rel}: stale price line '{mt.group(0)}' (PRICE-1)")
             elif f.endswith(".csv"):
                 rows = list(csv.reader(open(p, encoding="utf-8")))
