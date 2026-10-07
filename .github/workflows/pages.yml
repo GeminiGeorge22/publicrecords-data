@@ -1,0 +1,69 @@
+name: Build Top Movers page
+
+on:
+  push:
+    branches: [main]
+    paths:
+      - "data/top-movers/**"
+      - "scripts/**"
+      - ".github/workflows/pages.yml"
+  schedule:
+    - cron: "0 14 * * *"   # daily 14:00 UTC: rebuild from the newest CSV in data/top-movers/
+  workflow_dispatch:
+
+permissions:
+  contents: write
+  pages: write
+  id-token: write
+
+concurrency:
+  group: pages
+  cancel-in-progress: false
+
+jobs:
+  build:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.12"
+
+      # Optional: pull new nightly cuts from the private fleet-orders repo.
+      # Runs only if a FLEET_ORDERS_READ secret (read-only token) is configured; skipped otherwise.
+      - name: Sync nightly cuts (optional)
+        env:
+          FLEET_ORDERS_READ: ${{ secrets.FLEET_ORDERS_READ }}
+        if: ${{ env.FLEET_ORDERS_READ != '' }}
+        run: |
+          git clone --depth 1 "https://x-access-token:${FLEET_ORDERS_READ}@github.com/GeminiGeorge22/fleet-orders.git" /tmp/fo
+          ls /tmp/fo/marketer/top-movers/*.csv >/dev/null 2>&1 || exit 0
+          python scripts/import_cut.py /tmp/fo/marketer/top-movers/*.csv
+          rm -rf /tmp/fo
+          if [ -n "$(git status --porcelain data/top-movers)" ]; then
+            git config user.name "github-actions[bot]"
+            git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+            git add data/top-movers
+            git commit -m "sync top-movers cuts from fleet-orders"
+            git push
+          fi
+
+      - name: Build page
+        run: python scripts/build_movers_page.py --out _site
+
+      - uses: actions/configure-pages@v5
+
+      - uses: actions/upload-pages-artifact@v3
+        with:
+          path: _site
+
+  deploy:
+    needs: build
+    runs-on: ubuntu-latest
+    environment:
+      name: github-pages
+      url: ${{ steps.deployment.outputs.page_url }}
+    steps:
+      - id: deployment
+        uses: actions/deploy-pages@v4
