@@ -398,7 +398,7 @@
     var who = state.user ? '<div class="who">Signed in to Apify as <b>' + esc(state.user.username) + '</b> · <a href="#" id="signout">sign out</a></div>' : "";
     var fallbackHref = CFG.worker + "/r/site-run?a=" + t.actor + "&t=" + state.type + (t.actor === "search" && plan.combined.queries ? "&q=" + encodeURIComponent(plan.combined.queries.slice(0, 5).join(", ")) : "") + utmPass();
     var plat = plan.platform ? " + Apify platform usage, usually under " + usd(plan.platform) + " per run (billed separately for this tool)" : " (Apify platform usage included)";
-    var conf = plan.bigConfirm ? '<label class="bigconf"><input type="checkbox" id="bigok"' + (state.bigok === plan.max ? " checked" : "") + "> Yes, run it: this report can cost up to <b>" + usd(plan.max + plan.platform) + "</b> on my Apify account.</label>" : "";
+    var conf = plan.bigConfirm ? '<label class="bigconf"><input type="checkbox" id="bigok"' + (state.bigok === plan.max ? " checked" : "") + "><span>Yes, run it: this report can cost up to <b>" + usd(plan.max + plan.platform) + "</b> on my Apify account.</span></label>" : "";
     $("#brun").innerHTML = errs + warns +
       (empty ? '<div class="cost"><b>' + (t.actor === "search" ? "Add a keyword above to see the price" : "Add a shop above to see the price") + '</b><span>' + usd(a.unit) + " per " + (t.actor === "search" ? "listing" : "shop") + " + " + usd(a.start) + " per run" + plat + ".</span></div>" :
       '<div class="cost"><b>About ' + usd(plan.est) + ", at most " + usd(plan.max) + '</b><span>' + nUnits + " × " + usd(a.unit) + " + " + usd(a.start) + " start fee" + (plan.jobs.length > 1 ? " × " + plan.jobs.length + " runs" : "") + plat +
