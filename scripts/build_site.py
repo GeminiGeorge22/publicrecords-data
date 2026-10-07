@@ -359,11 +359,13 @@ PULSE_SVG = ('<svg class="pulse" viewBox="0 0 1200 90" preserveAspectRatio="none
 
 BAND_COLORS = ["#ffb27a", "#ff8a3d", "#FD5E02", "#b83f00"]
 
-NAV = [("index.html", "Overview"), ("movers.html", "Top Movers"), ("categories.html", "Hot Categories"),
+BUILDER = "run.html"
+RUN_FALLBACK = R + "site-run"
+NAV = [("index.html", "Overview"), ("run.html", "★ Custom report"), ("movers.html", "Top Movers"), ("categories.html", "Hot Categories"),
        ("rising.html", "Rising Shops"), ("breakouts.html", "Breakouts"), ("niche.html", "Niche Prices")]
 
 
-def page(name, title, desc, body, ctx, hero=None):
+def page(name, title, desc, body, ctx, hero=None, scripts=""):
     nav = "".join(f'<a href="{h}"{" class=on" if h == name else ""}>{t}</a>' for h, t in NAV if h in ctx["pages"])
     url = SITE_URL + ("" if name == "index.html" else name)
     og = SITE_URL + "og.png?v=" + ctx["cut"]
@@ -385,6 +387,7 @@ def page(name, title, desc, body, ctx, hero=None):
 <meta name="twitter:image" content="{og}">
 <script type="application/ld+json">{json.dumps(ctx["ld"], ensure_ascii=False)}</script>
 <style>{CSS}</style>
+<link rel="stylesheet" href="assets/builder.css?v={ctx['cut']}-b1">
 </head><body>
 <header class="top"><div class="wrap"><a class="brand" href="index.html"><img src="assets/logo-96.png" alt="" width="30" height="30">Etsy Pulse</a>
 <a class="x" href="{X_URL}" rel="noopener">Follow @EtsyPulse</a></div></header>
@@ -392,7 +395,7 @@ def page(name, title, desc, body, ctx, hero=None):
 {hero or ""}
 <main class="wrap">
 {body}
-{cta(ctx)}
+{"" if name == BUILDER else cta(ctx)}
 </main>
 <footer><div class="wrap">
 <p><b>Etsy Pulse</b> is published by publicrecords, and the data comes from our own tools: the publicrecords Etsy Shop Sales Tracker panel
@@ -400,6 +403,7 @@ def page(name, title, desc, body, ctx, hero=None):
 <p>Movers cut {E(ctx['cut'])} (counters read through {E(ctx['snap'])}). Not affiliated with, endorsed by, or sponsored by Etsy, Inc.
 Etsy is a trademark of Etsy, Inc.</p>
 </div></footer>
+{scripts}
 </body></html>
 """
 
@@ -407,22 +411,28 @@ Etsy is a trademark of Etsy, Inc.</p>
 def cta(ctx):
     return f"""<section class="cta">
 <h2>Run this on any niche</h2>
-<p>Every number here comes from public Etsy data our tools collect. Point it at your own keyword or category and get
-prices, reviews, bestseller badges and shop links for every page-1 listing, as a CSV in a few minutes.</p>
-<a class="btn" href="{CTA_URL}" rel="noopener">Try the Etsy Search Scraper</a><a class="btn ghost" href="{TRACKER_URL}" rel="noopener">Track a shop's sales</a>
-<div class="disc">Our tools (publicrecords on Apify). Pay per result; Apify's free plan covers a small test.</div>
+<p>Every number here comes from public Etsy data our tools collect. Build the same report for your own keyword or your
+competitors' shops, right here: charts, plain-English takeaways and a spreadsheet in a few minutes. No code, no API keys.</p>
+<a class="btn" href="{BUILDER}?type=niche&amp;from=cta">Build a niche report</a><a class="btn ghost" href="{BUILDER}?type=rivals&amp;from=cta">Compare competitor shops</a>
+<div class="disc">Runs our tools (publicrecords on Apify) on your own Apify account after a free sign-in. Pay per result; Apify's free plan includes $5 of usage a month.</div>
 </section>"""
 
 
 def hero_cta():
-    return (f'<div class="hcta"><a class="hbtn" href="{CTA_URL}" rel="noopener">Run a custom report on any niche →</a>'
-            '<small>Your keyword, your CSV: prices, reviews, Bestseller badges, shop links. Our Etsy Search Scraper on Apify, pay per result.</small></div>')
+    return (f'<form class="qform" action="{BUILDER}" method="get" role="search">'
+            '<input name="q" type="search" placeholder="Type a niche, e.g. ceramic mug" aria-label="Your Etsy niche or keyword" enterkeyhint="go" autocomplete="off">'
+            '<input type="hidden" name="from" value="hero"><button type="submit">Build my report →</button></form>'
+            '<div class="qsub">Live Etsy data on your keyword: prices, Bestseller badges, top shops, spreadsheet. Free Apify sign-in, no code, '
+            f'pay per result. <a href="{RUN_FALLBACK}" rel="noopener">Or open it on Apify</a></div>')
+
+
+REPORT_TYPE = {"site-movers": "velocity", "site-categories": "category", "site-rising": "category", "site-niche": "niche"}
 
 
 def report_btn(slug, actor_label, text):
     return (f'<div class="rbtn"><span>{text}</span>'
-            f'<a href="{R}{slug}" rel="noopener">Run this report yourself →</a></div>'
-            f'<p class="note" style="margin-top:6px">Opens our {actor_label} on Apify (publicrecords, pay per result).</p>')
+            f'<a href="{BUILDER}?type={REPORT_TYPE.get(slug, "niche")}&amp;from={slug}">Run this report yourself →</a></div>'
+            f'<p class="note" style="margin-top:6px">Builds it right here with our {actor_label}: free Apify sign-in, no code, pay per result.</p>')
 
 
 def publish_cfg():
@@ -448,7 +458,7 @@ def cadence_word():
 
 def fresh_box(snapshot_label, rows_label, cut):
     return (f'<div class="fresh"><div><b>Free reports refresh {cadence_word()}.</b> Need today\'s numbers for your niche? '
-            f'<a href="{CTA_URL}" rel="noopener">Run a live report →</a></div>'
+            f'<a href="{BUILDER}?from=fresh">Run a live report →</a></div>'
             f'<div class="snap">Snapshot <b>{E(snapshot_label)}</b> · <b>{E(rows_label)}</b> · next free refresh '
             f'{next_refresh(cut).strftime("%a %b %-d")}</div></div>')
 
@@ -602,7 +612,7 @@ def build(out_dir):
                 shutil.copy(src, os.path.join(out_dir, "data", nm))
             files["niche_" + k] = f"data/niche-{k}-{N['cut']}.csv"
 
-    pages = ["index.html", "movers.html", "categories.html", "rising.html"]
+    pages = ["index.html", BUILDER, "movers.html", "categories.html", "rising.html"]
     if prev:
         pages.append("breakouts.html")
     if N and any((r.get("listings") or 0) >= 20 for r in N["rows"]):
@@ -767,6 +777,25 @@ def build(out_dir):
         w("niche.html", page("niche.html", f"Etsy niche prices: {', '.join(x['keyword'] for x in nr)} | Etsy Pulse",
                              "Median prices, price bands and Bestseller-badge share on page 1 of Etsy search for this week's hottest niches.",
                              body, ctx, simple_hero("Report · Niche Prices", "Niche Prices", "What page 1 of Etsy search costs in this week's hottest niches.")))
+
+    # ---- report builder (run.html): Sign in with Apify, run our Actors on the visitor's account, report in-page
+    builder_hero = (f'<div class="hero">{PULSE_SVG}<div class="wrap" style="padding-bottom:52px"><div class="eyebrow">Etsy Pulse · Custom report</div>'
+                    '<h1>Build your own Etsy report</h1><p class="lede">Pick a report, type a niche or a few shops, press Run. '
+                    'Charts, plain-English takeaways and a spreadsheet in a few minutes. No code, no API keys.</p></div></div>')
+    body = """<div id="builder" class="bld"><noscript><div class="berr">The report builder needs JavaScript. You can still run our tools directly on Apify:
+<a href="https://apify.com/publicrecords/etsy-search-scraper">Etsy Search Scraper</a> · <a href="https://apify.com/publicrecords/etsy-shop-velocity">Etsy Shop Sales Tracker</a>.</div></noscript></div>
+<div id="progress" hidden></div>
+<div id="report" hidden></div>
+<section class="how-sec"><h2>How it works</h2><p class="sub">Three steps. Your data and your spend stay in your own Apify account.</p>
+<div class="how">
+<div><b>Sign in with Apify (free)</b><p>Apify is the platform our tools run on. New accounts are free, no credit card, and the free plan includes $5 of usage every month.</p></div>
+<div><b>Press Run</b><p>The report runs on your account. Keyword reports cost $0.006 per listing plus $0.005 per run (20 listings ≈ $0.13); shop reports $0.003 per shop plus $0.005. We show the estimate and cap it before you start.</p></div>
+<div><b>Read it, download it</b><p>Takeaways, charts and a sortable table appear right here. Download the spreadsheet (CSV), or print / save as PDF. Your runs and data also stay in your Apify account.</p></div>
+</div>
+<p class="note">Sign-in uses Apify's own OAuth screen; we never see your password. Apify offers one permission level (full account access): this page uses it only to start the report you asked for and read its results. The key stays in this browser tab and is gone when you close it. Remove the approval any time in Apify Console → Settings → API &amp; Integrations.</p></section>"""
+    w(BUILDER, page(BUILDER, "Build your own Etsy report: prices, bestsellers, top shops, shop sales | Etsy Pulse",
+                    "Type a niche or a few Etsy shops and get a live report: price bands, Bestseller share, top shops, sales pace, CSV. Free Apify sign-in, no code.",
+                    body, ctx, builder_hero, scripts=f'<script src="assets/builder.js?v={cut}-b1" defer></script>'))
 
     # ---- seo files
     with open(os.path.join(out_dir, "robots.txt"), "w") as fh:
