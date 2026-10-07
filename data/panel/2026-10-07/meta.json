@@ -13,11 +13,57 @@
   "total_7d_delta_ge_min": 48356,
   "categories": 46,
   "scaled_share": 1.0,
+  "coverage": {
+    "panel_shops": 88905,
+    "shops_read_once": 88247,
+    "shops_measured": 893,
+    "shops_measured_7d_span": 0,
+    "shops_one_read_only": 87354,
+    "measured_span_days_max": 5,
+    "series": [
+      {
+        "date": "2026-09-30",
+        "read_once": 313,
+        "measured": 0
+      },
+      {
+        "date": "2026-10-01",
+        "read_once": 869,
+        "measured": 0
+      },
+      {
+        "date": "2026-10-02",
+        "read_once": 869,
+        "measured": 855
+      },
+      {
+        "date": "2026-10-03",
+        "read_once": 893,
+        "measured": 855
+      },
+      {
+        "date": "2026-10-04",
+        "read_once": 893,
+        "measured": 855
+      },
+      {
+        "date": "2026-10-05",
+        "read_once": 53816,
+        "measured": 893
+      },
+      {
+        "date": "2026-10-06",
+        "read_once": 88247,
+        "measured": 893
+      }
+    ],
+    "definition": "measured = public sales counter read on at least two different days, so a sales gain can be computed; read_once = at least one readable sales counter; panel_shops = shops listed in the panel (read or not)."
+  },
   "rows": {
     "movers": 50,
     "rising": 25,
     "categories": 46
   },
   "method": "7-day gain = latest public sales counter minus the read 7+ days earlier; when a shop has fewer than 7 days of reads, the gain over the observed days is scaled to 7. Shops with lifetime sales >= 500 only.",
-  "generated_at": "2026-10-07T19:39:42+00:00"
+  "generated_at": "2026-10-07T20:13:26+00:00"
 }

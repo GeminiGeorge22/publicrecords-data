@@ -102,6 +102,53 @@ def movers_from(snap: dict, state: dict, min_sales: int) -> list[dict]:
     return movers
 
 
+def coverage_from(state: dict, latest: dict) -> dict:
+    """Honest coverage counts, all read from STATE/shops.json at export time.
+
+    A read is [day, sales, ...] where day = days since Jan 1 of the snapshot year (0-based) and sales is the
+    public sales counter (None = not readable). A shop has a measured sales figure once it has sales reads on
+    two different days; until then it is listed in the panel but has no gain to report.
+    """
+    year = int(str(latest.get("snapshot_date") or dt.date.today().isoformat())[:4])
+    day0 = dt.date(year, 1, 1)
+    first_read, second_read = {}, {}
+    read_once = measured = measured_7d = 0
+    span_max = 0
+    for st in state.values():
+        days = sorted({r[0] for r in (st.get("reads") or []) if r[1] is not None})
+        if not days:
+            continue
+        read_once += 1
+        d1 = int(days[0]); first_read[d1] = first_read.get(d1, 0) + 1
+        if len(days) >= 2:
+            measured += 1
+            d2 = int(days[1]); second_read[d2] = second_read.get(d2, 0) + 1
+            span = days[-1] - days[0]
+            span_max = max(span_max, span)
+            if span >= 7:
+                measured_7d += 1
+    series, a, b = [], 0, 0
+    snap_day = (dt.date.fromisoformat(latest["snapshot_date"]) - day0).days if latest.get("snapshot_date") else None
+    lo = min(first_read) if first_read else None
+    hi = max([snap_day or 0] + list(first_read) + list(second_read)) if first_read else None
+    if lo is not None:
+        for d in range(lo, hi + 1):
+            a += first_read.get(d, 0); b += second_read.get(d, 0)
+            series.append({"date": (day0 + dt.timedelta(days=d)).isoformat(), "read_once": a, "measured": b})
+    return {
+        "panel_shops": latest.get("panel"),
+        "shops_read_once": read_once,
+        "shops_measured": measured,
+        "shops_measured_7d_span": measured_7d,
+        "shops_one_read_only": read_once - measured,
+        "measured_span_days_max": span_max,
+        "series": series,
+        "definition": ("measured = public sales counter read on at least two different days, so a sales gain can "
+                       "be computed; read_once = at least one readable sales counter; panel_shops = shops listed "
+                       "in the panel (read or not)."),
+    }
+
+
 def write_csv(path, fields, rows):
     with open(path, "w", newline="", encoding="utf-8") as fh:
         w = csv.DictWriter(fh, fieldnames=fields, extrasaction="ignore", lineterminator="\n")
@@ -178,6 +225,7 @@ def main():
         "total_7d_delta_ge_min": sum(m["sales_7d_delta"] for m in main_m),
         "categories": len(crow),
         "scaled_share": round(sum(1 for m in main_m if m["scaled"]) / max(len(main_m), 1), 3),
+        "coverage": coverage_from(state, latest),
         "rows": {"movers": len(top), "rising": len(rising), "categories": len(crow)},
         "method": ("7-day gain = latest public sales counter minus the read 7+ days earlier; when a shop has "
                    "fewer than 7 days of reads, the gain over the observed days is scaled to 7. Shops with "

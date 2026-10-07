@@ -42,7 +42,7 @@
       blocks: ["kpis", "takeaways", "shops", "shoptable", "table"],
       cols: ["position", "shop_name", "title", "price", "review_count", "bestseller"] },
     velocity: { actor: "tracker", title: "Shop sales tracker", icon: "📈",
-      blurb: "Lifetime sales, sales per day and 7-day change for any Etsy shops you name.",
+      blurb: "Lifetime sales, sales per day and 7-day change for shops you name that are in our panel.",
       blocks: ["kpis", "takeaways", "velocity", "table"],
       cols: ["shop", "sales_count", "sales_per_day", "delta_7d", "units_day", "reviews_count", "rating", "as_of"] },
     rivals: { actor: "tracker", title: "Competitor comparison", icon: "🥊",
@@ -50,11 +50,11 @@
       blocks: ["kpis", "takeaways", "velocity", "rivals", "table"],
       cols: ["shop", "sales_per_day", "delta_7d", "sales_count", "reviews_count", "admirers", "listings_active", "rating"] },
     category: { actor: "tracker", title: "Category leaders", icon: "🏆",
-      blurb: "The fastest-selling shops in an Etsy category, from our daily shop panel.",
+      blurb: "The fastest-selling shops in an Etsy category, from our shop panel.",
       blocks: ["kpis", "takeaways", "velocity", "table"],
       cols: ["shop", "category", "sales_per_day", "delta_7d", "sales_count", "reviews_count", "as_of"] },
     breakouts: { actor: "tracker", title: "Breakout shops", icon: "🚀",
-      blurb: "Shops whose last 7 days are far above their own usual pace.",
+      blurb: "Shops whose last 7 days are far above their own usual pace (needs 7+ days of reads).",
       blocks: ["kpis", "takeaways", "velocity", "table"],
       cols: ["shop", "category", "delta_7d", "lift_7d", "sales_per_day", "sales_count", "breakout_p"] },
   };
@@ -74,7 +74,7 @@
     sales_precision_prev: "Prev precision", sales_precision_last: "Last precision",
   };
   var MONEY_COLS = { price: 1 }, BOOL_HINT = /^(bestseller|star_seller|popular_now|etsys_pick|free_shipping|is_ad|breakout|vintage_event|snapshot_stale|review_count_approx)$/;
-  var CATS = [];
+  var CATS = [], COV = null;
   var state = { type: "niche", blocks: null, cols: null, result: null, sort: null, user: null, refine: { by: "", dir: "top", n: "", filters: [] } };
   var $ = function (s, r) { return (r || document).querySelector(s); };
   var $$ = function (s, r) { return Array.prototype.slice.call((r || document).querySelectorAll(s)); };
@@ -220,7 +220,8 @@
         field("f-sort", "Which listings Etsy returns", "<select id=f-sort>" + opt("relevance", "Etsy's best match (default)") + opt("top_reviews", "Most reviewed") + opt("newest", "Newest") + opt("price_asc", "Cheapest first") + opt("price_desc", "Most expensive first") + "</select>") +
         "</div></div>" +
       '<div data-for="tracker">' +
-        '<div data-show="velocity rivals">' + field("f-shops", "Shop names or links <em>(one per line)</em>", '<textarea id="f-shops" rows="3" placeholder="CaitlynMinimalist&#10;https://www.etsy.com/shop/OrelCeramics"></textarea>', "A shop that isn't in our panel yet is added today and shows up from the next daily read.") + "</div>" +
+        '<div data-show="velocity rivals">' + field("f-shops", "Shop names or links <em>(one per line)</em>", '<textarea id="f-shops" rows="3" placeholder="CaitlynMinimalist&#10;https://www.etsy.com/shop/OrelCeramics"></textarea>', "Only shops in our panel return a row, and you pay only for rows returned. A shop that isn't in the panel returns nothing.") + "</div>" +
+        '<p class="hint covnote" data-show="velocity rivals category breakouts" id="covnote" hidden></p>' +
         '<div class="frow">' +
         '<div data-show="category breakouts">' + field("f-category", "Category", "<select id=f-category>" + catOpts + "</select>") + "</div>" +
         '<div data-show="category breakouts">' + field("f-maxshops", "How many shops (at most)", '<input id="f-maxshops" type="number" min="1" max="20000" inputmode="numeric" value="20">' +
@@ -549,7 +550,7 @@
     var j = await (await fetch(f)).json(), rows = j.rows;
     if (t.actor === "search" && state.type !== "compare") rows = rows.filter(function (r) { return r.query === "aprons"; });
     state.result = { type: state.type, actor: t.actor, rows: rows, runs: [], at: j.captured, live: false,
-      demo: t.actor === "search" ? "Example: a real run of our Etsy Search Scraper captured " + j.captured + " (Apify run " + j.run + ")." : "Example: real rows from our Etsy Shop Sales Tracker, snapshot " + j.captured + ". Today's numbers will differ." };
+      demo: t.actor === "search" ? "Example: a real run of our Etsy Search Scraper captured " + j.captured + " (Apify run " + j.run + ")." : "Example: real rows from our Etsy Shop Sales Tracker, snapshot " + j.captured + ". Current numbers will differ." };
     $("#report").dataset.shown = ""; state.page = 1; beacon("demo"); renderReport();
   }
 
@@ -727,6 +728,13 @@
     if (!rep.dataset.shown) { rep.dataset.shown = 1; rep.scrollIntoView({ behavior: "smooth", block: "start" }); }
   }
 
+  /* Panel coverage, written by build_site.py from the latest panel export (never hardcoded here). */
+  function covNote() {
+    var el = $("#covnote"); if (!el || !COV || COV.shops_measured == null) return;
+    var t = "Our panel lists " + num(COV.panel_shops) + " shops. " + num(COV.shops_measured) + " have a measured sales figure so far (sales counter read on 2+ days, as of " + COV.as_of + "); for the others, sales per day and 7-day change come back empty until their second read.";
+    if (!COV.shops_measured_7d_span) t += " No shop has 7 days of reads yet, so Breakout shops returns nothing for now.";
+    el.textContent = t; el.hidden = false;
+  }
   function stickyBar() {
     var bar = document.createElement("div"); bar.id = "stickyrun"; bar.className = "stickyrun"; document.body.appendChild(bar);
     bar.onclick = function () { $("#brun").scrollIntoView({ behavior: "smooth", block: "center" }); };
@@ -740,7 +748,8 @@
   async function boot() {
     var params = new URLSearchParams(location.search);
     try { CATS = await (await fetch("assets/tracker-categories.json")).json(); } catch (e) { CATS = []; }
-    renderForm(params.get("q") || ""); stickyBar();
+    try { COV = await (await fetch("data/coverage.json")).json(); } catch (e) { COV = null; }
+    renderForm(params.get("q") || ""); covNote(); stickyBar();
     var type = TYPES[params.get("type")] ? params.get("type") : "niche";
     setType(type);
     if (params.get("shops")) { $("#f-shops").value = params.get("shops").split(",").join("\n"); refresh(); }

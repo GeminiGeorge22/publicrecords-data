@@ -256,6 +256,8 @@ nav.tabs a:hover{text-decoration:none}
 .hero h1{font-size:clamp(28px,6.4vw,46px);line-height:1.08;margin:8px 0 10px;letter-spacing:-.025em;font-weight:850}
 .hero p.lede{font-size:clamp(16px,2.6vw,19px);margin:0;max-width:680px;opacity:.95}
 .chips{display:flex;flex-wrap:wrap;gap:8px;margin-top:16px}
+.chips b{font-weight:800}
+.hero .cov{margin:12px 0 0;font-size:13.5px;line-height:1.5;opacity:.95;max-width:760px}
 .chips span{background:rgba(255,255,255,.18);border:1px solid rgba(255,255,255,.28);border-radius:999px;padding:4px 11px;font-size:13px;font-weight:600}
 .kpis{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:10px;margin-top:14px;position:relative}
 @media(min-width:760px){.kpis{grid-template-columns:repeat(4,minmax(0,1fr));gap:14px}}
@@ -456,9 +458,58 @@ def cadence_word():
     return "weekly" if n == 7 else ("every 2 weeks" if n == 14 else f"every {n} days")
 
 
+def cov_of(meta):
+    """Coverage numbers from meta.json (written by export_panel_cut.py at publish time). Never hardcoded."""
+    c = dict(meta.get("coverage") or {})
+    c.setdefault("panel_shops", meta.get("panel_shops"))
+    c.setdefault("shops_read_once", meta.get("snapshot_rows"))
+    c.setdefault("shops_measured", None)
+    c.setdefault("series", [])
+    c["gaining"] = meta.get("shops_with_gain_any_size")
+    c["ranked"] = meta.get("shops_with_gain_ge_min")
+    return c
+
+
+def growth_phrase(series, key):
+    """'up from M on <date>' using the most recent earlier date whose value differs; None if no change on record."""
+    if not series:
+        return None
+    v = series[-1][key]
+    for row in reversed(series[:-1]):
+        if row[key] != v:
+            word = "up" if v > row[key] else "down"
+            return f"{word} from {n(row[key])} on {nice_date(row['date'])}"
+    return None
+
+
+def coverage_line(meta):
+    c = cov_of(meta)
+    if c.get("shops_measured") is None:
+        return ""
+    s = c["series"]
+    gm, gr = growth_phrase(s, "measured"), growth_phrase(s, "read_once")
+    asof = nice_date(s[-1]["date"]) if s else nice_date(meta["snapshot_date"])
+    out = (f"<b>{n(c['shops_measured'])}</b> shops have a measured sales figure (sales counter read on 2+ days) as of {asof}"
+           + (f", {gm}" if gm else "") + ". "
+           f"<b>{n(c['shops_one_read_only'])}</b> more have been read once so far and need a second read before they get one"
+           + (f" (shops read at least once: {n(c['shops_read_once'])}, {gr})" if gr else "") + ". "
+           f"The panel lists {n(c['panel_shops'])} shops in total.")
+    return out
+
+
+def coverage_short(meta):
+    c = cov_of(meta)
+    if c.get("shops_measured") is None:
+        return ""
+    gm = growth_phrase(c["series"], "measured")
+    asof = nice_date(c["series"][-1]["date"]) if c["series"] else nice_date(meta["snapshot_date"])
+    return (f"Shops with a measured sales figure: <b>{n(c['shops_measured'])}</b> as of {asof}" + (f", {gm}" if gm else "") + ". "
+            f"Another {n(c['shops_one_read_only'])} have one read so far and need a second before they get a figure.")
+
+
 def fresh_box(snapshot_label, rows_label, cut):
-    return (f'<div class="fresh"><div><b>Free reports refresh {cadence_word()}.</b> Need today\'s numbers for your niche? '
-            f'<a href="{BUILDER}?from=fresh">Run a live report →</a></div>'
+    return (f'<div class="fresh"><div><b>Free reports refresh {cadence_word()}.</b> Want current Etsy data for your own niche or shops? '
+            f'<a href="{BUILDER}?from=fresh">Run a report →</a></div>'
             f'<div class="snap">Snapshot <b>{E(snapshot_label)}</b> · <b>{E(rows_label)}</b> · next free refresh '
             f'{next_refresh(cut).strftime("%a %b %-d")}</div></div>')
 
@@ -575,6 +626,10 @@ def og_image(out_dir, P):
         vw = d.textbbox((0, 0), val, font=F(38, "ExtraBold"))[2]
         d.text((1116 - vw, y + 13), val, font=F(38, "ExtraBold"), fill=ORANGE)
         y += 86
+    cvo = cov_of(P["meta"])
+    if cvo.get("shops_measured") is not None:
+        d.text((60, 560), f"Among {cvo['shops_measured']:,} measured shops (of {cvo['panel_shops']:,} in our panel) · gains scaled to 7 days",
+               font=F(22, "Medium"), fill=(255, 236, 222))
     d.text((60, 596), "data by publicrecords (our tool) · not affiliated with Etsy", font=F(22, "Medium"),
            fill=(255, 236, 222))
     im.save(os.path.join(out_dir, "og.png"), optimize=True)
@@ -612,13 +667,20 @@ def build(out_dir):
                 shutil.copy(src, os.path.join(out_dir, "data", nm))
             files["niche_" + k] = f"data/niche-{k}-{N['cut']}.csv"
 
+    # panel coverage for the report builder (numbers come from meta.json written at publish time)
+    _c = cov_of(meta)
+    with open(os.path.join(out_dir, "data", "coverage.json"), "w", encoding="utf-8") as fh:
+        json.dump({"snapshot_date": snap, "as_of": nice_date((_c.get("series") or [{"date": snap}])[-1]["date"]),
+                   "panel_shops": _c.get("panel_shops"), "shops_read_once": _c.get("shops_read_once"),
+                   "shops_measured": _c.get("shops_measured"), "shops_measured_7d_span": _c.get("shops_measured_7d_span"),
+                   "series": _c.get("series") or []}, fh)
     pages = ["index.html", BUILDER, "movers.html", "categories.html", "rising.html"]
     if prev:
         pages.append("breakouts.html")
     if N and any((r.get("listings") or 0) >= 20 for r in N["rows"]):
         pages.append("niche.html")
     ld = {"@context": "https://schema.org", "@type": "Dataset", "name": "Etsy Pulse: weekly Etsy shop movers",
-          "description": "Etsy shops and categories with the biggest 7-day sales gains, from public shop sales counters.",
+          "description": "Etsy shops and categories with the biggest 7-day sales gains among the shops publicrecords measures, from public shop sales counters.",
           "url": SITE_URL, "dateModified": cut, "creator": {"@type": "Organization", "name": "publicrecords"},
           "isAccessibleForFree": True, "license": "https://creativecommons.org/licenses/by/4.0/"}
     ctx = {"pages": pages, "cut": cut, "snap": snap, "ld": ld}
@@ -631,9 +693,14 @@ def build(out_dir):
     else:
         span_note = f"Updated {nice_date(cut)}"
 
+    cv = cov_of(meta)
+    meas = cv.get("shops_measured")
+    meas_txt = f"{n(meas)} measured shops" if meas is not None else "the shops we measure"
     src_line = (f'<p class="note">Source: publicrecords Velocity panel, cut {E(cut)}, counters read through {E(snap)}. '
-                f'{n(meta["shops_with_gain_ge_min"])} shops with ≥{meta["min_lifetime_sales"]} lifetime sales showed a measurable '
-                f'gain (panel of {n(meta["panel_shops"])} shops). Fewer than 7 days of reads are scaled to 7 days.</p>')
+                f'The panel lists {n(cv["panel_shops"])} shops; {n(meas) + " have a measured sales figure (sales counter read on 2+ days); " if meas is not None else ""}'
+                f'{n(meta["shops_with_gain_ge_min"])} of those with ≥{meta["min_lifetime_sales"]} lifetime sales showed a gain and are ranked here. '
+                f'Fewer than 7 days of reads are scaled to 7 days.</p>')
+    cov_html = f'<p class="cov">{coverage_short(meta)}</p>' if coverage_short(meta) else ""
 
     mi, ci, ri = movers_insights(P), category_insights(P), rising_insights(P)
     ni = niche_insights(N) if "niche.html" in pages else []
@@ -641,17 +708,18 @@ def build(out_dir):
     # ---- overview
     top = m[0]
     kpis = f"""<div class="kpis">
-<div class="kpi"><div class="v">{plus(top['sales_7d_delta'])}</div><div class="l">#1 shop this week: {E(top['shop_name'])}</div></div>
-<div class="kpi"><div class="v">{E(leaf(c[0]['category']))}</div><div class="l">Hottest category, {plus(c[0]['total_7d_delta'])} across {c[0]['shops_moving']} shops</div></div>
-<div class="kpi"><div class="v">{plus(meta['total_7d_delta_ge_min'])}</div><div class="l">7-day gain across the {n(meta['shops_with_gain_ge_min'])} shops we measured (scaled)</div></div>
-<div class="kpi"><div class="v">{len(c)}</div><div class="l">categories with shops gaining</div></div>
+<div class="kpi"><div class="v">{plus(top['sales_7d_delta'])}</div><div class="l">#1 of the measured shops this week: {E(top['shop_name'])}</div></div>
+<div class="kpi"><div class="v">{E(leaf(c[0]['category']))}</div><div class="l">Top category among measured shops, {plus(c[0]['total_7d_delta'])} across {c[0]['shops_moving']} shops</div></div>
+<div class="kpi"><div class="v">{plus(meta['total_7d_delta_ge_min'])}</div><div class="l">7-day gain across the {n(meta['shops_with_gain_ge_min'])} gaining shops with {meta['min_lifetime_sales']}+ lifetime sales (scaled)</div></div>
+<div class="kpi"><div class="v">{len(c)}</div><div class="l">categories with measured shops gaining</div></div>
 </div>"""
     hero = f"""<div class="hero">{PULSE_SVG}<div class="wrap">
 <div class="eyebrow">Etsy Pulse · Weekly report</div>
-<h1>What's selling on Etsy right now</h1>
-<p class="lede">The shops and categories with the biggest 7-day sales jumps, read from public Etsy sales counters.</p>
+<h1>Etsy shops on the move this week</h1>
+<p class="lede">The biggest 7-day sales jumps among the Etsy shops we measure, read from public Etsy sales counters.</p>
 {hero_cta()}
-<div class="chips"><span>Week to {nice_date(snap)}</span><span>{n(meta['shops_with_gain_ge_min'])} shops measured</span><span>{E(span_note)}</span></div>
+<div class="chips">{f'<span><b>{n(cv["panel_shops"])}</b> shops in our panel</span>' if cv.get("panel_shops") else ''}{f'<span><b>{n(meas)}</b> with a measured sales figure</span>' if meas is not None else ''}<span><b>{n(meta['shops_with_gain_ge_min'])}</b> gaining, {meta['min_lifetime_sales']}+ sales, ranked here</span><span>{E(span_note)}</span></div>
+{cov_html}
 </div></div>"""
 
     def mini(rows, f_name, f_val, k=3):
@@ -659,16 +727,16 @@ def build(out_dir):
             f'<li><span class="nm">{E(f_name(x))}</span><b>{f_val(x)}</b></li>' for x in rows[:k]) + "</ul>"
 
     cards = [
-        ("movers.html", "Top Movers", f"{len(m)}", "Shops with the biggest 7-day sales gain.",
+        ("movers.html", "Top Movers", f"{len(m)}", "Measured shops with the biggest 7-day sales gain.",
          mini(m, lambda x: x["shop_name"], lambda x: plus(x["sales_7d_delta"]))),
         ("categories.html", "Hot Categories", f"{len(c)}", "Where the gains are piling up, by category.",
          mini(c, lambda x: leaf(x["category"]), lambda x: plus(x["total_7d_delta"]))),
-        ("rising.html", "Rising Shops", f"{len(r)}", "Fastest shops with under 1,000 lifetime sales.",
+        ("rising.html", "Rising Shops", f"{len(r)}", "Fastest measured shops with under 1,000 lifetime sales.",
          mini(r, lambda x: x["shop_name"], lambda x: plus(x["sales_7d_delta"]))),
     ]
     if "niche.html" in pages:
         nr = [x for x in N["rows"] if (x.get("listings") or 0) >= 20]
-        cards.append(("niche.html", "Niche Prices", f"{len(nr)}", "Page-1 prices and badges for the hottest niches.",
+        cards.append(("niche.html", "Niche Prices", f"{len(nr)}", "Page-1 prices and badges in the niches of this week's top movers.",
                       mini(nr, lambda x: x["keyword"], lambda x: f"median {money(x['price_median'])}")))
     if prev:
         new, _ = breakout_rows(P, prev)
@@ -680,7 +748,7 @@ def build(out_dir):
     cards_html = "".join(f'<a class="rcard" href="{h}"><div class="t">{t}<span>{k}</span></div><div class="d">{d}</div>{mn}</a>'
                          for h, t, k, d, mn in cards)
     over_ins = mi[:3] + ci[1:2] + (ni[:1] if ni else [])
-    body = f"""{fresh_box(nice_date(snap), f"{n(meta['shops_with_gain_ge_min'])} shops measured · {len(m)} movers · {len(c)} categories · {len(r)} rising", cut)}
+    body = f"""{fresh_box(nice_date(snap), f"{meas_txt} · {len(m)} movers · {len(c)} categories · {len(r)} rising", cut)}
 {kpis}
 <section>{insights_block(over_ins, "This week's takeaways")}</section>
 <section><h2>Reports</h2><p class="sub">Each report has its own page, a plain-English read and a CSV.</p>
@@ -691,46 +759,49 @@ def build(out_dir):
 <section class="method" id="method"><h2>How we measure</h2>
 <h3>Sales gains</h3><p>{E(meta['method'])} Lifetime sales and the gain come from the public sales counter on each Etsy shop page.
 "Week vs lifetime" = the 7-day gain as a share of everything the shop has sold.</p>
-<h3>Coverage</h3><p>The panel follows {n(meta['panel_shops'])} Etsy shops. This cut covers the {n(meta['shops_with_gain_ge_min'])} shops with at least
-{meta['min_lifetime_sales']} lifetime sales and two or more counter reads showing a gain. Categories come from each shop's listings; {n(meta['shops_with_gain_ge_min'] - meta['shops_with_gain_ge_min_known_category'])} shops with no category are left out of Hot Categories.</p>
+<h3>Coverage</h3><p>{coverage_line(meta)} A shop's sales gain can only be computed once its counter has been read on two different days, so the rankings
+use only measured shops. This cut ranks the {n(meta['shops_with_gain_ge_min'])} measured shops with at least
+{meta['min_lifetime_sales']} lifetime sales whose counter went up ({n(meta['shops_with_gain_any_size'])} measured shops of any size went up).
+These are not all of Etsy: they are the shops in our panel that we could measure this week. Categories come from each shop's listings; {n(meta['shops_with_gain_ge_min'] - meta['shops_with_gain_ge_min_known_category'])} shops with no category are left out of Hot Categories.</p>
 {"<h3>Niche prices</h3><p>Page 1 of Etsy search (US, relevance sort) for keywords taken from the categories of this week's leading movers, captured " + E((N['meta'].get('captured_at') or '')[:10]) + " with our Etsy Search Scraper (Apify run " + E(N['meta']['run_id']) + ").</p>" if "niche.html" in pages else ""}
 <p id="breakouts">Breakouts appear once there are two weekly cuts to compare.</p></section>"""
-    desc_home = (f"This week's Etsy movers: {top['shop_name']} {plus(top['sales_7d_delta'])} sales in 7 days; "
+    desc_home = (f"This week's Etsy movers among {meas_txt}: {top['shop_name']} {plus(top['sales_7d_delta'])} sales in 7 days; "
                  f"{leaf(c[0]['category'])} lead categories ({plus(c[0]['total_7d_delta'])}). From public Etsy sales counters; gains scaled to 7 days where we have fewer days of reads.")
     w = lambda name, html_: open(os.path.join(out_dir, name), "w", encoding="utf-8").write(html_)
-    w("index.html", page("index.html", f"Etsy Pulse: what's selling on Etsy this week ({nice_date(snap)})", desc_home, body, ctx, hero))
+    w("index.html", page("index.html", f"Etsy Pulse: Etsy shops on the move this week ({nice_date(snap)})", desc_home, body, ctx, hero))
 
     def simple_hero(eyebrow, h1, lede):
         return (f'<div class="hero">{PULSE_SVG}<div class="wrap" style="padding-bottom:30px"><div class="eyebrow">{eyebrow}</div>'
                 f'<h1>{h1}</h1><p class="lede">{lede}</p>{hero_cta()}<div class="chips"><span>Week to {nice_date(snap)}</span>'
-                f'<span>{E(span_note)}</span></div></div></div>')
+                + (f'<span><b>{n(meas)}</b> measured of {n(cv["panel_shops"])} shops in our panel</span>' if meas is not None else '')
+                + f'<span>{E(span_note)}</span></div></div></div>')
 
     # ---- movers
-    body = f"""{fresh_box(nice_date(snap), f"{len(m)} rows of {n(meta['shops_with_gain_ge_min'])} shops measured", cut)}<section>{insights_block(mi)}{report_btn("site-movers", "Etsy Shop Sales Tracker", "Track 7-day sales for any shops you choose: yours, competitors, or the ones above.")}</section>
-<section><h2>Top {len(m)} shops by 7-day sales gain</h2><p class="sub">Shops with at least {meta['min_lifetime_sales']} lifetime sales. Tap a shop to open it on Etsy.</p>
+    body = f"""{fresh_box(nice_date(snap), f"{len(m)} rows of {n(meta['shops_with_gain_ge_min'])} gaining shops ({meta['min_lifetime_sales']}+ sales) · {meas_txt}", cut)}<section>{insights_block(mi)}{report_btn("site-movers", "Etsy Shop Sales Tracker", "Track 7-day sales for any shops you choose: yours, competitors, or the ones above.")}</section>
+<section><h2>Top {len(m)} shops by 7-day sales gain</h2><p class="sub">Measured shops with at least {meta['min_lifetime_sales']} lifetime sales. Tap a shop to open it on Etsy.</p>
 {shop_rows(m, m[0]['sales_7d_delta'], None)}
 {dl(files['movers'], f'Download CSV ({len(m)} rows, cut {cut})')}{src_line}</section>"""
     w("movers.html", page("movers.html", f"Top {len(m)} Etsy shops by 7-day sales gain ({nice_date(snap)}) | Etsy Pulse",
                           f"{top['shop_name']} leads with {plus(top['sales_7d_delta'])} sales in 7 days. Full top {len(m)} with categories and CSV.",
-                          body, ctx, simple_hero("Report · Top Movers", "Top Movers", "The Etsy shops with the biggest 7-day sales gain, from public sales counters.")))
+                          body, ctx, simple_hero("Report · Top Movers", "Top Movers", "The biggest 7-day sales gains among the Etsy shops we measure, from public sales counters.")))
 
     # ---- categories
     body = f"""{fresh_box(nice_date(snap), f"{len(c)} categories", cut)}<section>{insights_block(ci)}{report_btn("site-categories", "Etsy Shop Sales Tracker", "Feed in the shops of any category and see who is gaining sales week to week.")}</section>
 <section><h2>Categories ranked by combined 7-day gain</h2><p class="sub">Sum of 7-day sales gains of every measured shop in the category. Showing the top 20 of {len(c)}; all are in the CSV.</p>
 {cat_rows(c[:20])}
 {dl(files['categories'], f'Download CSV ({len(c)} rows, cut {cut})')}{src_line}</section>"""
-    w("categories.html", page("categories.html", f"Hottest Etsy categories this week ({nice_date(snap)}) | Etsy Pulse",
+    w("categories.html", page("categories.html", f"Top Etsy categories by sales gain among measured shops ({nice_date(snap)}) | Etsy Pulse",
                               f"{leaf(c[0]['category'])} lead with {plus(c[0]['total_7d_delta'])} sales across {c[0]['shops_moving']} shops. {len(c)} categories ranked.",
-                              body, ctx, simple_hero("Report · Hot Categories", "Hot Categories", "Where this week's Etsy sales gains are piling up.")))
+                              body, ctx, simple_hero("Report · Hot Categories", "Hot Categories", "Where the sales gains of the shops we measure are piling up this week.")))
 
     # ---- rising
     body = f"""{fresh_box(nice_date(snap), f"{len(r)} rows", cut)}<section>{insights_block(ri)}{report_btn("site-rising", "Etsy Shop Sales Tracker", "Watch small shops in your niche and catch the next riser early.")}</section>
-<section><h2>Fastest shops under 1,000 lifetime sales</h2><p class="sub">Same 7-day gain, smaller shops ({meta['min_lifetime_sales']}–999 lifetime sales). These are the ones to learn from if you're early.</p>
+<section><h2>Fastest measured shops under 1,000 lifetime sales</h2><p class="sub">Same 7-day gain, smaller shops ({meta['min_lifetime_sales']}–999 lifetime sales). These are the ones to learn from if you're early.</p>
 {shop_rows(r, r[0]['sales_7d_delta'] if r else 1, None)}
 {dl(files['rising'], f'Download CSV ({len(r)} rows, cut {cut})')}{src_line}</section>"""
-    w("rising.html", page("rising.html", f"Fastest-rising small Etsy shops ({nice_date(snap)}) | Etsy Pulse",
-                          f"Small Etsy shops (under 1,000 sales) with the biggest 7-day jumps. {r[0]['shop_name']} added {plus(r[0]['sales_7d_delta'])}." if r else "Rising small Etsy shops.",
-                          body, ctx, simple_hero("Report · Rising Shops", "Rising Shops", "Small shops with big weeks: under 1,000 lifetime sales.")))
+    w("rising.html", page("rising.html", f"Fastest-rising small Etsy shops we measure ({nice_date(snap)}) | Etsy Pulse",
+                          f"Small Etsy shops (under 1,000 sales) with the biggest 7-day jumps among the shops we measure. {r[0]['shop_name']} added {plus(r[0]['sales_7d_delta'])}." if r else "Rising small Etsy shops.",
+                          body, ctx, simple_hero("Report · Rising Shops", "Rising Shops", "Small measured shops with big weeks: under 1,000 lifetime sales.")))
 
     # ---- breakouts
     if prev:
@@ -770,13 +841,13 @@ def build(out_dir):
         missing = [k for k in kws if k not in [x["keyword"] for x in nr]]
         miss_note = (f" Not shown (fewer than 20 listings captured this run): {', '.join(missing)}." if missing else "")
         body = f"""{fresh_box(nice_date((N['meta'].get('captured_at') or N['cut'])[:10]), f"{N['meta']['rows']['listings']} listings · {len(nr)} niches", cut)}<section>{insights_block(ni)}{report_btn("site-niche", "Etsy Search Scraper", "Get this price breakdown for your own keyword: every page-1 listing as a CSV.")}</section>
-<section><h2>Page-1 prices in this week's hottest niches</h2><p class="sub">Keywords are the categories of this week's leading Top Movers shops. Prices are what Etsy shows US shoppers on page 1 (relevance sort).</p>
+<section><h2>Page-1 prices in the niches of this week's top movers</h2><p class="sub">Keywords are the categories of this week's leading Top Movers shops. Prices are what Etsy shows US shoppers on page 1 (relevance sort).</p>
 <div class="niche">{''.join(cards)}</div>
 {dl(files['niche_summary'], f"Download summary CSV ({len(N['rows'])} keywords)")} {dl(files['niche_listings'], f"Download listings CSV ({N['meta']['rows']['listings']} rows)")}
 <p class="note">Source: publicrecords Etsy Search Scraper, Apify run {E(N['meta']['run_id'])}{(' + ' + ', '.join(E(x) for x in N['meta'].get('extra_run_ids', []))) if N['meta'].get('extra_run_ids') else ''}, captured {E((N['meta'].get('captured_at') or '')[:16].replace('T', ' '))} UTC, {N['meta']['rows']['listings']} listings.{E(miss_note)}</p></section>"""
         w("niche.html", page("niche.html", f"Etsy niche prices: {', '.join(x['keyword'] for x in nr)} | Etsy Pulse",
-                             "Median prices, price bands and Bestseller-badge share on page 1 of Etsy search for this week's hottest niches.",
-                             body, ctx, simple_hero("Report · Niche Prices", "Niche Prices", "What page 1 of Etsy search costs in this week's hottest niches.")))
+                             "Median prices, price bands and Bestseller-badge share on page 1 of Etsy search for the niches of this week's top movers.",
+                             body, ctx, simple_hero("Report · Niche Prices", "Niche Prices", "What page 1 of Etsy search costs in the niches of this week's top movers.")))
 
     # ---- report builder (run.html): Sign in with Apify, run our Actors on the visitor's account, report in-page
     builder_hero = (f'<div class="hero">{PULSE_SVG}<div class="wrap" style="padding-bottom:52px"><div class="eyebrow">Etsy Pulse · Custom report</div>'
@@ -795,7 +866,7 @@ def build(out_dir):
 <p class="note">Sign-in uses Apify's own OAuth screen; we never see your password. Apify offers one permission level (full account access): this page uses it only to start the report you asked for and read its results. The key stays in this browser tab and is gone when you close it. Remove the approval any time in Apify Console → Settings → API &amp; Integrations.</p></section>"""
     w(BUILDER, page(BUILDER, "Build your own Etsy report: prices, bestsellers, top shops, shop sales | Etsy Pulse",
                     "Type a niche or a few Etsy shops and get a live report: price bands, Bestseller share, top shops, sales pace, CSV. Free Apify sign-in, no code.",
-                    body, ctx, builder_hero, scripts=f'<script src="assets/builder.js?v={cut}-b1" defer></script>'))
+                    body, ctx, builder_hero, scripts=f'<script src="assets/builder.js?v={cut}-b3" defer></script>'))
 
     # ---- seo files
     with open(os.path.join(out_dir, "robots.txt"), "w") as fh:
