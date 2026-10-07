@@ -713,7 +713,6 @@ MCP_URL = "https://mcp.apify.com?tools=" + MCP_TOOLS
 MCP_SETUP = "https://mcp.apify.com/?tools=" + MCP_TOOLS          # Apify's own setup page, our tools preselected
 CLAUDE_ADD = "https://claude.ai/new?modal=add-custom-connector#settings/customize-connectors"
 CHATGPT_SETTINGS = "https://chatgpt.com/#settings/Connectors"
-TINY_RUN = "https://tinyurl.com/etsypulse-run"
 
 
 def mcp_links():
@@ -782,7 +781,7 @@ answers right in the chat, and turns it into a report when you ask.</p>
 <ol class="steps3"><li>Click Connect</li><li>Sign in with Apify (free)</li><li>Ask your AI</li></ol>
 <div class="hcta"><a class="hbtn" href="#connect">Connect your AI →</a><small>Runs on your own Apify account. Pay per search: from 13¢ for 1 keyword, top 20 listings.</small></div></div>
 <div><video autoplay muted loop playsinline preload="metadata" poster="assets/ai/etsypulse-ai-wide-poster.png" width="1200" height="676"
-aria-label="Demo: connect Etsy Pulse, sign in with Apify, ask who the top sellers are in 5 Etsy niches and how Bestsellers price, then get a report">
+aria-label="Demo: connect Etsy Pulse, sign in with Apify, ask who the top sellers are in your Etsy niches and how Bestsellers price, then get a report">
 <source src="assets/ai/etsypulse-ai-wide.webm" type="video/webm"><source src="assets/ai/etsypulse-ai-wide.mp4" type="video/mp4">
 <img class="poster" src="assets/ai/etsypulse-ai-wide-poster.png" alt="Demo of the Etsy Pulse AI connection"></video></div>
 </div></div>"""
@@ -831,21 +830,21 @@ Claude Code, Codex, GitHub Copilot CLI and more.</p></section>"""
     ]
     uses_html = "".join(f'<div class="use"><h3>{E(t)}</h3><p>{E(d)}</p><q>{E(p)}</q><div class="f">{E(f)}</div></div>' for t, d, p, f in uses)
 
-    convo = """<section><h2>What it looks like</h2><p class="sub">The conversation from the video, with the real numbers from our own Etsy search run
-(Oct 7, 2026, top 10 listings for each of 5 niches, US shopper).</p>
+    convo = """<section><h2>What it looks like</h2><p class="sub">The conversation from the video, with real numbers from an Etsy search run
+on Oct 7, 2026 (US shopper). Every dollar figure is what Etsy sellers charge.</p>
 <div class="convo">
 <div class="u">Who are the top sellers in my 5 niches?</div>
-<div class="b"><div class="t">Ran Etsy Search Scraper · 5 niches · top 10 each</div>#1 on Etsy search right now: <b>backpacks</b> HKwoodwork ($18, Bestseller badge),
+<div class="b"><div class="t">Ran Etsy Search Scraper on your niches</div>#1 on Etsy search right now, with that seller's price: <b>backpacks</b> HKwoodwork ($18, Bestseller badge),
 <b>aprons</b> VivifyCreationsUS ($12), <b>pet storage</b> PeachBlossomAU ($12), <b>patches</b> CustomPatchesTX ($7), <b>faux plants</b> WaterFreeGreenery ($36).</div>
 <div class="u">How do Bestseller shops price vs the rest?</div>
-<div class="b">Listings with a Bestseller badge charge more in 3 of 4 niches (patches had none in the top 10). Typical prices, badge vs the rest of the top 10:
+<div class="b">Listings with a Bestseller badge charge more in 3 of 4 niches (patches had none in the top 10). Typical prices sellers charge, badge vs the rest of the top 10:
 <ul><li>backpacks: <b>$62 vs $16</b></li><li>aprons: $22 vs $20</li><li>pet storage: $14 vs $12</li><li>faux plants: $23 vs $36 (the one where badge holders charge less)</li></ul>
 <div class="t">Small groups: 2 to 5 badge holders per niche.</div></div>
 <div class="u">Put it all in a report with the other analytics</div>
 <div class="b">Here's your report: typical price, the range most top sellers charge, Bestseller badges, free shipping and the #1 shop for each niche, with charts.
 <div class="t">Ask for a document or PDF if your AI app can make files.</div></div>
 </div>
-<p class="note">Source: publicrecords Etsy Search Scraper, Apify run mZPhcYgZOJ8SKb9fW, Oct 7, 2026 (data/niche/2026-10-07/listings.csv, top 10 per keyword).
+<p class="note">Source: publicrecords Etsy Search Scraper, Apify run mZPhcYgZOJ8SKb9fW, Oct 7, 2026.
 Answers in your chat will be worded by your AI and use the data from your own run.</p></section>"""
 
     costs = f"""<section><h2>How it works, and what it costs</h2>
@@ -858,9 +857,9 @@ Answers in your chat will be worded by your AI and use the data from your own ru
     tryit = f"""<section><div class="try"><b>No account yet? Try it with our free files.</b> Download our free top-10 listings file
 (<a href="{files.get('niche_listings', 'data/niche-listings-latest.csv')}">CSV</a>) and drop it into any AI chat. Then ask:
 <ul><li>“What should I charge for pet storage?”</li><li>“Which listings have a Bestseller badge, and what do they have in common?”</li>
-<li>“Write me a one-page report on these 5 niches.”</li></ul>
-<p class="note" style="margin-bottom:0">The free file is a weekly snapshot (top 10 per niche). Connect above for fresh data on any keyword.
-Rather not use AI? <a href="{BUILDER}?from=ai">Build a report here</a> or <a href="{TINY_RUN}" rel="noopener">run it on Apify</a>.</p></div></section>"""
+<li>“Write me a one-page report on these niches.”</li></ul>
+<p class="note" style="margin-bottom:0">The free file is a weekly snapshot. Connect above for fresh data on any keyword.
+Rather not use AI? <a href="{BUILDER}?from=ai">Build a report here</a> or <a href="{RUN_FALLBACK}" rel="noopener">run it inside Apify</a>.</p></div></section>"""
 
     body = (f"<style>{AI_CSS}</style>{apps}<section><h2>What you can do</h2><p class=\"sub\">Six things to ask once you're connected. "
             f"Copy a prompt, swap in your own niche.</p><div class=\"uses\">{uses_html}</div></section>{convo}{costs}{tryit}")
