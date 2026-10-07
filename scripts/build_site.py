@@ -775,15 +775,15 @@ def ai_page(ctx, files):
     copy = lambda label="Copy link": f'<button class="abtn" type="button" data-copy="{E(MCP_URL)}">{label}</button>'
     hero = f"""<div class="hero aih">{PULSE_SVG}<div class="wrap" style="padding-bottom:40px">
 <div><div class="eyebrow">Etsy Pulse · AI</div>
-<h1>Ask your Etsy data anything</h1>
-<p class="lede">Connect our Etsy tools to Claude, ChatGPT or Cursor. Ask in plain words: your AI pulls fresh Etsy search and shop data,
+<h1>Ask AI about any Etsy niche</h1>
+<p class="lede">Connect our Etsy tools to Claude, ChatGPT or Cursor. Ask in plain words about any keyword or niche: your AI pulls fresh public Etsy search and shop data,
 answers right in the chat, and turns it into a report when you ask.</p>
 <ol class="steps3"><li>Click Connect</li><li>Sign in with Apify (free)</li><li>Ask your AI</li></ol>
 <div class="hcta"><a class="hbtn" href="#connect">Connect your AI →</a><small>Runs on your own Apify account. Pay per search: from 13¢ for 1 keyword, top 20 listings.</small></div></div>
 <div><video autoplay muted loop playsinline preload="metadata" poster="assets/ai/etsypulse-ai-wide-poster.png" width="1200" height="676"
-aria-label="Demo: connect Etsy Pulse, sign in with Apify, ask who the top sellers are in your Etsy niches and how Bestsellers price, then get a report">
+aria-label="Demo: connect Etsy Pulse, sign in with Apify, ask AI who the top sellers are in a few Etsy niches and how Bestsellers price, using public Etsy search data, then get a report">
 <source src="assets/ai/etsypulse-ai-wide.webm" type="video/webm"><source src="assets/ai/etsypulse-ai-wide.mp4" type="video/mp4">
-<img class="poster" src="assets/ai/etsypulse-ai-wide-poster.png" alt="Demo of the Etsy Pulse AI connection"></video></div>
+<img class="poster" src="assets/ai/etsypulse-ai-wide-poster.png" alt="Demo: ask AI about any Etsy niche with Etsy Pulse, using public Etsy search data"></video></div>
 </div></div>"""
 
     apps = f"""<section id="connect"><h2>Connect in a minute</h2>
@@ -851,7 +851,7 @@ Answers in your chat will be worded by your AI and use the data from your own ru
 <div class="costs">
 <div><b>Runs through Apify</b><p>Apify is the platform our tools run on. The link is Apify's MCP server with our two Etsy tools picked. You sign in with your own Apify account: free to create, and the free plan includes $5 of usage a month.</p></div>
 <div><b>Pay per search</b><p>Etsy Search: from 13¢ for 1 keyword and the top 20 listings ($0.005 per run + $0.006 per listing, Apify usage included). Shop Sales Tracker: $0.005 per run + $0.003 per shop, plus Apify usage.</p></div>
-<div><b>Your account, your data</b><p>Every run and its results stay in your Apify account. Sign-in happens on Apify's own screen; we never see your password. Remove access any time in Apify Console → Settings → API &amp; Integrations.</p></div>
+<div><b>Your account, your results</b><p>Every run and its results stay in your Apify account. Sign-in happens on Apify's own screen; we never see your password. Remove access any time in Apify Console → Settings → API &amp; Integrations.</p></div>
 </div></section>"""
 
     tryit = f"""<section><div class="try"><b>No account yet? Try it with our free files.</b> Download our free top-10 listings file
@@ -863,8 +863,8 @@ Rather not use AI? <a href="{BUILDER}?from=ai">Build a report here</a> or <a hre
 
     body = (f"<style>{AI_CSS}</style>{apps}<section><h2>What you can do</h2><p class=\"sub\">Six things to ask once you're connected. "
             f"Copy a prompt, swap in your own niche.</p><div class=\"uses\">{uses_html}</div></section>{convo}{costs}{tryit}")
-    return page("ai.html", "Ask your Etsy data anything: connect Etsy Pulse to Claude, ChatGPT or Cursor | Etsy Pulse",
-                "Connect our Etsy tools to your AI through Apify's MCP server. Ask about any niche and get answers and reports from fresh Etsy data. Pay per search, from 13¢ for 1 keyword and the top 20 listings.",
+    return page("ai.html", "Ask AI about any Etsy niche: connect Etsy Pulse to Claude, ChatGPT or Cursor | Etsy Pulse",
+                "Connect our Etsy tools to your AI through Apify's MCP server. Ask about any Etsy keyword or niche and get answers and reports from fresh public Etsy market data. Pay per search, from 13¢ for 1 keyword and the top 20 listings.",
                 body, ctx, hero, scripts=AI_JS)
 
 
@@ -1154,7 +1154,7 @@ These are not all of Etsy: they are the shops in our panel that we could measure
 <a href="https://apify.com/publicrecords/etsy-search-scraper">Etsy Search Scraper</a> · <a href="https://apify.com/publicrecords/etsy-shop-velocity">Etsy Shop Sales Tracker</a>.</div></noscript></div>
 <div id="progress" hidden></div>
 <div id="report" hidden></div>
-<section class="how-sec"><h2>How it works</h2><p class="sub">Three steps. Your data and your spend stay in your own Apify account.</p>
+<section class="how-sec"><h2>How it works</h2><p class="sub">Three steps. Your results and your spend stay in your own Apify account.</p>
 <div class="how">
 <div><b>Sign in with Apify (free)</b><p>Apify is the platform our tools run on. New accounts are free, no credit card, and the free plan includes $5 of usage every month.</p></div>
 <div><b>Press Run</b><p>The report runs on your account. Keyword reports cost $0.006 per listing plus $0.005 per keyword (20 listings ≈ $0.13, Apify platform usage included); shop reports $0.003 per shop plus $0.005 (plus Apify platform usage, usually under $0.02 a run). The price updates as you change options, and you see “about $X, at most $Y” before you start.</p></div>
