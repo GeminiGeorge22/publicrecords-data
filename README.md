@@ -44,3 +44,14 @@ Legacy: `data/top-movers/` + `scripts/import_cut.py` hold the original top-20 cu
 
 Etsy Pulse is published by publicrecords. The data comes from our own tools (Etsy Shop Sales Tracker panel and
 Etsy Search Scraper on Apify). Not affiliated with, endorsed by, or sponsored by Etsy, Inc. Etsy is a trademark of Etsy, Inc.
+
+## Report builder (`run.html`)
+
+Visitors build a custom report on-site and run it on **their own Apify account** after "Sign in with Apify":
+OAuth 2 authorization code + PKCE against `console-backend.apify.com` (public client `41bogEetbPU2ZVmGm`, registered via
+Apify's open dynamic client registration, redirect `https://geminigeorge22.github.io/publicrecords-data/run.html`;
+there is no client secret). Token exchange and Actor runs go browser → Apify directly; the token sits in
+`sessionStorage` only. Apify offers a single scope (`full_api_access`), disclosed on the page.
+Code: `assets/builder.js` / `assets/builder.css`; example reports use `assets/sample-*.json` (real runs).
+Fallback "Rather run it inside Apify?" uses the worker tag `/r/site-run` (`?a=tracker` for the tracker) plus copyable input JSON.
+Funnel counts: worker `/e/<event>` (builder-view, signin-start, signin-ok, run-start, run-ok, run-empty, csv, print, demo, fallback-*), shown in `/stats` → `events`.
