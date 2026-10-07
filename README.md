@@ -1,36 +1,38 @@
-# publicrecords-data
+# Etsy Pulse — publicrecords-data
 
-Weekly **Etsy top movers** from the publicrecords Velocity panel, published as a static page:
+Weekly Etsy market reports, published as a static site:
 
 **https://geminigeorge22.github.io/publicrecords-data/**
 
-The page lists the 20 Etsy shops with the largest 7-day gain in sales: shop, category, 7-day sold delta and rank move versus the prior week. Only that table is published.
+| Report | Page | What it shows | Source |
+|---|---|---|---|
+| Overview | `index.html` | Headline numbers, this week's takeaways, links to every report | all below |
+| Top Movers | `movers.html` | Top 50 shops (≥500 lifetime sales) by 7-day sales gain | `data/panel/<cut>/movers.csv` |
+| Hot Categories | `categories.html` | Every category ranked by combined 7-day gain, with shops gaining, median shop and leader | `data/panel/<cut>/categories.csv` |
+| Rising Shops | `rising.html` | Top 25 shops with 500–999 lifetime sales by 7-day gain | `data/panel/<cut>/rising.csv` |
+| Breakouts | `breakouts.html` | Shops new to the top 50 vs the previous cut (appears automatically once two cuts exist) | two panel cuts |
+| Niche Prices | `niche.html` | Page-1 Etsy search prices, price bands, Bestseller share, free shipping for keywords from this week's leading movers | `data/niche/<cut>/` |
 
-## How the page is built
+Every report page has a "What this means for sellers" block generated from the same rows, and a CSV download
+(`data/<report>-<cut>.csv`, plus `-latest.csv` aliases). Nothing is estimated beyond the 7-day scaling described below.
 
-- `data/top-movers/YYYY-MM-DD.csv`: one file per cut, public columns only (`rank, shop_name, shop_url, category, sales_7d_delta, cut_date`).
-- `scripts/build_movers_page.py`: renders `_site/index.html` (plus `robots.txt` and `sitemap.xml`) from the newest CSV. Rank move is computed against the newest cut that is at least 7 days older. If there isn't one, the column shows `—` and the page says so.
-- `.github/workflows/pages.yml`: builds and deploys to GitHub Pages on every push that touches `data/top-movers/`, daily at 14:00 UTC, and on manual dispatch.
+## Pipeline
 
-## Dropping in the nightly file
+1. **Panel cut** (box-side, needs `HF_READ_TOKEN` for the private HF dataset `Publicrecords/etsy-shop-velocity`):
+   `python scripts/export_panel_cut.py` → `data/panel/YYYY-MM-DD/{movers,categories,rising}.csv` + `meta.json`.
+   7-day gain = latest public sales counter minus the read 7+ days earlier; with fewer than 7 days of reads the
+   observed gain is scaled to 7 days. Same method as fleet `ops/etsy_top_movers.py` (TM-1).
+2. **Niche snapshot** (box-side, weekly, needs `APIFY_TOKEN`; ~$0.10–0.30 Apify usage):
+   `python scripts/niche_snapshot.py run` runs the publicrecords Etsy Search Scraper on the first 5 distinct categories of
+   Top Movers (1 page each) → `data/niche/YYYY-MM-DD/`. `fetch --run-id ID [ID...]` rebuilds from existing runs.
+3. **Site**: `python scripts/build_site.py --out _site` renders every page, the insights, CSVs, `og.png` social card
+   (Pillow + `scripts/fonts/Inter.ttf`), sitemap and robots. No network access at build time.
+4. **Deploy**: `.github/workflows/pages.yml` rebuilds on every push to `data/`, `scripts/`, `assets/`, daily at 14:00 UTC,
+   and on manual dispatch. If a repository secret `HF_READ_TOKEN` is added, the workflow exports the panel cut itself.
 
-From a checkout of fleet-orders and this repo:
-
-```bash
-python scripts/import_cut.py ../fleet-orders/marketer/top-movers/YYYY-MM-DD.csv
-git add data/top-movers/YYYY-MM-DD.csv
-git commit -m "top movers YYYY-MM-DD"
-git push
-```
-
-`import_cut.py` keeps only the `top20_7d` section and the public columns. Totals, method/span fields and the other sections are not published. The push triggers the rebuild. You can also run the workflow by hand from the Actions tab (`workflow_dispatch`).
-
-Optional: if a repository secret `FLEET_ORDERS_READ` (a read-only token for the private fleet-orders repo) is added later, the workflow imports new cuts itself before building. Without that secret the step is skipped and the in-repo CSVs are used.
-
-## Track a shop yourself
-
-The numbers come from the same public sales counters as the [Etsy Shop Sales Tracker](https://apify.com/publicrecords/etsy-shop-velocity) Actor on Apify. Example input: `{"shops": ["Lamoriea", "MoonberryHandmade", "JoycieLaneDesigns"]}`.
+Legacy: `data/top-movers/` + `scripts/import_cut.py` hold the original top-20 cut from fleet-orders; the site now reads `data/panel/`.
 
 ---
 
-Published by publicrecords. Not affiliated with, endorsed by, or sponsored by Etsy, Inc.
+Etsy Pulse is published by publicrecords. The data comes from our own tools (Etsy Shop Sales Tracker panel and
+Etsy Search Scraper on Apify). Not affiliated with, endorsed by, or sponsored by Etsy, Inc. Etsy is a trademark of Etsy, Inc.

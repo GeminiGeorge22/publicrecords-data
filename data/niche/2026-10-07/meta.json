@@ -1,0 +1,43 @@
+{
+  "cut_date": "2026-10-07",
+  "captured_at": "2026-10-07T19:27:25.956Z",
+  "actor": "publicrecords/etsy-search-scraper",
+  "run_id": "mZPhcYgZOJ8SKb9fW",
+  "dataset_id": "9xCi13KldHbu1dSjY",
+  "status": "SUCCEEDED",
+  "usage_usd": 0.2748,
+  "charged_events": {
+    "actor-start": 2,
+    "listing-row": 294
+  },
+  "extra_run_ids": [
+    "O80jPtzjfDqAZV6Ki"
+  ],
+  "keywords": [
+    {
+      "keyword": "backpacks",
+      "from_category": "bags & purses > backpacks"
+    },
+    {
+      "keyword": "faux plants",
+      "from_category": "home & living > home decor > faux plants & greenery"
+    },
+    {
+      "keyword": "aprons",
+      "from_category": "accessories > aprons"
+    },
+    {
+      "keyword": "patches",
+      "from_category": "accessories > patches & appliques"
+    },
+    {
+      "keyword": "pet storage",
+      "from_category": "pet supplies > pet storage"
+    }
+  ],
+  "rows": {
+    "listings": 284,
+    "keywords": 5
+  },
+  "region": "US (Apify residential proxy), sort=relevance, page 1"
+}

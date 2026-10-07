@@ -1,14 +1,15 @@
-name: Build Top Movers page
+name: Build Etsy Pulse site
 
 on:
   push:
     branches: [main]
     paths:
-      - "data/top-movers/**"
+      - "data/**"
       - "scripts/**"
+      - "assets/**"
       - ".github/workflows/pages.yml"
   schedule:
-    - cron: "0 14 * * *"   # daily 14:00 UTC: rebuild from the newest CSV in data/top-movers/
+    - cron: "0 14 * * *"   # daily 14:00 UTC: rebuild every report from the newest data in the repo
   workflow_dispatch:
 
 permissions:
@@ -30,27 +31,28 @@ jobs:
         with:
           python-version: "3.12"
 
-      # Optional: pull new nightly cuts from the private fleet-orders repo.
-      # Runs only if a FLEET_ORDERS_READ secret (read-only token) is configured; skipped otherwise.
-      - name: Sync nightly cuts (optional)
+      - name: Install Pillow (social card image)
+        run: pip install --quiet pillow
+
+      # Optional: export a fresh panel cut straight from the private HF dataset.
+      # Runs only if an HF_READ_TOKEN repository secret is configured; skipped otherwise
+      # (the box-side export pushes new cuts instead).
+      - name: Export panel cut (optional)
         env:
-          FLEET_ORDERS_READ: ${{ secrets.FLEET_ORDERS_READ }}
-        if: ${{ env.FLEET_ORDERS_READ != '' }}
+          HF_READ_TOKEN: ${{ secrets.HF_READ_TOKEN }}
+        if: ${{ env.HF_READ_TOKEN != '' }}
         run: |
-          git clone --depth 1 "https://x-access-token:${FLEET_ORDERS_READ}@github.com/GeminiGeorge22/fleet-orders.git" /tmp/fo
-          ls /tmp/fo/marketer/top-movers/*.csv >/dev/null 2>&1 || exit 0
-          python scripts/import_cut.py /tmp/fo/marketer/top-movers/*.csv
-          rm -rf /tmp/fo
-          if [ -n "$(git status --porcelain data/top-movers)" ]; then
+          python scripts/export_panel_cut.py
+          if [ -n "$(git status --porcelain data/panel)" ]; then
             git config user.name "github-actions[bot]"
             git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
-            git add data/top-movers
-            git commit -m "sync top-movers cuts from fleet-orders"
+            git add data/panel
+            git commit -m "panel cut $(date -u +%F) (Actions export)"
             git push
           fi
 
-      - name: Build page
-        run: python scripts/build_movers_page.py --out _site
+      - name: Build site
+        run: python scripts/build_site.py --out _site
 
       - uses: actions/configure-pages@v5
 
