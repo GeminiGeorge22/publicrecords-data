@@ -368,7 +368,7 @@ BAND_COLORS = ["#ffb27a", "#ff8a3d", "#FD5E02", "#b83f00"]
 
 BUILDER = "run.html"
 RUN_FALLBACK = R + "site-run"
-NAV = [("index.html", "Overview"), ("run.html", "★ Custom report"), ("movers.html", "Top Movers"), ("categories.html", "Hot Categories"),
+NAV = [("index.html", "Overview"), ("ai.html", "✦ AI"), ("run.html", "★ Custom report"), ("movers.html", "Top Movers"), ("categories.html", "Hot Categories"),
        ("rising.html", "Rising Shops"), ("breakouts.html", "Breakouts"), ("niche.html", "Niche Prices")]
 
 
@@ -703,6 +703,171 @@ def og_image(out_dir, P):
     return True
 
 
+# ---------------------------------------------------------------- AI page (ai.html): Apify MCP server with our two Actors preselected
+# Sources (checked 2026-10-07): docs.apify.com/platform/integrations/mcp (URL + ?tools= selection, OAuth sign-in),
+# docs.apify.com/platform/integrations/claude-desktop (custom connector; direct "Add custom connector" dialog link),
+# docs.apify.com/platform/integrations/chatgpt (Developer mode -> Create app, OAuth), mcp.apify.com configurator
+# (Cursor cursor:// and VS Code vscode:mcp/install buttons, ?tools= and ?client= prefill), cursor.com/docs/context/mcp/install-links.
+MCP_TOOLS = "publicrecords/etsy-search-scraper,publicrecords/etsy-shop-velocity"
+MCP_URL = "https://mcp.apify.com?tools=" + MCP_TOOLS
+MCP_SETUP = "https://mcp.apify.com/?tools=" + MCP_TOOLS          # Apify's own setup page, our tools preselected
+CLAUDE_ADD = "https://claude.ai/new?modal=add-custom-connector#settings/customize-connectors"
+CHATGPT_SETTINGS = "https://chatgpt.com/#settings/Connectors"
+
+
+def mcp_links():
+    import base64
+    from urllib.parse import quote
+    cur = "cursor://anysphere.cursor-deeplink/mcp/install?name=etsy-pulse&config=" + quote(
+        base64.b64encode(json.dumps({"url": MCP_URL}, separators=(",", ":")).encode()).decode())
+    vsc = "vscode:mcp/install?" + quote(json.dumps({"name": "etsy-pulse", "url": MCP_URL}, separators=(",", ":")))
+    return {"cursor": cur, "vscode": vsc}
+
+
+AI_CSS = """
+.aih .wrap{display:grid;gap:22px;align-items:center}
+@media(min-width:900px){.aih .wrap{grid-template-columns:1fr 1.05fr}}
+.aih video,.aih img.poster{width:100%;height:auto;border-radius:16px;box-shadow:0 16px 40px rgba(70,15,0,.35);display:block;background:#ff7a1f}
+.steps3{display:flex;flex-wrap:wrap;gap:8px;margin:16px 0 0;padding:0;list-style:none;counter-reset:s}
+.steps3 li{counter-increment:s;background:rgba(255,255,255,.18);border:1px solid rgba(255,255,255,.3);border-radius:999px;padding:6px 13px 6px 6px;font-weight:700;font-size:14.5px;display:flex;align-items:center;gap:8px}
+.steps3 li:before{content:counter(s);background:#fff;color:#c2410c;border-radius:50%;width:24px;height:24px;display:inline-flex;align-items:center;justify-content:center;font-weight:850;font-size:13px}
+.apps{display:grid;grid-template-columns:minmax(0,1fr);gap:12px}
+@media(min-width:760px){.apps{grid-template-columns:repeat(2,minmax(0,1fr))}}
+.app{background:var(--card);border:1px solid var(--line);border-radius:16px;padding:16px}
+.app h3{margin:0 0 4px;font-size:19px}.app p{margin:4px 0 10px;color:var(--mut);font-size:14.5px}
+.app ol{margin:6px 0 0;padding-left:20px;font-size:14.5px;color:var(--mut)}.app ol li{margin:0 0 4px}.app ol b{color:var(--ink)}
+.app .acts{display:flex;flex-wrap:wrap;gap:8px}
+.abtn{display:inline-flex;align-items:center;gap:6px;background:var(--o);color:#fff;font-weight:800;padding:10px 15px;border-radius:10px;font-size:15px;border:0;cursor:pointer;font-family:inherit}
+.abtn:hover{text-decoration:none;filter:brightness(1.06)}
+.abtn.ghost{background:var(--chip);color:var(--ink)}
+.urlbox{display:flex;gap:8px;align-items:stretch;margin:12px 0 0;background:var(--card);border:1.5px solid var(--o);border-radius:12px;padding:6px 6px 6px 12px}
+.urlbox code{flex:1;min-width:0;overflow-x:auto;white-space:nowrap;font-size:13.5px;align-self:center;scrollbar-width:thin}
+.uses{display:grid;grid-template-columns:minmax(0,1fr);gap:12px}
+@media(min-width:700px){.uses{grid-template-columns:repeat(2,minmax(0,1fr))}}
+@media(min-width:1000px){.uses{grid-template-columns:repeat(3,minmax(0,1fr))}}
+.use{background:var(--card);border:1px solid var(--line);border-radius:16px;padding:16px}
+.use h3{margin:0 0 4px;font-size:17px}.use p{margin:0 0 10px;color:var(--mut);font-size:14px}
+.use q{display:block;background:var(--chip);border-radius:12px 12px 12px 4px;padding:10px 12px;font-size:14.5px;quotes:none;font-weight:600}
+.use .f{margin-top:8px;font-size:12.5px;color:var(--mut)}
+.convo{display:grid;gap:10px;max-width:760px}
+.convo .u{justify-self:end;background:var(--o);color:#fff;font-weight:700;border-radius:16px 16px 4px 16px;padding:10px 14px;max-width:90%}
+.convo .b{justify-self:start;background:var(--card);border:1px solid var(--line);border-radius:16px 16px 16px 4px;padding:12px 14px;max-width:96%;font-size:15px}
+.convo .b ul{margin:6px 0 0;padding-left:18px}.convo .b li{margin:0 0 3px}
+.convo .t{font-size:12.5px;color:var(--mut)}
+.costs{display:grid;grid-template-columns:minmax(0,1fr);gap:10px}
+@media(min-width:760px){.costs{grid-template-columns:repeat(3,minmax(0,1fr))}}
+.costs div{background:var(--card);border:1px solid var(--line);border-radius:14px;padding:14px}
+.costs b{display:block;font-size:16px;margin-bottom:4px}.costs p{margin:0;color:var(--mut);font-size:14px}
+.try{background:var(--card);border:1px dashed var(--line);border-radius:14px;padding:14px 16px;font-size:14.5px}
+.try ul{margin:6px 0 0;padding-left:18px}
+"""
+
+AI_JS = """<script>
+document.querySelectorAll('[data-copy]').forEach(function(b){b.addEventListener('click',function(){
+var t=b.getAttribute('data-copy'),o=b.textContent;function ok(){b.textContent='Copied ✓';setTimeout(function(){b.textContent=o},1600)}
+if(navigator.clipboard){navigator.clipboard.writeText(t).then(ok,function(){prompt('Copy this link:',t)})}else{prompt('Copy this link:',t)}
+try{navigator.sendBeacon&&navigator.sendBeacon('https://publicrecords-redirect.publicrecords.workers.dev/e/ai-copy')}catch(e){}});});
+</script>"""
+
+
+def ai_page(ctx, files):
+    L = mcp_links()
+    copy = lambda label="Copy link": f'<button class="abtn" type="button" data-copy="{E(MCP_URL)}">{label}</button>'
+    hero = f"""<div class="hero aih">{PULSE_SVG}<div class="wrap" style="padding-bottom:40px">
+<div><div class="eyebrow">Etsy Pulse · AI</div>
+<h1>Ask your Etsy data anything</h1>
+<p class="lede">Connect our Etsy tools to Claude, ChatGPT or Cursor. Ask in plain words: your AI pulls fresh Etsy search and shop data,
+answers right in the chat, and turns it into a report when you ask.</p>
+<ol class="steps3"><li>Click Connect</li><li>Sign in with Apify (free)</li><li>Ask your AI</li></ol>
+<div class="hcta"><a class="hbtn" href="#connect">Connect your AI →</a><small>Runs on your own Apify account. Pay per search: from 13¢ for 1 keyword, top 20 listings.</small></div></div>
+<div><video autoplay muted loop playsinline preload="metadata" poster="assets/ai/etsypulse-ai-wide-poster.png" width="1200" height="676"
+aria-label="Demo: connect Etsy Pulse, sign in with Apify, ask who the top sellers are in your Etsy niches and how Bestsellers price, then get a report">
+<source src="assets/ai/etsypulse-ai-wide.webm" type="video/webm"><source src="assets/ai/etsypulse-ai-wide.mp4" type="video/mp4">
+<img class="poster" src="assets/ai/etsypulse-ai-wide-poster.png" alt="Demo of the Etsy Pulse AI connection"></video></div>
+</div></div>"""
+
+    apps = f"""<section id="connect"><h2>Connect in a minute</h2>
+<p class="sub">It's Apify's official MCP server (the standard way AI apps plug into tools) with our two Etsy tools already picked:
+the Etsy Search Scraper and the Etsy Shop Sales Tracker. One link works in every app below.</p>
+<div class="urlbox"><code>{E(MCP_URL)}</code>{copy()}</div>
+<div class="apps" style="margin-top:14px">
+<div class="app"><h3>Claude</h3><p>claude.ai or the Claude desktop app.</p>
+<div class="acts">{copy("1. Copy link")}<a class="abtn ghost" href="{E(CLAUDE_ADD)}" target="_blank" rel="noopener">2. Open Claude connectors →</a></div>
+<ol><li>Name it <b>Etsy Pulse</b> and paste the link as the server URL.</li><li>Press <b>Add</b>, then <b>Connect</b>, and sign in with Apify.</li></ol></div>
+<div class="app"><h3>ChatGPT</h3><p>Needs Developer mode (Plus, Pro, Business, Enterprise and Edu plans).</p>
+<div class="acts">{copy("1. Copy link")}<a class="abtn ghost" href="{E(CHATGPT_SETTINGS)}" target="_blank" rel="noopener">2. Open ChatGPT settings →</a></div>
+<ol><li>Go to <b>Apps</b> → <b>Create</b>. No Create button? Turn on <b>Developer mode</b> under Advanced.</li>
+<li>Name it <b>Etsy Pulse</b>, paste the link, keep <b>OAuth</b>, press Create and sign in with Apify.</li></ol></div>
+<div class="app"><h3>Cursor</h3><p>One click adds it. Cursor opens and asks you to confirm.</p>
+<div class="acts"><a class="abtn" href="{E(L['cursor'])}">Add to Cursor</a></div>
+<ol><li>Then sign in with Apify when Cursor asks.</li></ol></div>
+<div class="app"><h3>VS Code</h3><p>One click adds it (Copilot agent mode).</p>
+<div class="acts"><a class="abtn" href="{E(L['vscode'])}">Add to VS Code</a></div>
+<ol><li>Then sign in with Apify when VS Code asks.</li></ol></div>
+</div>
+<p class="note">Another AI app? <a href="{E(MCP_SETUP)}" target="_blank" rel="noopener">Open Apify's setup page</a> with our tools already picked: it has steps for
+Claude Code, Codex, GitHub Copilot CLI and more.</p></section>"""
+
+    uses = [
+        ("Compare niches", "Find the opening before you make anything.",
+         "Compare “aprons”, “faux plants” and “pet storage”: what top sellers charge, how many have a Bestseller badge, and which looks easiest to break into.",
+         "Uses: price, Bestseller badge, number of Etsy results"),
+        ("Price-check a listing", "See where your price sits against the top 20.",
+         "I sell a personalized pet toy basket for $18. Pull the top 20 for “pet toy basket” and tell me where my price sits.",
+         "Uses: price, position, free shipping"),
+        ("Ads vs Bestsellers", "Who's paying to be there, and who earned it.",
+         "For “ceramic mug”, which of the top 20 are paid ads and which have a Bestseller badge or Star Seller? What do the badge winners have in common?",
+         "Uses: ad flag, Bestseller, Star Seller, reviews, rating"),
+        ("Titles and tags", "Write like the listings that rank.",
+         "Read the titles of the top 20 “scarf pin brooch” listings and write 3 title options and 13 tag ideas in the same style for mine.",
+         "Uses: listing titles. Etsy tags aren't in the data, so tag ideas come from the titles."),
+        ("Weekly niche watch", "A short check-in on your niche and your rivals.",
+         "Run my 3 keywords and look up shops X and Y. Write a short niche watch: top shops, price range, Bestseller badges, lifetime sales and reviews. I'll ask again next week to compare.",
+         "Uses: Etsy Search + Shop Sales Tracker (lifetime sales, reviews, active listings)"),
+        ("Charts and plans", "Turn answers into something you can use.",
+         "Put it all in a report: a price chart per niche, the top shops, and a one-page plan for my first 10 listings.",
+         "Your AI makes the chart or file from the rows our tools return."),
+    ]
+    uses_html = "".join(f'<div class="use"><h3>{E(t)}</h3><p>{E(d)}</p><q>{E(p)}</q><div class="f">{E(f)}</div></div>' for t, d, p, f in uses)
+
+    convo = """<section><h2>What it looks like</h2><p class="sub">The conversation from the video, with real numbers from an Etsy search run
+on Oct 7, 2026 (US shopper). Every dollar figure is what Etsy sellers charge.</p>
+<div class="convo">
+<div class="u">Who are the top sellers in my 5 niches?</div>
+<div class="b"><div class="t">Ran Etsy Search Scraper on your niches</div>#1 on Etsy search right now, with that seller's price: <b>backpacks</b> HKwoodwork ($18, Bestseller badge),
+<b>aprons</b> VivifyCreationsUS ($12), <b>pet storage</b> PeachBlossomAU ($12), <b>patches</b> CustomPatchesTX ($7), <b>faux plants</b> WaterFreeGreenery ($36).</div>
+<div class="u">How do Bestseller shops price vs the rest?</div>
+<div class="b">Listings with a Bestseller badge charge more in 3 of 4 niches (patches had none in the top 10). Typical prices sellers charge, badge vs the rest of the top 10:
+<ul><li>backpacks: <b>$62 vs $16</b></li><li>aprons: $22 vs $20</li><li>pet storage: $14 vs $12</li><li>faux plants: $23 vs $36 (the one where badge holders charge less)</li></ul>
+<div class="t">Small groups: 2 to 5 badge holders per niche.</div></div>
+<div class="u">Put it all in a report with the other analytics</div>
+<div class="b">Here's your report: typical price, the range most top sellers charge, Bestseller badges, free shipping and the #1 shop for each niche, with charts.
+<div class="t">Ask for a document or PDF if your AI app can make files.</div></div>
+</div>
+<p class="note">Source: publicrecords Etsy Search Scraper, Apify run mZPhcYgZOJ8SKb9fW, Oct 7, 2026.
+Answers in your chat will be worded by your AI and use the data from your own run.</p></section>"""
+
+    costs = f"""<section><h2>How it works, and what it costs</h2>
+<div class="costs">
+<div><b>Runs through Apify</b><p>Apify is the platform our tools run on. The link is Apify's MCP server with our two Etsy tools picked. You sign in with your own Apify account: free to create, and the free plan includes $5 of usage a month.</p></div>
+<div><b>Pay per search</b><p>Etsy Search: from 13¢ for 1 keyword and the top 20 listings ($0.005 per run + $0.006 per listing, Apify usage included). Shop Sales Tracker: $0.005 per run + $0.003 per shop, plus Apify usage.</p></div>
+<div><b>Your account, your data</b><p>Every run and its results stay in your Apify account. Sign-in happens on Apify's own screen; we never see your password. Remove access any time in Apify Console → Settings → API &amp; Integrations.</p></div>
+</div></section>"""
+
+    tryit = f"""<section><div class="try"><b>No account yet? Try it with our free files.</b> Download our free top-10 listings file
+(<a href="{files.get('niche_listings', 'data/niche-listings-latest.csv')}">CSV</a>) and drop it into any AI chat. Then ask:
+<ul><li>“What should I charge for pet storage?”</li><li>“Which listings have a Bestseller badge, and what do they have in common?”</li>
+<li>“Write me a one-page report on these niches.”</li></ul>
+<p class="note" style="margin-bottom:0">The free file is a weekly snapshot. Connect above for fresh data on any keyword.
+Rather not use AI? <a href="{BUILDER}?from=ai">Build a report here</a> or <a href="{RUN_FALLBACK}" rel="noopener">run it inside Apify</a>.</p></div></section>"""
+
+    body = (f"<style>{AI_CSS}</style>{apps}<section><h2>What you can do</h2><p class=\"sub\">Six things to ask once you're connected. "
+            f"Copy a prompt, swap in your own niche.</p><div class=\"uses\">{uses_html}</div></section>{convo}{costs}{tryit}")
+    return page("ai.html", "Ask your Etsy data anything: connect Etsy Pulse to Claude, ChatGPT or Cursor | Etsy Pulse",
+                "Connect our Etsy tools to your AI through Apify's MCP server. Ask about any niche and get answers and reports from fresh Etsy data. Pay per search, from 13¢ for 1 keyword and the top 20 listings.",
+                body, ctx, hero, scripts=AI_JS)
+
+
 # ---------------------------------------------------------------- public checks
 import re as _re
 BANNED = _re.compile(r"\bmedian\b|middle half|\bpage[ -]1\b|7-day pace|\biqr\b", _re.I)
@@ -799,7 +964,7 @@ def build(out_dir):
                    "panel_shops": _c.get("panel_shops"), "shops_read_once": _c.get("shops_read_once"),
                    "shops_measured": _c.get("shops_measured"), "shops_measured_7d_span": _c.get("shops_measured_7d_span"),
                    "series": _c.get("series") or []}, fh)
-    pages = ["index.html", BUILDER, "movers.html", "categories.html", "rising.html"]
+    pages = ["index.html", "ai.html", BUILDER, "movers.html", "categories.html", "rising.html"]
     if prev:
         pages.append("breakouts.html")
     if N and any((r.get("listings") or 0) >= 20 for r in N["rows"]):
@@ -999,6 +1164,9 @@ These are not all of Etsy: they are the shops in our panel that we could measure
     w(BUILDER, page(BUILDER, "Build your own Etsy report: prices, bestsellers, top shops, shop sales | Etsy Pulse",
                     "Type a niche or a few Etsy shops and get a live report: price bands, Bestseller share, top shops, sales pace, CSV. Free Apify sign-in, no code.",
                     body, ctx, builder_hero, scripts=f'<script src="assets/builder.js?v={cut}-b6" defer></script>'))
+
+    # ---- AI page
+    w("ai.html", ai_page(ctx, files))
 
     # ---- seo files
     with open(os.path.join(out_dir, "robots.txt"), "w") as fh:
