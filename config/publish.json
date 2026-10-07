@@ -3,7 +3,7 @@
   "publish_weekday": "Mon",
   "publish_time_et": "07:30",
   "niche_with_publish": true,
-  "niche_max_usd": 0.45,
+  "niche_max_usd": 0.40,
   "internal_daily_time_et": "07:30",
   "note": "Public site data is published at most every cadence_days, on publish_weekday (rule: publish when >= cadence_days-3 days since the last published cut). Daily panel exports stay box-only (internal X post data)."
 }
