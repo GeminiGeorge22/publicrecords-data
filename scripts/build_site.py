@@ -27,6 +27,7 @@ ROOT = os.path.normpath(os.path.join(os.path.dirname(os.path.abspath(__file__)),
 SITE_URL = "https://geminigeorge22.github.io/publicrecords-data/"
 CTA_URL = "https://publicrecords-redirect.publicrecords.workers.dev/r/site-cta"
 TRACKER_URL = "https://publicrecords-redirect.publicrecords.workers.dev/r/site-tracker"
+R = "https://publicrecords-redirect.publicrecords.workers.dev/r/"
 X_URL = "https://x.com/EtsyPulse"
 ORANGE = "#FD5E02"
 E = html.escape
@@ -315,6 +316,15 @@ h2{font-size:clamp(21px,4.4vw,27px);letter-spacing:-.02em;margin:0 0 6px;font-we
 .cta{margin:36px 0;border-radius:20px;background:#17171a;color:#fff;padding:26px 20px;position:relative;overflow:hidden}
 @media (prefers-color-scheme:dark){.cta{background:#1d1d22;border:1px solid var(--line)}}
 .cta h2{color:#fff}.cta p{color:#d4d4d8;margin:6px 0 16px;max-width:640px}
+.hcta{margin-top:18px;display:flex;flex-wrap:wrap;align-items:center;gap:8px 14px}
+.hbtn{display:inline-flex;align-items:center;gap:8px;background:#fff;color:#c2410c;font-weight:850;font-size:17px;padding:14px 20px;border-radius:14px;box-shadow:0 8px 24px rgba(80,20,0,.28);letter-spacing:-.01em}
+.hbtn:hover{text-decoration:none;transform:translateY(-1px)}
+.hcta small{font-size:13px;opacity:.92;font-weight:600;max-width:300px;line-height:1.35}
+@media(max-width:480px){.hbtn{width:100%;justify-content:center}}
+.rbtn{display:flex;flex-wrap:wrap;align-items:center;justify-content:space-between;gap:10px;margin:14px 0 0;background:var(--card);border:1.5px solid var(--o);border-radius:14px;padding:12px 14px}
+.rbtn span{font-size:14px;color:var(--mut);flex:1 1 220px}
+.rbtn a{background:var(--o);color:#fff;font-weight:800;padding:10px 16px;border-radius:10px;white-space:nowrap}
+.rbtn a:hover{text-decoration:none;filter:brightness(1.06)}
 .btn{display:inline-block;background:var(--o);color:#fff;font-weight:800;padding:13px 20px;border-radius:12px;font-size:16px}
 .btn:hover{text-decoration:none;filter:brightness(1.06)}
 .btn.ghost{background:transparent;border:1px solid #52525b;margin-left:8px;color:#fff}
@@ -399,6 +409,17 @@ prices, reviews, bestseller badges and shop links for every page-1 listing, as a
 <a class="btn" href="{CTA_URL}" rel="noopener">Try the Etsy Search Scraper</a><a class="btn ghost" href="{TRACKER_URL}" rel="noopener">Track a shop's sales</a>
 <div class="disc">Our tools (publicrecords on Apify). Pay per result; Apify's free plan covers a small test.</div>
 </section>"""
+
+
+def hero_cta():
+    return (f'<div class="hcta"><a class="hbtn" href="{CTA_URL}" rel="noopener">Run a custom report on any niche →</a>'
+            '<small>Your keyword, your CSV: prices, reviews, Bestseller badges, shop links. Our Etsy Search Scraper on Apify, pay per result.</small></div>')
+
+
+def report_btn(slug, actor_label, text):
+    return (f'<div class="rbtn"><span>{text}</span>'
+            f'<a href="{R}{slug}" rel="noopener">Run this report yourself →</a></div>'
+            f'<p class="note" style="margin-top:6px">Opens our {actor_label} on Apify (publicrecords, pay per result).</p>')
 
 
 def insights_block(items, title="What this means for sellers"):
@@ -582,6 +603,7 @@ def build(out_dir):
 <div class="eyebrow">Etsy Pulse · Weekly report</div>
 <h1>What's selling on Etsy right now</h1>
 <p class="lede">The shops and categories with the biggest real 7-day sales jumps, read from public Etsy sales counters. No guesses, no estimates.</p>
+{hero_cta()}
 <div class="chips"><span>Week to {nice_date(snap)}</span><span>{n(meta['shops_with_gain_ge_min'])} shops measured</span><span>Updated {nice_date(cut)}</span></div>
 </div></div>"""
 
@@ -632,11 +654,11 @@ def build(out_dir):
 
     def simple_hero(eyebrow, h1, lede):
         return (f'<div class="hero">{PULSE_SVG}<div class="wrap" style="padding-bottom:30px"><div class="eyebrow">{eyebrow}</div>'
-                f'<h1>{h1}</h1><p class="lede">{lede}</p><div class="chips"><span>Week to {nice_date(snap)}</span>'
+                f'<h1>{h1}</h1><p class="lede">{lede}</p>{hero_cta()}<div class="chips"><span>Week to {nice_date(snap)}</span>'
                 f'<span>Updated {nice_date(cut)}</span></div></div></div>')
 
     # ---- movers
-    body = f"""<section>{insights_block(mi)}</section>
+    body = f"""<section>{insights_block(mi)}{report_btn("site-movers", "Etsy Shop Sales Tracker", "Track 7-day sales for any shops you choose: yours, competitors, or the ones above.")}</section>
 <section><h2>Top {len(m)} shops by 7-day sales gain</h2><p class="sub">Shops with at least {meta['min_lifetime_sales']} lifetime sales. Tap a shop to open it on Etsy.</p>
 {shop_rows(m, m[0]['sales_7d_delta'], None)}
 {dl(files['movers'], f'Download CSV ({len(m)} rows, cut {cut})')}{src_line}</section>"""
@@ -645,7 +667,7 @@ def build(out_dir):
                           body, ctx, simple_hero("Report · Top Movers", "Top Movers", "The Etsy shops that added the most sales in the last 7 days.")))
 
     # ---- categories
-    body = f"""<section>{insights_block(ci)}</section>
+    body = f"""<section>{insights_block(ci)}{report_btn("site-categories", "Etsy Shop Sales Tracker", "Feed in the shops of any category and see who is gaining sales week to week.")}</section>
 <section><h2>Categories ranked by combined 7-day gain</h2><p class="sub">Sum of 7-day sales gains of every measured shop in the category. Showing the top 20 of {len(c)}; all are in the CSV.</p>
 {cat_rows(c[:20])}
 {dl(files['categories'], f'Download CSV ({len(c)} rows, cut {cut})')}{src_line}</section>"""
@@ -654,7 +676,7 @@ def build(out_dir):
                               body, ctx, simple_hero("Report · Hot Categories", "Hot Categories", "Where this week's Etsy sales gains are piling up.")))
 
     # ---- rising
-    body = f"""<section>{insights_block(ri)}</section>
+    body = f"""<section>{insights_block(ri)}{report_btn("site-rising", "Etsy Shop Sales Tracker", "Watch small shops in your niche and catch the next riser early.")}</section>
 <section><h2>Fastest shops under 1,000 lifetime sales</h2><p class="sub">Same 7-day gain, smaller shops ({meta['min_lifetime_sales']}–999 lifetime sales). These are the ones to learn from if you're early.</p>
 {shop_rows(r, r[0]['sales_7d_delta'] if r else 1, None)}
 {dl(files['rising'], f'Download CSV ({len(r)} rows, cut {cut})')}{src_line}</section>"""
@@ -699,7 +721,7 @@ def build(out_dir):
         kws = [k["keyword"] for k in N["meta"]["keywords"]]
         missing = [k for k in kws if k not in [x["keyword"] for x in nr]]
         miss_note = (f" Not shown (fewer than 20 listings captured this run): {', '.join(missing)}." if missing else "")
-        body = f"""<section>{insights_block(ni)}</section>
+        body = f"""<section>{insights_block(ni)}{report_btn("site-niche", "Etsy Search Scraper", "Get this price breakdown for your own keyword: every page-1 listing as a CSV.")}</section>
 <section><h2>Page-1 prices in this week's hottest niches</h2><p class="sub">Keywords are the categories of this week's leading Top Movers shops. Prices are what Etsy shows US shoppers on page 1 (relevance sort).</p>
 <div class="niche">{''.join(cards)}</div>
 {dl(files['niche_summary'], f"Download summary CSV ({len(N['rows'])} keywords)")} {dl(files['niche_listings'], f"Download listings CSV ({N['meta']['rows']['listings']} rows)")}
