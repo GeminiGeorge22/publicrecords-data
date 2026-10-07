@@ -26,7 +26,7 @@
   };
   var TYPES = {
     niche: { actor: "search", title: "Niche price snapshot", icon: "💲",
-      blurb: "What page 1 of Etsy costs for your keyword: price range, sweet spot, badges, who ranks.",
+      blurb: "What the top Etsy results cost for your keyword: price range, sweet spot, badges, who ranks.",
       blocks: ["kpis", "takeaways", "prices", "badges", "shops", "table"],
       cols: ["position", "title", "price", "shop_name", "review_count", "rating_value", "bestseller", "free_shipping"] },
     compare: { actor: "search", title: "Compare keywords", icon: "⚖️",
@@ -38,7 +38,7 @@
       blocks: ["kpis", "takeaways", "badges", "bestprice", "table"],
       cols: ["position", "title", "price", "shop_name", "bestseller", "popular_now", "star_seller", "etsys_pick", "review_count"] },
     competitors: { actor: "search", title: "Top shops in a niche", icon: "🏪",
-      blurb: "Which shops own page 1 for your keyword: spots held, best rank, prices, reviews.",
+      blurb: "Which shops own the top results for your keyword: spots held, best rank, prices, reviews.",
       blocks: ["kpis", "takeaways", "shops", "shoptable", "table"],
       cols: ["position", "shop_name", "title", "price", "review_count", "bestseller"] },
     velocity: { actor: "tracker", title: "Shop sales tracker", icon: "📈",
@@ -179,7 +179,7 @@
       if (named && !shops.length) errors.push("Add at least one shop name or link.");
       if (state.type === "rivals" && shops.length === 1) errors.push("Comparing needs at least 2 shops.");
       if (shops.length > LIMITS.shopsMax) errors.push("Up to " + num(LIMITS.shopsMax) + " shops per report.");
-      if (state.type === "category" && !inp.category && !kw.length && !shops.length) errors.push("Pick a category (or add shop-name words under Advanced options).");
+      if (state.type === "category" && !inp.category && !kw.length && !shops.length && !inp.minSales) errors.push("Pick a category (or add shop-name words or a lifetime-sales floor under Advanced options).");
       var trows = maxShops, tcap = capFor(ACTORS.tracker.start + trows * ACTORS.tracker.unit);
       plan.jobs.push({ label: shops.length ? shops.length + " shops" : (inp.category ? unesc(inp.category) : "panel"), input: inp, cap: tcap, memory: mem, timeout: tmin ? clamp(tmin, 1, 1440) * 60 : 900 });
       plan.combined = inp; plan.rows = trows;
@@ -584,42 +584,42 @@
         rev: Math.max.apply(null, a.map(function (r) { return r.review_count || 0; })), bs: a.filter(function (r) { return r.bestseller; }).length, url: a[0].shop_url };
     }).sort(function (a, b) { return b.n - a.n || a.best - b.best; });
     var totalRes = qs.map(function (q) { return (byQ[q][0] || {}).total_results; }).filter(Boolean);
-    if (B.kpis) out.push(kpis([[num(rows.length), "listings read" + (qs.length > 1 ? " across " + qs.length + " keywords" : "")], [money(med, c), "median price"],
-      [money(p25, c) + "–" + money(p75, c), "middle half of prices"], [pct(bs), "carry a Bestseller badge"]].concat(totalRes.length === 1 ? [[num(totalRes[0]), "results Etsy shows for this search"]] : [[pct(fs), "offer free shipping"]])));
-    if (med != null) tk.push("Half of these listings are priced between <b>" + money(p25, c) + "</b> and <b>" + money(p75, c) + "</b>; the middle price is <b>" + money(med, c) + "</b>. Pricing inside that band puts you where page 1 already is.");
+    if (B.kpis) out.push(kpis([[num(rows.length), "listings read" + (qs.length > 1 ? " across " + qs.length + " keywords" : "")], [money(med, c), "typical price"],
+      [money(p25, c) + "–" + money(p75, c), "most charge"], [pct(bs), "carry a Bestseller badge"]].concat(totalRes.length === 1 ? [[num(totalRes[0]), "results Etsy shows for this search"]] : [[pct(fs), "offer free shipping"]])));
+    if (med != null) tk.push("Most of these listings charge <b>" + money(p25, c) + "–" + money(p75, c) + "</b>; the typical price is <b>" + money(med, c) + "</b>. Pricing inside that range puts you where the top sellers already are.");
     var bsr = rows.filter(function (r) { return r.bestseller; }), rest = rows.filter(function (r) { return !r.bestseller; });
     var mb = median(bsr.map(function (r) { return r.price; })), mr = median(rest.map(function (r) { return r.price; }));
-    if (bsr.length >= 3 && rest.length >= 3) tk.push("<b>" + pct(bs) + "</b> carry a Bestseller badge. Their middle price is <b>" + money(mb, c) + "</b> vs <b>" + money(mr, c) + "</b> for the rest" + (mb > mr * 1.1 ? ": buyers here pay up for proven listings." : mb < mr * .9 ? ": the badge goes to the cheaper end." : ": about the same, so the badge isn't about price here."));
+    if (bsr.length >= 3 && rest.length >= 3) tk.push("<b>" + pct(bs) + "</b> carry a Bestseller badge. Their typical price is <b>" + money(mb, c) + "</b> vs <b>" + money(mr, c) + "</b> for the rest" + (mb > mr * 1.1 ? ": buyers here pay up for proven listings." : mb < mr * .9 ? ": the badge goes to the cheaper end." : ": about the same, so the badge isn't about price here."));
     if (shopList.length && shopList[0].n > 1) tk.push("<b>" + esc(shopList[0].shop) + "</b> holds " + shopList[0].n + " of the " + rows.length + " spots" + (shopList[1] && shopList[1].n > 1 ? ", then " + esc(shopList[1].shop) + " (" + shopList[1].n + ")" : "") + "; " + (shopList.filter(function (s) { return s.n === 1; }).length) + " other shops have one listing each.");
     else if (shopList.length) tk.push("Every listing here comes from a different shop (" + shopList.length + " shops): nobody dominates this search.");
     var revs = rows.map(function (r) { return r.review_count; }).filter(isFinite);
-    if (revs.length) tk.push("The middle listing shows <b>" + num(median(revs)) + "</b> reviews on its card" + (median(revs) < 300 ? ", a low bar: newer shops can compete here." : median(revs) > 2000 ? ", a high bar: established shops own this search." : "."));
+    if (revs.length) tk.push("A typical listing shows <b>" + num(median(revs)) + "</b> reviews on its card" + (median(revs) < 300 ? ", a low bar: newer shops can compete here." : median(revs) > 2000 ? ", a high bar: established shops own this search." : "."));
     if (fs != null) tk.push("<b>" + pct(fs) + "</b> offer free shipping" + (fs >= .5 ? ", so buyers here expect it." : "."));
     if (qs.length > 1) {
       var stats = qs.map(function (q) { var a = byQ[q]; return { q: q, med: median(a.map(function (r) { return r.price; })), bs: share(a, "bestseller"), tr: (a[0] || {}).total_results }; });
       var hi = stats.slice().sort(function (a, b) { return b.med - a.med; })[0], lo = stats.slice().sort(function (a, b) { return a.med - b.med; })[0];
-      tk.unshift("<b>“" + esc(hi.q) + "”</b> has the highest middle price (" + money(hi.med, c) + "), <b>“" + esc(lo.q) + "”</b> the lowest (" + money(lo.med, c) + ").");
+      tk.unshift("<b>“" + esc(hi.q) + "”</b> has the highest typical price (" + money(hi.med, c) + "), <b>“" + esc(lo.q) + "”</b> the lowest (" + money(lo.med, c) + ").");
       var trs = stats.filter(function (s) { return s.tr; }); if (trs.length > 1) { var least = trs.sort(function (a, b) { return a.tr - b.tr; })[0]; tk.push("Least crowded: <b>“" + esc(least.q) + "”</b> with " + num(least.tr) + " Etsy results."); }
     }
     if (B.takeaways && tk.length) out.push('<div class="insights"><h3>What this means for you</h3><ul>' + tk.map(function (x) { return "<li>" + x + "</li>"; }).join("") + "</ul></div>");
     if (B.compare && qs.length > 1) {
       var rowsC = qs.map(function (q) { var a = byQ[q], pr = a.map(function (r) { return r.price; }); return { q: q, n: a.length, med: median(pr), p25: quant(pr, .25), p75: quant(pr, .75), bs: share(a, "bestseller"), fs: share(a, "free_shipping"), rv: median(a.map(function (r) { return r.review_count; })), tr: (a[0] || {}).total_results }; });
       out.push(card("Keyword comparison", bars(rowsC.map(function (r) { return [r.q, r.med]; }), function (v) { return money(v, c); }) +
-        '<div class="tscroll"><table class="dt"><thead><tr><th>Keyword</th><th>Listings</th><th>Median price</th><th>Middle half</th><th>Bestseller</th><th>Free ship</th><th>Median reviews</th><th>Etsy results</th></tr></thead><tbody>' +
-        rowsC.map(function (r) { return "<tr><td>" + esc(r.q) + "</td><td>" + r.n + "</td><td>" + money(r.med, c) + "</td><td>" + money(r.p25, c) + "–" + money(r.p75, c) + "</td><td>" + pct(r.bs) + "</td><td>" + pct(r.fs) + "</td><td>" + num(r.rv) + "</td><td>" + num(r.tr) + "</td></tr>"; }).join("") + "</tbody></table></div>", "Median page-1 price per keyword."));
+        '<div class="tscroll"><table class="dt"><thead><tr><th>Keyword</th><th>Listings</th><th>Typical price</th><th>Most charge</th><th>Bestseller</th><th>Free ship</th><th>Typical reviews</th><th>Etsy results</th></tr></thead><tbody>' +
+        rowsC.map(function (r) { return "<tr><td>" + esc(r.q) + "</td><td>" + r.n + "</td><td>" + money(r.med, c) + "</td><td>" + money(r.p25, c) + "–" + money(r.p75, c) + "</td><td>" + pct(r.bs) + "</td><td>" + pct(r.fs) + "</td><td>" + num(r.rv) + "</td><td>" + num(r.tr) + "</td></tr>"; }).join("") + "</tbody></table></div>", "Typical price per keyword."));
     }
     if (B.prices && prices.length) {
       if (qs.length > 1) out.push(card("Price bands", qs.map(function (q) { var pr = byQ[q].map(function (r) { return r.price; }).filter(isFinite); return "<h4>“" + esc(q) + "”</h4>" + bars(priceBands(pr), function (v) { return v + " listings"; }); }).join(""), "Bands split at each keyword's quarter points."));
       else out.push(card("Price bands", bars(priceBands(prices), function (v) { return v + " listings"; }), "Listings per price band (bands split at the quarter points)."));
     }
-    if (B.badges) out.push(card("Badges on page 1", bars([["Bestseller", share(rows, "bestseller")], ["Popular now", share(rows, "popular_now")], ["Star Seller", share(rows, "star_seller")], ["Etsy's Pick", share(rows, "etsys_pick")], ["Free shipping", share(rows, "free_shipping")]], function (v) { return pct(v); }), "Share of listings carrying each badge."));
+    if (B.badges) out.push(card("Badges in the top results", bars([["Bestseller", share(rows, "bestseller")], ["Popular now", share(rows, "popular_now")], ["Star Seller", share(rows, "star_seller")], ["Etsy's Pick", share(rows, "etsys_pick")], ["Free shipping", share(rows, "free_shipping")]], function (v) { return pct(v); }), "Share of listings carrying each badge."));
     if (B.bestprice && bsr.length && rest.length) out.push(card("Bestsellers vs the rest", '<div class="kpis two">' +
-      '<div class="kpi"><div class="v">' + money(mb, c) + '</div><div class="l">median price, ' + bsr.length + " Bestseller listings</div></div>" +
-      '<div class="kpi"><div class="v">' + money(mr, c) + '</div><div class="l">median price, ' + rest.length + " other listings</div></div>" +
-      '<div class="kpi"><div class="v">' + num(median(bsr.map(function (r) { return r.review_count; }))) + '</div><div class="l">median reviews, Bestsellers</div></div>' +
-      '<div class="kpi"><div class="v">' + num(median(rest.map(function (r) { return r.review_count; }))) + '</div><div class="l">median reviews, others</div></div></div>'));
+      '<div class="kpi"><div class="v">' + money(mb, c) + '</div><div class="l">typical price, ' + bsr.length + " Bestseller listings</div></div>" +
+      '<div class="kpi"><div class="v">' + money(mr, c) + '</div><div class="l">typical price, ' + rest.length + " other listings</div></div>" +
+      '<div class="kpi"><div class="v">' + num(median(bsr.map(function (r) { return r.review_count; }))) + '</div><div class="l">typical reviews, Bestsellers</div></div>' +
+      '<div class="kpi"><div class="v">' + num(median(rest.map(function (r) { return r.review_count; }))) + '</div><div class="l">typical reviews, others</div></div></div>'));
     if (B.shops && shopList.length) out.push(card("Shops with the most spots", bars(shopList.slice(0, 10).map(function (s) { return [s.shop, s.n]; }), function (v) { return v + (v === 1 ? " spot" : " spots"); }), "Listings each shop has in these results (top 10)."));
-    if (B.shoptable && shopList.length) out.push(card("Shop leaderboard", '<div class="tscroll"><table class="dt"><thead><tr><th>Shop</th><th>Spots</th><th>Best rank</th><th>Median price</th><th>Most reviews</th><th>Bestsellers</th></tr></thead><tbody>' +
+    if (B.shoptable && shopList.length) out.push(card("Shop leaderboard", '<div class="tscroll"><table class="dt"><thead><tr><th>Shop</th><th>Spots</th><th>Best rank</th><th>Typical price</th><th>Most reviews</th><th>Bestsellers</th></tr></thead><tbody>' +
       shopList.slice(0, 25).map(function (s) { return '<tr><td><a href="' + esc(s.url) + '" rel="nofollow noopener" target="_blank">' + esc(s.shop) + "</a></td><td>" + s.n + "</td><td>#" + s.best + "</td><td>" + money(s.med, c) + "</td><td>" + num(s.rev) + "</td><td>" + s.bs + "</td></tr>"; }).join("") + "</tbody></table></div>"));
     return out;
   }
@@ -744,6 +744,46 @@
     ["builder", "brun", "report"].forEach(function (id) { var el = document.getElementById(id); if (el) io.observe(el); });
   }
 
+  /* ------------------------------------------------------------------ URL prefill
+   * Every input can be set from the link, so a report page can open the builder fully set up ("Run your own report").
+   *   type=<report type>          q=<keywords, one per line or comma>   shops=a,b   category=<panel category value>
+   *   f-<input id>=<value>        any form field by its id, e.g. f-perkw=50, f-sort=relevance, f-region=US, f-minsales=500,
+   *                               f-maxshops=120, f-fill=1, f-is_best_seller=1 (checkboxes: 1/true/on or 0/false/off)
+   *   rank=<field> dir=top|bottom n=<how many>   filter=<field>:<op>:<value> (repeatable; op >=,<=,>,<,=,!=,yes,no,has,not,is)
+   *   adv=1 opens Advanced options (also opened automatically when a prefilled field lives there). */
+  function applyPrefill(params) {
+    var advUsed = false, any = false;
+    var setEl = function (el, v) {
+      if (!el) return;
+      if (el.type === "checkbox") el.checked = /^(1|true|on|yes)$/i.test(v);
+      else {
+        if (el.tagName === "SELECT" && !$$("option", el).some(function (o) { return o.value === v; })) {
+          var o = document.createElement("option"); o.value = v; o.textContent = unesc(v); el.appendChild(o);
+        }
+        el.value = v;
+      }
+      if (el.closest("#adv")) advUsed = true; any = true;
+    };
+    params.forEach(function (v, k) { if (/^f-[a-z0-9_]+$/i.test(k) && k !== "f-category" && k !== "f-category2") setEl(document.getElementById(k), v); });
+    if (params.has("category")) { setEl($(state.type === "velocity" || state.type === "rivals" ? "#f-category2" : "#f-category"), params.get("category")); }
+    ["f-category", "f-category2"].forEach(function (k) { if (params.has(k)) setEl(document.getElementById(k), params.get(k)); });
+    if (params.get("f-maxshops")) { $("#f-maxshops2").value = params.get("f-maxshops"); }
+    var R = state.refine, touched = false;
+    var RK = RANKABLE[TYPES[state.type].actor];
+    if (params.get("rank") && RK.indexOf(params.get("rank")) >= 0) { R.by = params.get("rank"); touched = true; }
+    if (/^(top|bottom)$/.test(params.get("dir") || "")) { R.dir = params.get("dir"); touched = true; }
+    if (parseInt(params.get("n"), 10) > 0) { R.n = String(parseInt(params.get("n"), 10)); touched = true; }
+    params.getAll("filter").forEach(function (f) {
+      var m = String(f).match(/^([a-z0-9_]+):(>=|<=|>|<|=|!=|yes|no|has|not|is)(?::(.*))?$/i);
+      if (m && knownCols(TYPES[state.type].actor).indexOf(m[1]) >= 0) { R.filters.push({ f: m[1], op: m[2], v: m[3] == null ? "" : m[3] }); touched = true; }
+    });
+    if (touched) { advUsed = true; any = true; renderRefine(); }
+    if (advUsed || params.get("adv") === "1") $("#adv").open = true;
+    if (any) state.prefilled = true;
+    refresh();
+  }
+  window.EtsyPulseBuilder = { plan: function () { var p = buildPlan(); return { type: state.type, errors: p.errors, warns: p.warns, est: p.est, max: p.max, rows: p.rows, jobs: p.jobs.length, combined: p.combined, bigConfirm: p.bigConfirm, refine: state.refine }; } };
+
   /* ------------------------------------------------------------------ boot */
   async function boot() {
     var params = new URLSearchParams(location.search);
@@ -753,7 +793,7 @@
     var type = TYPES[params.get("type")] ? params.get("type") : "niche";
     setType(type);
     if (params.get("shops")) { $("#f-shops").value = params.get("shops").split(",").join("\n"); refresh(); }
-    if (params.get("category")) { $("#f-category").value = params.get("category"); refresh(); }
+    if (!params.get("code")) applyPrefill(params);
     beacon("builder-view", "from=" + encodeURIComponent(params.get("from") || document.referrer.replace(/^https?:\/\/[^/]+/, "").slice(0, 40)));
     var pending = null;
     if (params.get("code") || params.get("error")) {

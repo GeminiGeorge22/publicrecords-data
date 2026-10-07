@@ -6,13 +6,18 @@ Usage:
   python scripts/export_panel_cut.py --snapshot snap.jsonl.gz --state shops.json --latest latest.json
 
 Reads the Hugging Face dataset Publicrecords/etsy-shop-velocity (latest.json,
-the snapshot it points to, STATE/shops.json) and writes data/panel/<cut>/:
+the snapshot it points to, STATE/shops.json) and writes <out-root>/<cut>/:
 
-  movers.csv      top 50 shops (lifetime sales >= 500) by 7-day sales gain
-  categories.csv  every category with >= 1 moving shop: shops moving, total and
-                  median 7-day gain, shops in the top 50, leading shop
-  rising.csv      top 25 shops with 500-999 lifetime sales... see MIN_RISING
-  meta.json       snapshot date, panel size, counts, method
+  movers.csv      top shops (lifetime sales >= 500) by 7-day sales gain
+  categories.csv  categories with >= 1 moving shop: shops moving, total and
+                  median 7-day gain, shops in the top list, leading shop
+  rising.csv      top shops with 500-999 lifetime sales
+  meta.json       snapshot date, panel size, counts, method, custom-report readiness
+
+PUBLIC = the repo's data/panel (default out-root): every CSV is cut to PUBLIC_N (10) rows. Free reports show the
+top 10 only; the top 50 is what a visitor gets by running the custom report. The full cut (top 50 / 25 / every
+category) is written only to a box-only folder (--full-root, default /workspace/x-etsypulse/internal/panel-full)
+and is never pushed. Any other --out-root (box-only internal exports) gets the full cut.
 
 Delta method is the same as fleet ops/etsy_top_movers.py (TM-1): the latest sales
 read minus the read 7+ days earlier; if the shop has fewer than 7 days of reads,
@@ -39,6 +44,10 @@ MIN_SALES = 500          # main movers / categories floor (same as TM-1)
 RISING_MAX = 1000        # "rising" = lifetime sales below this
 TOP_N = 50
 RISING_N = 25
+PUBLIC_N = 10            # rows per report in the public repo (t518u: free = top 10, top 50 = custom report)
+CUSTOM_N = 50            # what the "run your own report" button asks the builder for
+PUBLIC_ROOT = os.path.join(ROOT, "data", "panel")
+FULL_ROOT = os.environ.get("INTERNAL_PANEL_FULL", "/workspace/x-etsypulse/internal/panel-full")
 
 
 def hf_get(path: str) -> bytes:
@@ -149,6 +158,47 @@ def coverage_from(state: dict, latest: dict) -> dict:
     }
 
 
+def tracker_order(rows):
+    """Same order the Etsy Shop Sales Tracker returns when no shop names are given (src/filter.js select())."""
+    return sorted(rows, key=lambda r: (0 if r.get("breakout") else 1, -(r.get("sales_per_day") if r.get("sales_per_day") is not None else -1),
+                                       -(r.get("sales_count") or 0), r.get("shop") or ""))
+
+
+def custom_readiness(snap: dict, categories: list[str], min_sales: int) -> dict:
+    """Can the custom report (Shop Sales Tracker, run by the visitor) rebuild the top 50 of each public report?
+
+    Read from the same snapshot the tracker serves. A report is 'ready' only when the tracker returns the field we
+    rank by (delta_7d, else sales_per_day) for enough shops; max_shops is how many rows the tracker must return so
+    that the top CUSTOM_N by that field are all inside them (tracker order is breakouts first, then sales_per_day),
+    plus a 20% margin for the daily snapshot moving. Nothing here is shown to visitors as a number."""
+    base = [r for r in snap.values() if (r.get("sales_count") or -1) >= min_sales]
+    n7 = sum(1 for r in base if r.get("delta_7d") is not None)
+    field = "delta_7d" if n7 >= CUSTOM_N else "sales_per_day"
+
+    def plan(rows, keep=lambda r: True, need=CUSTOM_N):
+        order = tracker_order(rows)
+        pos = {r["shop"]: i for i, r in enumerate(order, 1)}
+        cand = sorted([r for r in rows if keep(r) and r.get(field) is not None], key=lambda r: -r[field])[:CUSTOM_N]
+        deepest = max((pos[r["shop"]] for r in cand), default=0)
+        return {"ready": len(cand) >= need, "rows_with_field": len(cand),
+                "max_shops": max(CUSTOM_N, int(-(-deepest * 1.2 // 1))) if cand else None}
+
+    out = {"rank_field": field, "n": CUSTOM_N, "min_sales": min_sales,
+           "snapshot_rows_with_field": sum(1 for r in base if r.get(field) is not None),
+           "movers": plan(base),
+           "rising": dict(plan(base, keep=lambda r: (r.get("sales_count") or 0) < RISING_MAX, need=20), max_sales=RISING_MAX - 1),
+           "categories": {}}
+    for c in categories:
+        rows = [r for r in base if r.get("category") and html.unescape(r["category"]) == c]
+        if not rows:
+            continue
+        raw = rows[0]["category"]
+        p = plan(rows, need=min(CUSTOM_N, max(10, len(rows))))
+        p["tracker_value"] = raw
+        out["categories"][c] = p
+    return out
+
+
 def write_csv(path, fields, rows):
     with open(path, "w", newline="", encoding="utf-8") as fh:
         w = csv.DictWriter(fh, fieldnames=fields, extrasaction="ignore", lineterminator="\n")
@@ -159,8 +209,10 @@ def write_csv(path, fields, rows):
 def main():
     ap = argparse.ArgumentParser()
     ap.add_argument("--cut-date", default=dt.datetime.now(ZoneInfo("America/Toronto")).date().isoformat())
-    ap.add_argument("--out-root", default=os.path.join(ROOT, "data", "panel"),
+    ap.add_argument("--out-root", default=PUBLIC_ROOT,
                     help="where <cut>/ is written (box-only internal exports use a path outside the repo)")
+    ap.add_argument("--full-root", default=FULL_ROOT,
+                    help="box-only folder that keeps the full (untrimmed) cut when --out-root is the public repo")
     ap.add_argument("--snapshot"); ap.add_argument("--state"); ap.add_argument("--latest")
     a = ap.parse_args()
 
@@ -179,6 +231,7 @@ def main():
               for i, m in enumerate(rising, 1)]
 
     top_names = {m["shop"] for m in top}
+    top10_names = {m["shop"] for m in top[:PUBLIC_N]}
     cats: dict[str, list] = {}
     for m in main_m:
         if m["category"] != "unknown":
@@ -192,6 +245,7 @@ def main():
             "shops_moving": len(ms),
             "total_7d_delta": sum(x["sales_7d_delta"] for x in ms),
             "median_7d_delta": int(statistics.median(x["sales_7d_delta"] for x in ms)),
+            "shops_in_top10": sum(1 for x in ms if x["shop"] in top10_names),
             "shops_in_top50": sum(1 for x in ms if x["shop"] in top_names),
             "top_shop": ms[0]["shop_name"],
             "top_shop_url": ms[0]["shop_url"],
@@ -201,15 +255,24 @@ def main():
     for i, r in enumerate(crow, 1):
         r["rank"] = i
 
-    out = os.path.join(a.out_root, a.cut_date)
-    os.makedirs(out, exist_ok=True)
+    public = os.path.realpath(a.out_root).startswith(os.path.realpath(ROOT) + os.sep)
+    cap = PUBLIC_N if public else None
     mf = ["rank", "shop_name", "shop_url", "category", "sales_7d_delta", "sales_total",
           "gain_pct_of_lifetime", "days_observed"]
-    write_csv(os.path.join(out, "movers.csv"), mf, top)
-    write_csv(os.path.join(out, "rising.csv"), mf, rising)
-    write_csv(os.path.join(out, "categories.csv"),
-              ["rank", "category", "department", "shops_moving", "total_7d_delta", "median_7d_delta",
-               "shops_in_top50", "top_shop", "top_shop_url", "top_shop_7d_delta"], crow)
+    cf_full = ["rank", "category", "department", "shops_moving", "total_7d_delta", "median_7d_delta",
+               "shops_in_top10", "shops_in_top50", "top_shop", "top_shop_url", "top_shop_7d_delta"]
+
+    def write_cut(root, n):
+        cf = [f for f in cf_full if f != "shops_in_top50"] if n else cf_full
+        d = os.path.join(root, a.cut_date)
+        os.makedirs(d, exist_ok=True)
+        write_csv(os.path.join(d, "movers.csv"), mf, top[:n] if n else top)
+        write_csv(os.path.join(d, "rising.csv"), mf, rising[:n] if n else rising)
+        write_csv(os.path.join(d, "categories.csv"), cf, crow[:n] if n else crow)
+        return d
+
+    out = write_cut(a.out_root, cap)
+    full_dir = write_cut(a.full_root, None) if public else out
     meta = {
         "cut_date": a.cut_date,
         "snapshot_date": latest.get("snapshot_date"),
@@ -226,15 +289,20 @@ def main():
         "categories": len(crow),
         "scaled_share": round(sum(1 for m in main_m if m["scaled"]) / max(len(main_m), 1), 3),
         "coverage": coverage_from(state, latest),
-        "rows": {"movers": len(top), "rising": len(rising), "categories": len(crow)},
+        "rows": {"movers": len(top[:cap] if cap else top), "rising": len(rising[:cap] if cap else rising),
+                 "categories": len(crow[:cap] if cap else crow)},
+        "rows_full": {"movers": len(top), "rising": len(rising), "categories": len(crow)},
+        "public_max_rows": cap,
+        "custom_report": custom_readiness(snap, [r["category"] for r in crow[:PUBLIC_N]], MIN_SALES),
         "method": ("7-day gain = latest public sales counter minus the read 7+ days earlier; when a shop has "
                    "fewer than 7 days of reads, the gain over the observed days is scaled to 7. Shops with "
                    f"lifetime sales >= {MIN_SALES} only."),
         "generated_at": dt.datetime.now(dt.timezone.utc).isoformat(timespec="seconds"),
     }
-    with open(os.path.join(out, "meta.json"), "w", encoding="utf-8") as fh:
-        json.dump(meta, fh, indent=2)
-        fh.write("\n")
+    for d in dict.fromkeys([out, full_dir]):
+        with open(os.path.join(d, "meta.json"), "w", encoding="utf-8") as fh:
+            json.dump(meta, fh, indent=2)
+            fh.write("\n")
     print(json.dumps(meta, indent=2))
 
 

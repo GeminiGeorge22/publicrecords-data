@@ -7,7 +7,8 @@
   APIFY_TOKEN=... python scripts/niche_snapshot.py fetch --run-id RUN [--cut-date D]
       writes data/niche/<cut>/ from an existing run.
 
-Output: listings.csv (public listing fields, one row per search result),
+Output: listings.csv (public listing fields; the repo copy keeps the top PUBLIC_N = 10 results per keyword, the full
+list goes to the box-only INTERNAL_NICHE/<cut>/listings.csv and is never pushed),
 summary.csv (one row per keyword: price quartiles, price bands, reviews, badge shares),
 meta.json (run id, dataset id, Apify usage USD, keywords and where they came from).
 Budget guard: maxItems = keywords x per-keyword, maxPages = 1.
@@ -29,6 +30,9 @@ ROOT = os.path.normpath(os.path.join(os.path.dirname(os.path.abspath(__file__)),
 ACTOR = "JbNpPvG1Z7YtM9onP"  # publicrecords/etsy-search-scraper
 API = "https://api.apify.com/v2"
 BANDS = [(0, 15, "under $15"), (15, 30, "$15–30"), (30, 60, "$30–60"), (60, 10**9, "$60+")]
+PUBLIC_N = 10  # results per keyword in the public repo (t518u: free = top 10; top 50 = the visitor's own report)
+INTERNAL_NICHE = os.environ.get("INTERNAL_NICHE", "/workspace/x-etsypulse/internal/niche")
+FULL_PANEL = os.environ.get("INTERNAL_PANEL_FULL", "/workspace/x-etsypulse/internal/panel-full")
 LIST_COLS = ["query", "position", "title", "url", "price", "currency", "shop_name", "shop_url", "rating_value",
              "review_count", "bestseller", "star_seller", "popular_now", "etsys_pick", "free_shipping", "total_results"]
 
@@ -58,7 +62,11 @@ def latest_cut():
 
 def keywords_for(cut, n=5):
     """Leaf names of the first n distinct categories in Top Movers order (e.g. 'faux plants & greenery' -> 'faux plants')."""
-    rows = list(csv.DictReader(open(os.path.join(ROOT, "data", "panel", cut, "movers.csv"), encoding="utf-8")))
+    # the full (box-only) cut when present: the public movers.csv only has the top 10
+    p = os.path.join(FULL_PANEL, cut, "movers.csv")
+    if not os.path.exists(p):
+        p = os.path.join(ROOT, "data", "panel", cut, "movers.csv")
+    rows = list(csv.DictReader(open(p, encoding="utf-8")))
     out, seen = [], set()
     for r in rows:
         c = r["category"]
@@ -85,11 +93,16 @@ def write(cut, run, items, kw_map):
     out = os.path.join(ROOT, "data", "niche", cut)
     os.makedirs(out, exist_ok=True)
     items = [i for i in items if i.get("query")]
-    with open(os.path.join(out, "listings.csv"), "w", newline="", encoding="utf-8") as fh:
-        w = csv.DictWriter(fh, fieldnames=LIST_COLS, extrasaction="ignore", lineterminator="\n")
-        w.writeheader()
-        for i in sorted(items, key=lambda x: (x["query"], x.get("position") or 0)):
-            w.writerow(i)
+    srt = sorted(items, key=lambda x: (x["query"], x.get("position") or 0))
+    seen = {}
+    pub = [i for i in srt if seen.setdefault(i["query"], []).append(1) or len(seen[i["query"]]) <= PUBLIC_N]
+    full_dir = os.path.join(INTERNAL_NICHE, cut)
+    os.makedirs(full_dir, exist_ok=True)
+    for path, rows_ in ((os.path.join(out, "listings.csv"), pub), (os.path.join(full_dir, "listings.csv"), srt)):
+        with open(path, "w", newline="", encoding="utf-8") as fh:
+            w = csv.DictWriter(fh, fieldnames=LIST_COLS, extrasaction="ignore", lineterminator="\n")
+            w.writeheader()
+            w.writerows(rows_)
     summ = []
     for q in dict.fromkeys(i["query"] for i in items):
         rows = [i for i in items if i["query"] == q]
@@ -123,7 +136,8 @@ def write(cut, run, items, kw_map):
         "charged_events": run.get("chargedEventCounts"),
         "extra_run_ids": run.get("extra_run_ids", []),
         "keywords": [{"keyword": k, "from_category": v} for k, v in kw_map.items()],
-        "rows": {"listings": len(items), "keywords": len(summ)},
+        "rows": {"listings": len(items), "keywords": len(summ), "listings_public": len(pub)},
+        "public_max_rows_per_keyword": PUBLIC_N,
         "region": "US (Apify residential proxy), sort=relevance, page 1",
     }
     with open(os.path.join(out, "meta.json"), "w", encoding="utf-8") as fh:

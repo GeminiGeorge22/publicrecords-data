@@ -37,7 +37,9 @@
   ],
   "rows": {
     "listings": 284,
-    "keywords": 5
+    "keywords": 5,
+    "listings_public": 50
   },
-  "region": "US (Apify residential proxy), sort=relevance, page 1"
+  "region": "US (Apify residential proxy), sort=relevance, page 1",
+  "public_max_rows_per_keyword": 10
 }

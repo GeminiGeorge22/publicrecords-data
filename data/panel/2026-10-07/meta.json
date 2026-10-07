@@ -60,10 +60,95 @@
     "definition": "measured = public sales counter read on at least two different days, so a sales gain can be computed; read_once = at least one readable sales counter; panel_shops = shops listed in the panel (read or not)."
   },
   "rows": {
+    "movers": 10,
+    "rising": 10,
+    "categories": 10
+  },
+  "method": "7-day gain = latest public sales counter minus the read 7+ days earlier; when a shop has fewer than 7 days of reads, the gain over the observed days is scaled to 7. Shops with lifetime sales >= 500 only.",
+  "generated_at": "2026-10-07T20:13:26+00:00",
+  "rows_full": {
     "movers": 50,
     "rising": 25,
     "categories": 46
   },
-  "method": "7-day gain = latest public sales counter minus the read 7+ days earlier; when a shop has fewer than 7 days of reads, the gain over the observed days is scaled to 7. Shops with lifetime sales >= 500 only.",
-  "generated_at": "2026-10-07T20:13:26+00:00"
+  "public_max_rows": 10,
+  "custom_report": {
+    "rank_field": "sales_per_day",
+    "n": 50,
+    "min_sales": 500,
+    "snapshot_rows_with_field": 0,
+    "movers": {
+      "ready": false,
+      "rows_with_field": 0,
+      "max_shops": null
+    },
+    "rising": {
+      "ready": false,
+      "rows_with_field": 0,
+      "max_shops": null,
+      "max_sales": 999
+    },
+    "categories": {
+      "bags & purses > backpacks": {
+        "ready": false,
+        "rows_with_field": 0,
+        "max_shops": null,
+        "tracker_value": "bags &amp; purses > backpacks"
+      },
+      "accessories > aprons": {
+        "ready": false,
+        "rows_with_field": 0,
+        "max_shops": null,
+        "tracker_value": "accessories > aprons"
+      },
+      "accessories > patches & appliques": {
+        "ready": false,
+        "rows_with_field": 0,
+        "max_shops": null,
+        "tracker_value": "accessories > patches &amp; appliques"
+      },
+      "kids & baby > games & puzzles": {
+        "ready": false,
+        "rows_with_field": 0,
+        "max_shops": null,
+        "tracker_value": "kids &amp; baby > games &amp; puzzles"
+      },
+      "bath & beauty > fragrances": {
+        "ready": false,
+        "rows_with_field": 0,
+        "max_shops": null,
+        "tracker_value": "bath &amp; beauty > fragrances"
+      },
+      "home & living > home decor > faux plants & greenery": {
+        "ready": false,
+        "rows_with_field": 0,
+        "max_shops": null,
+        "tracker_value": "home &amp; living > home decor > faux plants &amp; greenery"
+      },
+      "bags & purses > pouches & coin purses": {
+        "ready": false,
+        "rows_with_field": 0,
+        "max_shops": null,
+        "tracker_value": "bags &amp; purses > pouches &amp; coin purses"
+      },
+      "pet supplies > pet storage": {
+        "ready": false,
+        "rows_with_field": 0,
+        "max_shops": null,
+        "tracker_value": "pet supplies > pet storage"
+      },
+      "accessories > hand fans": {
+        "ready": false,
+        "rows_with_field": 0,
+        "max_shops": null,
+        "tracker_value": "accessories > hand fans"
+      },
+      "bags & purses > totes": {
+        "ready": false,
+        "rows_with_field": 0,
+        "max_shops": null,
+        "tracker_value": "bags &amp; purses > totes"
+      }
+    }
+  }
 }

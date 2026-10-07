@@ -6,6 +6,7 @@ Usage: python scripts/import_cut.py path/to/YYYY-MM-DD.csv [more.csv ...]
 Keeps only section=top20_7d and the columns the public page shows
 (rank, shop_name, shop_url, category, sales_7d_delta, cut_date).
 Totals, method/span columns and the other sections are dropped on purpose.
+Public files keep the top PUBLIC_N (10) rows only (t518u: free = top 10).
 """
 import csv
 import os
@@ -13,6 +14,7 @@ import re
 import sys
 
 PUBLIC_COLS = ["rank", "shop_name", "shop_url", "category", "sales_7d_delta", "cut_date"]
+PUBLIC_N = 10
 OUT_DIR = os.path.join(os.path.dirname(os.path.abspath(__file__)), "..", "data", "top-movers")
 
 
@@ -31,6 +33,7 @@ def import_one(path):
         if not r.get("cut_date"):
             r["cut_date"] = name[:-4]
     rows.sort(key=lambda r: int(r["rank"]))
+    rows = rows[:PUBLIC_N]
     os.makedirs(OUT_DIR, exist_ok=True)
     out = os.path.join(OUT_DIR, name)
     with open(out, "w", newline="", encoding="utf-8") as fh:

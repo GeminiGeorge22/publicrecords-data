@@ -7,11 +7,20 @@ Weekly Etsy market reports, published as a static site:
 | Report | Page | What it shows | Source |
 |---|---|---|---|
 | Overview | `index.html` | Headline numbers, this week's takeaways, links to every report | all below |
-| Top Movers | `movers.html` | Top 50 shops (≥500 lifetime sales) by 7-day sales gain | `data/panel/<cut>/movers.csv` |
-| Hot Categories | `categories.html` | Every category ranked by combined 7-day gain, with shops gaining, median shop and leader | `data/panel/<cut>/categories.csv` |
-| Rising Shops | `rising.html` | Top 25 shops with 500–999 lifetime sales by 7-day gain | `data/panel/<cut>/rising.csv` |
-| Breakouts | `breakouts.html` | Shops new to the top 50 vs the previous cut (appears automatically once two cuts exist) | two panel cuts |
-| Niche Prices | `niche.html` | Page-1 Etsy search prices, price bands, Bestseller share, free shipping for keywords from this week's leading movers | `data/niche/<cut>/` |
+| Top Movers | `movers.html` | Top 10 shops (≥500 lifetime sales) by 7-day sales gain | `data/panel/<cut>/movers.csv` |
+| Hot Categories | `categories.html` | Top 10 categories by combined 7-day gain, with shops gaining, typical shop and leader | `data/panel/<cut>/categories.csv` |
+| Rising Shops | `rising.html` | Top 10 shops with 500–999 lifetime sales by 7-day gain | `data/panel/<cut>/rising.csv` |
+| Breakouts | `breakouts.html` | Shops new to the top 10 vs the previous cut (appears automatically once two cuts exist) | two panel cuts |
+| Niche Prices | `niche.html` | What top sellers charge (typical price, most charge $a–$b), price ranges, Bestseller share, free shipping for keywords from this week's leading movers; top 10 results per keyword in the CSV | `data/niche/<cut>/` |
+
+**Free = top 10, custom = top 50 (t518u).** Every public file (repo `data/` and the site's CSVs) has at most 10 rows per
+report (niche listings: 10 per keyword). Full cuts live only on the box (`/workspace/x-etsypulse/internal/panel-full/`,
+`/workspace/x-etsypulse/internal/niche/`) and are never pushed. Under each report a "Want the top 50?" button opens `run.html`
+already set up for that report (URL prefill: `type`, `q`, `category`, `f-<input id>`, `rank`/`dir`/`n`, `filter=field:op:value`).
+Shop reports only get the prefilled top-50 button when `meta.json` → `custom_report.<report>.ready` says the Shop Sales Tracker
+returns the gain field for enough shops (checked at export time); until then the button says plainly that it isn't ready and
+offers a niche report. `build_site.py` fails the build if a public file has more than 10 rows per report or uses the banned
+robot words (median, middle half, page 1, 7-day pace) in visible text, CSV headers or builder strings.
 
 Every report page has a "What this means for sellers" block generated from the same rows, and a CSV download
 (`data/<report>-<cut>.csv`, plus `-latest.csv` aliases). Nothing is estimated beyond the 7-day scaling described below.
