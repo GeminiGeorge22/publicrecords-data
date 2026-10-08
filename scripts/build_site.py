@@ -1421,8 +1421,12 @@ def dm_load(day):
     cast = lambda rows: [{**r, "rank": int(r["rank"]), "sales_added": int(r["sales_added"]), "sales_before": int(r["sales_before"]),
                           "sales_total": int(r["sales_total"]), "pct_added": float(r["pct_added"] or 0)} for r in rows]
     pct_p = os.path.join(d, "pct.csv")
+    nich_p = os.path.join(d, "niches.csv")
+    nich = ([{**r, "rank": int(r["rank"]), "sales_added": int(r["sales_added"]), "shops": int(r["shops"]),
+              "top_shop_added": int(r["top_shop_added"])} for r in read_csv(nich_p)][:PUBLIC_N]
+            if os.path.exists(nich_p) and meta.get("niche_window_days") else [])
     return {"day": day, "meta": meta, "movers": cast(read_csv(os.path.join(d, "movers.csv")))[:PUBLIC_N],
-            "pct": cast(read_csv(pct_p))[:PUBLIC_N] if os.path.exists(pct_p) else []}
+            "pct": cast(read_csv(pct_p))[:PUBLIC_N] if os.path.exists(pct_p) else [], "niches": nich}
 
 
 def short_date(iso, lang="en", T=None):
@@ -1463,12 +1467,44 @@ def dm_rows(rows, key, lang="en", T=None):
     return f'<div class="tc" role="table" style="--cols:{cols}">{"".join(out)}</div>'
 
 
+def dm_niche_rows(rows, lang="en", T=None):
+    """NICHES (Mark t620u): top niches by sales added. Columns: #, niche, department, shops behind it, top shop, bar, sales added."""
+    L = (T or {}).get("movers", {})
+    tr = lang == "tr"
+    num = n_tr if tr else n
+    pl = plus_tr if tr else plus
+    cols_ = L.get("niche_cols") if tr else ["#", "Niche", "Department", "Shops", "Top shop", "Size vs #1", "Sales added"]
+    nm_tr, dp_tr = L.get("niche_names", {}), L.get("dept_names", {})
+    hd = (f'<div class="hd" role="row"><span>{cols_[0]}</span><span>{cols_[1]}</span><span>{cols_[2]}</span>'
+          f'<span class="r">{cols_[3]}</span><span>{cols_[4]}</span><span>{cols_[5]}</span><span class="r">{cols_[6]}</span></div>')
+    maxv = rows[0]["sales_added"] if rows else 1
+    out = [hd]
+    for r in rows:
+        w = max(2, round(100 * r["sales_added"] / maxv)) if maxv else 0
+        key = r["category"].split(" > ")[-1].strip()
+        name = nm_tr.get(key, r["niche"]) if tr else r["niche"]
+        dk = r["category"].split(" > ")[0].strip()
+        dname = dp_tr.get(dk, dept(r["category"])) if tr else dept(r["category"])
+        out.append(
+            f'<div class="{"row top3" if r["rank"] <= 3 else "row"}" role="row"><span class="rk">{r["rank"]}</span>'
+            f'<span class="nm" title="{E(r["category"])}">{E(name)}</span>'
+            f'<span class="meta"><span class="c">{E(dname)}</span>'
+            f'<span><em>{L.get("row_shops", "shops: ") if tr else "shops: "}</em><b>{num(r["shops"])}</b></span>'
+            f'<span class="ld"><em>{L.get("row_top", "top: ") if tr else "top: "}</em><a href="{E(r["top_shop_url"])}" rel="nofollow noopener">{E(r["top_shop"])}</a>'
+            f' <b>{pl(r["top_shop_added"])}</b></span></span>'
+            f'<span class="bar"><i style="width:{w}%"></i></span><span class="big">{pl(r["sales_added"])}</span></div>')
+    cols = "34px minmax(150px,1.2fr) minmax(110px,.9fr) 70px minmax(150px,1.1fr) minmax(80px,.8fr) 100px"
+    return f'<div class="tc" role="table" style="--cols:{cols}">{"".join(out)}</div>'
+
+
 DM_CSS = """.tagline{background:linear-gradient(135deg,#FD5E02,#ff8a3d);color:#fff;border-radius:18px;padding:22px 22px 18px;margin:26px 0}
 .tagline h2{color:#fff;margin:0 0 6px;font-size:26px;letter-spacing:-.02em}.tagline p{margin:0 0 14px;color:#fff;opacity:.95}
 .tagline .btn{background:#fff;color:#c2410c;display:inline-block;margin:0 8px 8px 0;border-radius:999px;padding:10px 18px;font-weight:800}
 .tagline .btn.ghost{background:transparent;color:#fff;border:2px solid #fff}
 .tagline .disc{font-size:12.5px;color:#fff;opacity:.9;margin-top:6px}
 .dmwin{display:inline-block;background:var(--chip);border-radius:999px;padding:3px 12px;font-size:14px;font-weight:700;margin:0 0 12px}
+.jump{display:inline-block;margin:0 0 0 10px;font-weight:700;font-size:14px}
+#niches{scroll-margin-top:70px}
 .arch{display:flex;flex-wrap:wrap;gap:8px}.arch a{background:var(--chip);color:var(--ink);border-radius:999px;padding:5px 12px;font-weight:600;font-size:14px}
 """
 
@@ -1544,11 +1580,32 @@ def dm_page(out_dir, D, days, ctx, lang="en", archive=False):
                 "".join(f'<a href="/movers/{x}/">{short_date(x)}, {x[:4]}</a>' for x in past) + "</div></section>")
     if archive:
         arch = f'<p class="note"><a href="/movers/">See today\'s movers →</a></p>' + arch
+    NC = movers_cfg().get("niche_list", {})
+    nich_sec, jump = "", ""
+    if D.get("niches"):
+        nw, nfrm = int(meta["niche_window_days"]), meta["niche_from_date"]
+        mins, share = meta.get("niche_min_shops") or NC.get("min_shops", 10), round(100 * (meta.get("niche_max_top_shop_share") or NC.get("max_top_shop_share", 0.5)))
+        if tr:
+            nwin = (M["win_1"] if nw == 1 else M["win_n"]).format(n=nw, frm=short_date(nfrm, "tr", T), to=sd)
+            nh2, nsub, jl = M["h2_niches"], M["sub_niches"].format(n=nw, min=mins, share=share), M["niche_jump"]
+        else:
+            nwin = (f"Sales added in 24 hours, {short_date(nfrm)} → {sd}" if nw == 1 else f"Sales added in {nw} days, {short_date(nfrm)} → {sd}")
+            nh2, jl = "Fastest-growing niches", "Fastest-growing niches ↓"
+            nsub = (f"Each niche is an Etsy category. Sales added = what the shops in it added over the same "
+                    f"{'24 hours' if nw == 1 else f'{nw} days'}, summed. A niche needs at least {mins} shops with clean reads, "
+                    f"and no single shop can be more than {share}% of its total.")
+        jump = f'<a class="jump" href="#niches">{E(jl)}</a>'
+        nich_sec = (f'<section id="niches"><div class="dmwin">{E(nwin)}</div><h2>{E(nh2)}</h2><p class="sub">{E(nsub)}</p>'
+                    f'{dm_niche_rows(D["niches"], lang, T)}</section>')
+        method += " " + (M["niche_method"] if tr else
+                         "Niches: the same clean counter pairs, summed by the shop's Etsy category and ranked by total sales added. "
+                         "Shops without a known category are not counted. These are the niches we read, not all of Etsy.")
     pct_sec = (f'<section><h2>{h2b}</h2><p class="sub">{E(subb)}</p>{dm_rows(D["pct"], "pct_added", lang, T)}</section>'
                if D["pct"] else "")
     og = SITE_URL + "og.png?v=" + ctx["cut"]
-    body = f"""<section><div class="dmwin">{E(win)}</div><h2>{h2a}</h2><p class="sub">{E(suba)}</p>
+    body = f"""<section><div class="dmwin">{E(win)}</div>{jump}<h2>{h2a}</h2><p class="sub">{E(suba)}</p>
 {dm_rows(D["movers"], "sales_added", lang, T)}</section>
+{nich_sec}
 {dm_tagline(lang, T, price, beacon)}
 {pct_sec}
 {arch}
@@ -1616,7 +1673,7 @@ def build_daily_movers(out_dir, ctx):
     paths.insert(0, dm_page(out_dir, D, days, ctx, "en"))
     paths.insert(1, dm_page(out_dir, D, days, ctx, "tr"))
     # public CSVs (top 10 each, dated + latest)
-    for k in ("movers", "pct"):
+    for k in ("movers", "pct", "niches"):
         rows_ = D[k]
         if rows_:
             for nm in (f"daily-{k}-{days[-1]}.csv", f"daily-{k}-latest.csv"):
@@ -1668,6 +1725,10 @@ def check_movers(out_dir, en_cta_html):
     for need in ("movers/index.html", os.path.join("tr", "movers", "index.html")):
         if not os.path.exists(os.path.join(out_dir, need)):
             bad.append(f"{need} missing")
+        elif dm_load(dm_days()[-1])["niches"]:
+            raw = open(os.path.join(out_dir, need), encoding="utf-8").read()
+            if raw.count('id="niches"') != 1 or raw.count('href="#niches"') != 1:
+                bad.append(f"{need}: niche section (#niches) or its jump link missing")
     if bad:
         raise SystemExit("movers check failed:\n  " + "\n  ".join(bad))
     print("movers check ok:", len(dm_days()), "day(s), tagline + CTA links + beacons + price line")

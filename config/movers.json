@@ -11,6 +11,15 @@
     "min_base_sales": 1000,
     "min_added": 25
   },
+  "niche_list": {
+    "enabled": true,
+    "top_n": 10,
+    "min_shops": 10,
+    "max_top_shop_share": 0.5,
+    "rank_by": "sales_added",
+    "source": "tracker shop category (Etsy category path; niche = its last segment)",
+    "_note": "Mark t620u 2026-10-08: daily 'Etsy's fastest-growing niches'. Same clean exact counter pairs as the shop list; niche window = the shortest of window_days_preferred with >= top_n rankable niches. Rankable = >= min_shops shops with clean reads in that window AND the biggest shop <= max_top_shop_share of the niche's sales added. Shops without a category are skipped. Ranked by total sales added (ties: more shops first)."
+  },
   "guards": {
     "max_jump_ratio": 0.5,
     "require_exact_precision": true,
@@ -30,5 +39,7 @@
   "x_post_url": "https://www.etsypulse.ca/movers/",
   "x_out_dir": "/workspace/x-etsypulse/movers",
   "x_teaser_rows": 3,
-  "tagline_note": "Mark t616u: generic AI wording in the tagline (no client named). Swap here only."
+  "tagline_note": "Mark t616u: generic AI wording in the tagline (no client named). Swap here only.",
+  "x_teaser_rows_niches": 3,
+  "x_post_url_niches": "https://www.etsypulse.ca/movers/#niches"
 }
