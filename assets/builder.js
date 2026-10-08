@@ -14,9 +14,9 @@
     worker: "https://publicrecords-redirect.publicrecords.workers.dev",
   };
   var ACTORS = {
-    search: { id: "JbNpPvG1Z7YtM9onP", name: "Etsy Search Scraper", store: "https://apify.com/publicrecords/etsy-search-scraper",
+    search: { id: "JbNpPvG1Z7YtM9onP", name: "Etsy Search Scraper", store: "https://publicrecords-redirect.publicrecords.workers.dev/r/site-store-search",
       start: 0.005, unit: 0.006, unitName: "listing" },
-    tracker: { id: "iSqAcbENkn1ZdUMm1", name: "Etsy Shop Sales Tracker", store: "https://apify.com/publicrecords/etsy-shop-velocity",
+    tracker: { id: "iSqAcbENkn1ZdUMm1", name: "Etsy Shop Sales Tracker", store: "https://publicrecords-redirect.publicrecords.workers.dev/r/site-store-tracker",
       start: 0.005, unit: 0.003, unitName: "shop", platform: 0 },   // PRICE-2: exactly $0.005/run + $0.003/shop; standard runs, user pays no platform usage
   };
   var BLOCKED_NOTE = "If Etsy blocks a search, you get the most recent cached results, clearly dated, at the same rate; if there's nothing cached, you pay nothing.";

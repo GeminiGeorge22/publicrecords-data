@@ -35,6 +35,15 @@ assert SITE_URL.startswith("https://") and SITE_URL.endswith("/"), "config/site.
 CTA_URL = "https://publicrecords-redirect.publicrecords.workers.dev/r/site-cta"
 TRACKER_URL = "https://publicrecords-redirect.publicrecords.workers.dev/r/site-tracker"
 R = "https://publicrecords-redirect.publicrecords.workers.dev/r/"
+# BEACON-1 (Mark 2026-10-08): every page sends ONE anonymous page-view beacon to the worker: page name, referrer host only,
+# utm_content/from tag, ?me=1 (own) and ?test=1 (not logged) passed through. No cookies (credentials:'omit'), no storage, no IDs.
+VIEW_BEACON = "https://publicrecords-redirect.publicrecords.workers.dev/e/view"
+def view_js(name):
+    pg = re.sub(r"\.html$", "", name).replace("index", "home")
+    return ("<script>(function(){try{var q=new URLSearchParams(location.search),r='';try{r=document.referrer?new URL(document.referrer).hostname:''}catch(e){}"
+            f"var u='{VIEW_BEACON}?p={pg}'+(r?'&r='+encodeURIComponent(r):'')+'&from='+encodeURIComponent((q.get('utm_content')||q.get('from')||'').slice(0,40))"
+            "+(q.get('me')==='1'?'&me=1':'')+(q.get('test')==='1'?'&test=1':'');"
+            "fetch(u,{method:'POST',mode:'no-cors',credentials:'omit',keepalive:true,referrerPolicy:'no-referrer'})}catch(e){}})();</script>")
 X_URL = "https://x.com/EtsyPulse"
 ORANGE = "#FD5E02"
 PUBLIC_N = 10   # t518u: free reports show the top 10 only; the top 50 is the visitor's own custom report
@@ -450,6 +459,7 @@ def page(name, title, desc, body, ctx, hero=None, scripts=""):
 <p>Movers cut {E(ctx['cut'])} (counters read through {E(ctx['snap'])}). Not affiliated with, endorsed by, or sponsored by Etsy, Inc.
 Etsy is a trademark of Etsy, Inc.</p>
 </div></footer>
+{view_js(name)}
 {scripts}
 </body></html>
 """
@@ -748,6 +758,10 @@ MCP_TOOLS = "publicrecords/etsy-search-scraper,publicrecords/etsy-shop-velocity"
 MCP_URL = "https://mcp.apify.com?tools=" + MCP_TOOLS
 MCP_SETUP = "https://mcp.apify.com/?tools=" + MCP_TOOLS          # Apify's own setup page, our tools preselected
 CLAUDE_ADD = "https://claude.ai/new?modal=add-custom-connector#settings/customize-connectors"
+# BEACON-1: page links go through logged worker hand-offs that 302 to the exact URLs above (worker TARGETS keep them identical).
+# MCP_URL itself stays direct: it is the address people copy/paste into their AI app (copies are counted by the ai-copy beacon).
+MCP_SETUP_LINK = R + "ai-mcp-connect"
+CLAUDE_ADD_LINK = R + "ai-claude-connect"
 CHATGPT_SETTINGS = "https://chatgpt.com/#settings/Connectors"
 # AI-PAGE-2 (t570u): a client is named on the page only after a committed real-test pass on that client and surface.
 # claude: PASS on claude.ai web (Mark's account, 2026-10-07 23:50Z; Search run NbmK5QVMvSggPpUIi, 26.9 s, 12 rows;
@@ -838,7 +852,7 @@ aria-label="Demo: connect Etsy Pulse, sign in with Apify, ask AI who the top sel
 
     cards = {
         "claude": f"""<div class="app"><h3>Claude</h3><p>Connect on claude.ai in a browser first (the iPhone app can't add it yet).</p>
-<div class="acts">{copy("1. Copy link")}<a class="abtn ghost" href="{E(CLAUDE_ADD)}" target="_blank" rel="noopener">2. Open Claude connectors →</a></div>
+<div class="acts">{copy("1. Copy link")}<a class="abtn ghost" href="{E(CLAUDE_ADD_LINK)}" target="_blank" rel="noopener">2. Open Claude connectors →</a></div>
 <ol><li>Name it <b>Etsy Pulse</b> and paste the link as the server URL.</li><li>Press <b>Add</b>, then <b>Connect</b>, and sign in with Apify.</li>
 <li>In Claude: <b>Customize → Connectors → Etsy Pulse → set tools to Always allow.</b> One question uses 3 tools (run, check status, read results), so otherwise Claude stops to ask 3 times.</li></ol></div>""",
         "chatgpt": f"""<div class="app"><h3>ChatGPT</h3><p>Needs Developer mode (Plus, Pro, Business, Enterprise and Edu plans).</p>
@@ -860,7 +874,7 @@ the Etsy Search Scraper and the Etsy Shop Sales Tracker. Copy the link below and
 <div class="apps" style="margin-top:14px">
 {cards_html}
 </div>
-<p class="note">Another AI app? <a href="{E(MCP_SETUP)}" target="_blank" rel="noopener">Open Apify's setup page</a> with our tools already picked.
+<p class="note">Another AI app? <a href="{E(MCP_SETUP_LINK)}" target="_blank" rel="noopener">Open Apify's setup page</a> with our tools already picked.
 We list an app here only after we've run a real question through it.</p></section>"""
 
     # AI-PAGE-2: copy-paste prompts stay small (one keyword, top 5-10, or one shop) so a first answer lands in about 30 s.
@@ -1076,6 +1090,23 @@ def check_public(out_dir, meta=None):
                     bad.append(f"{rel}: URL '{u}' does not use the site base {SITE_URL} (DOMAIN-1)")
             if SITE_URL != GITHUB_IO_URL and "geminigeorge22.github.io" in raw:
                 bad.append(f"{rel}: legacy github.io URL left after the custom-domain switch (DOMAIN-1)")
+    # BEACON-1 guards: every page carries exactly one cookieless page-view beacon; no page links straight to an Apify Store
+    # page or the MCP setup page / Claude connector dialog (those go through logged worker /r/ hand-offs).
+    direct = _re.compile(r'href="(https://(?:apify\.com/publicrecords/|mcp\.apify\.com/?\?tools=|claude\.ai/new\?modal=add-custom-connector)[^"]*)"')
+    for f in sorted(os.listdir(out_dir)):
+        if not f.endswith(".html"):
+            continue
+        h = open(os.path.join(out_dir, f), encoding="utf-8").read()
+        nb = h.count(VIEW_BEACON + "?p=")
+        if nb != 1:
+            bad.append(f"{f}: {nb} page-view beacons (need exactly 1)")
+        if "credentials:'omit'" not in h:
+            bad.append(f"{f}: page-view beacon must be cookieless (credentials:'omit')")
+        for mt in direct.finditer(h):
+            bad.append(f"{f}: direct hand-off link {mt.group(1)[:80]} (use the worker /r/ slug)")
+    bj = os.path.join(out_dir, "assets", "builder.js")
+    if os.path.exists(bj) and "https://apify.com/publicrecords/" in open(bj, encoding="utf-8").read():
+        bad.append("assets/builder.js: direct Store link (use /r/site-store-*)")
     if bad:
         raise SystemExit("public check failed:\n  " + "\n  ".join(bad))
     print("public check ok: no banned words, every report <= %d rows" % PUBLIC_N)
@@ -1319,7 +1350,7 @@ These are not all of Etsy: they are the shops in our panel that we could measure
                     '<h1>Build your own Etsy report</h1><p class="lede">Pick a report, type a niche or a few shops, press Run. '
                     'Charts, plain-English takeaways and a spreadsheet in a few minutes. No code, no API keys.</p></div></div>')
     body = """<div id="builder" class="bld"><noscript><div class="berr">The report builder needs JavaScript. You can still run our tools directly on Apify:
-<a href="https://apify.com/publicrecords/etsy-search-scraper">Etsy Search Scraper</a> · <a href="https://apify.com/publicrecords/etsy-shop-velocity">Etsy Shop Sales Tracker</a>.</div></noscript></div>
+<a href="https://publicrecords-redirect.publicrecords.workers.dev/r/site-store-search">Etsy Search Scraper</a> · <a href="https://publicrecords-redirect.publicrecords.workers.dev/r/site-store-tracker">Etsy Shop Sales Tracker</a>.</div></noscript></div>
 <div id="progress" hidden></div>
 <div id="report" hidden></div>
 <section class="how-sec"><h2>How it works</h2><p class="sub">Three steps. Your results and your spend stay in your own Apify account.</p>
@@ -1331,7 +1362,7 @@ These are not all of Etsy: they are the shops in our panel that we could measure
 <p class="note">Sign-in uses Apify's own OAuth screen; we never see your password. Apify offers one permission level (full account access): this page uses it only to start the report you asked for and read its results. The key stays in this browser tab and is gone when you close it. Remove the approval any time in Apify Console → Settings → API &amp; Integrations.</p></section>"""
     w(BUILDER, page(BUILDER, "Build your own Etsy report: prices, bestsellers, top shops, shop sales | Etsy Pulse",
                     "Type a niche or a few Etsy shops and get a live report: price bands, Bestseller share, top shops, sales pace, CSV. Free Apify sign-in, no code.",
-                    body, ctx, builder_hero, scripts=f'<script src="assets/builder.js?v={cut}-b6" defer></script>'))
+                    body, ctx, builder_hero, scripts=f'<script src="assets/builder.js?v={cut}-b7" defer></script>'))
 
     # ---- AI page
     w("ai.html", ai_page(ctx, files))
