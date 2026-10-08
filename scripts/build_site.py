@@ -731,8 +731,7 @@ def og_image(out_dir, P):
         d.text((1116 - vw, y + 13), val, font=F(38, "ExtraBold"), fill=ORANGE)
         y += 86
     # DAILY-1: no shop-coverage count on the social card (X shows it under posts that quote other numbers).
-    scaled = any((r.get("days_observed") or 7) < 7 for r in P["movers"][:3])
-    d.text((60, 560), "From public Etsy sales counters" + (" · gains scaled to 7 days where reads are shorter" if scaled else ""),
+    d.text((60, 560), "From public Etsy sales counters",
            font=F(22, "Medium"), fill=(255, 236, 222))
     d.text((60, 596), "data by publicrecords (our tool) · not affiliated with Etsy", font=F(22, "Medium"),
            fill=(255, 236, 222))
@@ -962,6 +961,10 @@ Rather not use AI? <a href="{BUILDER}?from=ai">Build a report here</a> or <a hre
 
 # ---------------------------------------------------------------- public checks
 import re as _re
+# t591u (Mark 2026-10-08): the hero says the dataset grows every day instead of the "N gaining, 500+ sales, ranked here"
+# and "Gains scaled to 7 days where a shop has N days of reads" chips; check_public keeps those lines from coming back.
+GROWTH_LINE = "Our dataset grows every day as we read more Etsy shops."
+UNCLEAR_LINES = _re.compile(r"ranked here|gaining,\s*\d+\+\s*sales|gains scaled to 7 days (?:where|from)|scaled to 7 days where", _re.I)
 BANNED = _re.compile(r"\bmedian\b|middle half|\bpage[ -]1\b|7-day pace|\biqr\b", _re.I)
 # PRICE-1 (t566u): a price on a page must be what the default buyer path charges. MCP-2 is live (Etsy Search 0.2.10
 # LRdhNvPXU8Yei84J8, default maxItems 20, owner run 5jf38ytVjcPMi7nm3 = 20 rows = $0.125), so "13¢" is allowed ONLY as
@@ -1019,6 +1022,8 @@ def check_public(out_dir, meta=None):
                 for k, rx in {"cursor": r"cursor://", "vscode": r"vscode:mcp", "chatgpt": r"chatgpt\.com"}.items():
                     if k not in TESTED_CLIENTS and _re.search(rx, raw):
                         bad.append(f"{rel}: untested client link '{rx}' (AI-PAGE-2)")
+                for mt in UNCLEAR_LINES.finditer(vt + " " + " ".join(html.unescape(x) for x in DESC_RX.findall(raw))):
+                    bad.append(f"{rel}: removed line '{mt.group(0)}' is back (t591u)")
                 if _re.search(r"your Etsy data", vt, _re.I):
                     bad.append(f"{rel}: 'your Etsy data' (t559u)")
                 for dsc in DESC_RX.findall(raw):
@@ -1145,24 +1150,13 @@ def build(out_dir):
     ctx = {"pages": pages, "cut": cut, "snap": snap, "ld": ld}
     og_ok = og_image(out_dir, P)
     m, c, r = P["movers"], P["categories"], P["rising"]
-    spans = sorted({x["days_observed"] for x in m if x.get("days_observed")})
-    if spans and spans[-1] < 7:
-        rng = f"{spans[0]}–{spans[-1]}" if spans[0] != spans[-1] else f"{spans[0]}"
-        span_note = f"Gains scaled to 7 days from {rng} days of reads"
-    elif spans and spans[0] < 7:
-        short = [x for x in spans if x < 7]
-        rng = f"{short[0]}–{short[-1]}" if short[0] != short[-1] else f"{short[0]}"
-        span_note = f"Gains scaled to 7 days where a shop has {rng} days of reads"
-    else:
-        span_note = f"Counters read through {nice_date(snap)}"
 
     cv = cov_of(meta)
     meas = cv.get("shops_measured")
     meas_txt = f"{n(meas)} measured shops" if meas is not None else "the shops we measure"
     src_line = (f'<p class="note">Source: publicrecords Velocity panel, cut {E(cut)}, counters read through {E(snap)}. '
                 f'The panel lists {n(cv["panel_shops"])} shops; {n(meas) + " have a measured sales figure (sales counter read on 2+ days); " if meas is not None else ""}'
-                f'{n(meta["shops_with_gain_ge_min"])} of those with ≥{meta["min_lifetime_sales"]} lifetime sales showed a gain and are ranked here. '
-                f'Fewer than 7 days of reads are scaled to 7 days.</p>')
+                f'{n(meta["shops_with_gain_ge_min"])} of those with ≥{meta["min_lifetime_sales"]} lifetime sales showed a gain.</p>')
     cov_html = f'<p class="cov">{coverage_short(meta)}</p>' if coverage_short(meta) else ""
 
     mi, ci, ri = movers_insights(P), category_insights(P), rising_insights(P)
@@ -1181,7 +1175,7 @@ def build(out_dir):
 <h1>Etsy shops on the move this week</h1>
 <p class="lede">The biggest 7-day sales jumps among the Etsy shops we measure, read from public Etsy sales counters.</p>
 {hero_cta()}
-<div class="chips">{f'<span><b>{n(cv["panel_shops"])}</b> shops in our panel</span>' if cv.get("panel_shops") else ''}{f'<span><b>{n(meas)}</b> with a measured sales figure</span>' if meas is not None else ''}<span><b>{n(meta['shops_with_gain_ge_min'])}</b> gaining, {meta['min_lifetime_sales']}+ sales, ranked here</span><span>{E(span_note)}</span></div>
+<div class="chips">{f'<span><b>{n(cv["panel_shops"])}</b> shops in our panel</span>' if cv.get("panel_shops") else ''}{f'<span><b>{n(meas)}</b> with a measured sales figure</span>' if meas is not None else ''}<span>{E(GROWTH_LINE)}</span></div>
 {cov_html}
 </div></div>"""
 
@@ -1232,8 +1226,7 @@ These are not all of Etsy: they are the shops in our panel that we could measure
 <p id="breakouts">Breakouts appear once there are two cuts to compare.</p></section>"""
     # DAILY-1: no shop-coverage count in the description (X shows it under posts; check_public enforces it).
     desc_home = (f"This week's Etsy movers: {top['shop_name']} {plus(top['sales_7d_delta'])} sales in 7 days; "
-                 f"{leaf(c[0]['category'])} lead categories ({plus(c[0]['total_7d_delta'])}). From public Etsy sales counters"
-                 + ("; gains scaled to 7 days where we have fewer days of reads." if (top.get("days_observed") or 7) < 7 else "."))
+                 f"{leaf(c[0]['category'])} lead categories ({plus(c[0]['total_7d_delta'])}). From public Etsy sales counters.")
     w = lambda name, html_: open(os.path.join(out_dir, name), "w", encoding="utf-8").write(html_)
     w("index.html", page("index.html", f"Etsy Pulse: Etsy shops on the move this week ({nice_date(snap)})", desc_home, body, ctx, hero))
 
@@ -1241,7 +1234,7 @@ These are not all of Etsy: they are the shops in our panel that we could measure
         return (f'<div class="hero">{PULSE_SVG}<div class="wrap" style="padding-bottom:30px"><div class="eyebrow">{eyebrow}</div>'
                 f'<h1>{h1}</h1><p class="lede">{lede}</p>{hero_cta()}<div class="chips"><span>Week to {nice_date(snap)}</span>'
                 + (f'<span><b>{n(meas)}</b> measured of {n(cv["panel_shops"])} shops in our panel</span>' if meas is not None else '')
-                + f'<span>{E(span_note)}</span></div></div></div>')
+                + '</div></div></div>')
 
     # ---- movers
     body = f"""{fresh_box(nice_date(snap), f"top {len(m)} of {n(meta['shops_with_gain_ge_min'])} gaining shops ({meta['min_lifetime_sales']}+ sales) · {meas_txt}", cut)}<section>{insights_block(mi)}{report_btn("site-movers", "Etsy Shop Sales Tracker", "Track 7-day sales for any shops you choose: yours, competitors, or the ones above.")}</section>
