@@ -30,6 +30,7 @@ import argparse
 import csv
 import datetime as dt
 import gzip
+import hashlib
 import html
 import io
 import json
@@ -218,7 +219,14 @@ def main():
 
     latest = json.loads(open(a.latest).read() if a.latest else hf_get("latest.json"))
     snap_blob = open(a.snapshot, "rb").read() if a.snapshot else hf_get(latest["path"])
+    # DAILY-1 completeness: the downloaded file must be the exact snapshot latest.json describes (sha256 of the .gz)
+    # and hold every row it claims; a partial or swapped file fails the export instead of publishing wrong data.
+    got_sha = hashlib.sha256(snap_blob).hexdigest()
+    if latest.get("sha256") and got_sha != latest["sha256"]:
+        raise SystemExit(f"snapshot sha256 mismatch: got {got_sha}, latest.json says {latest['sha256']}")
     snap = load_snapshot(snap_blob)
+    if latest.get("rows") is not None and len(snap) != int(latest["rows"]):
+        raise SystemExit(f"snapshot rows mismatch: file has {len(snap)} shops, latest.json says {latest['rows']}")
     state = json.loads(open(a.state).read() if a.state else hf_get("STATE/shops.json"))
 
     allm = movers_from(snap, state, 0)
@@ -280,12 +288,15 @@ def main():
         "snapshot_sha256": latest.get("sha256"),
         "panel_shops": latest.get("panel"),
         "snapshot_rows": latest.get("rows"),
+        "snapshot_rows_in_file": len(snap),
+        "snapshot_built_at": latest.get("built_at"),
         "history_days_max": latest.get("history_days_max"),
         "min_lifetime_sales": MIN_SALES,
         "shops_with_gain_any_size": len(allm),
         "shops_with_gain_ge_min": len(main_m),
         "shops_with_gain_ge_min_known_category": sum(len(v) for v in cats.values()),
         "total_7d_delta_ge_min": sum(m["sales_7d_delta"] for m in main_m),
+        "total_7d_delta_ge_min_known_category": sum(m["sales_7d_delta"] for v in cats.values() for m in v),
         "categories": len(crow),
         "scaled_share": round(sum(1 for m in main_m if m["scaled"]) / max(len(main_m), 1), 3),
         "coverage": coverage_from(state, latest),

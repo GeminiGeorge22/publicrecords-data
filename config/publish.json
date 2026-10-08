@@ -1,9 +1,13 @@
 {
-  "cadence_days": 7,
-  "publish_weekday": "Mon",
-  "publish_time_et": "07:30",
-  "niche_with_publish": true,
+  "publish": "daily_on_new_snapshot",
+  "poll_minutes": 30,
+  "poll_window_et": ["06:00", "23:00"],
+  "min_rows_ratio": 0.95,
+  "min_panel_ratio": 0.95,
+  "min_movers_rows": 10,
+  "niche_weekday": "Mon",
+  "niche_time_et": "07:45",
+  "niche_cadence_days": 7,
   "niche_max_usd": 0.40,
-  "internal_daily_time_et": "07:30",
-  "note": "Public site data is published at most every cadence_days, on publish_weekday (rule: publish when >= cadence_days-3 days since the last published cut). Daily panel exports stay box-only (internal X post data)."
+  "note": "DAILY-1 (Mark 2026-10-08 11:29 ET): the public site publishes every day a newer Velocity snapshot exists than the one live on the site. The box loop polls Hugging Face latest.json every poll_minutes between poll_window_et (ET). A snapshot is published only if complete: its .gz sha256 matches latest.json, the file holds every row latest.json claims, rows >= min_rows_ratio x the last published snapshot's rows, panel >= min_panel_ratio x the last published panel, and gates (if present) are all true. Otherwise it is logged and skipped. The niche price snapshot (paid Apify run) keeps its weekly cadence: niche_weekday at/after niche_time_et, at most once a day, when the newest niche cut is >= niche_cadence_days-3 days old."
 }
