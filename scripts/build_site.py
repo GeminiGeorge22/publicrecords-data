@@ -445,8 +445,8 @@ def nav_items(ctx):
 
 # ---------------------------------------------------------------- TR-1: Turkish home (/tr/)
 # Mark t607u (2026-10-08): a Turkish home at /tr/ built from config/i18n/tr.json (strings only). Every number comes from the
-# same snapshot as the English home, so the daily publish keeps /tr/ current. Only the home is translated; other reports link
-# to the English pages. check_tr() runs the Turkish copy rules (see TR_BANNED / TR_COVERAGE) and pins the TR price line to the
+# same snapshot as the English home, so the daily publish keeps /tr/ current. LANG-2 (t627u): every page is translated
+# now (see loc_page and friends below). check_tr() runs the Turkish copy rules (see TR_BANNED / TR_COVERAGE) and pins the TR price line to the
 # exact $/¢ amounts of the English home CTA, so a price change on the English side fails the build until tr.json follows.
 I18N_DIR = os.path.join(ROOT, "config", "i18n")
 TR_PATH = "tr/"
@@ -465,6 +465,12 @@ LOCALES = [("en", "", "English"), ("fr", "fr/", "Français"), ("tr", "tr/", "Tü
 LOC_PATH = {k: p for k, p, _ in LOCALES}
 FR_PATH = "fr/"
 TRANSLATED = {"home": "", "movers": "movers/"}   # page key -> path under each locale root
+# LANG-2 (Mark t627u): every public page exists in every language, so a page key is also just its path under the locale
+# root ("ai.html", "run.html", "rising.html", "niche.html", "movers/<day>/"); "home"/"movers" stay as aliases.
+
+
+def loc_rel(key):
+    return TRANSLATED.get(key, key)
 GLOBE = ('<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" aria-hidden="true"><circle cx="12" cy="12" r="10"/>'
          '<path d="M2 12h20M12 2a15.3 15.3 0 0 1 4 10 15.3 15.3 0 0 1-4 10 15.3 15.3 0 0 1-4-10 15.3 15.3 0 0 1 4-10z"/></svg>')
 
@@ -475,7 +481,7 @@ def load_loc(lang):
 
 def loc_url(lang, key):
     """Root-relative URL of a translated page in a locale."""
-    return "/" + LOC_PATH[lang] + TRANSLATED[key]
+    return "/" + LOC_PATH[lang] + loc_rel(key)
 
 
 def lang_menu(cur, key=None, self_href="/"):
@@ -485,17 +491,18 @@ def lang_menu(cur, key=None, self_href="/"):
     lab = {"en": "Language", "fr": "Langue", "tr": "Dil"}[cur]
     items = []
     for lg, _, nm in LOCALES:
-        href = loc_url(lg, key) if key else (self_href if lg == cur else loc_url(lg, "home"))
+        href = loc_url(lg, key) if key is not None else (self_href if lg == cur else loc_url(lg, "home"))
         cur_ = ' aria-current="true"' if lg == cur else ""
-        items.append(f'<li><a href="{href}" hreflang="{lg}" lang="{lg}" data-lang="{lg}"{" data-k=1" if key else ""}{cur_}>{nm}</a></li>')
+        items.append(f'<li><a href="{href}" hreflang="{lg}" lang="{lg}" data-lang="{lg}"{" data-k=1" if key is not None else ""}{cur_}>{nm}</a></li>')
     return (f'<details class="lsel"><summary aria-label="{lab}: {names[cur]}">{GLOBE}<span class="ln">{names[cur]}</span>'
             f'<span class="lc">{cur.upper()}</span><span class="cv">▼</span></summary><ul>{"".join(items)}</ul></details>')
 
 
+# LANG-2: switching keeps the query string (?me=1, ?test=1, ?type=…) and the #anchor.
 LANG_JS = ("<script>(function(){var d=document.querySelector('.lsel');if(!d)return;"
            "d.addEventListener('click',function(e){var a=e.target.closest&&e.target.closest('a[data-lang]');if(!a)return;"
            "try{localStorage.setItem('ep_lang',a.getAttribute('data-lang'))}catch(x){}"
-           "if(a.hasAttribute('data-k')&&location.hash){a.href=a.href.split('#')[0]+location.hash}});"
+           "if(a.hasAttribute('data-k')){a.href=a.href.split(/[?#]/)[0]+location.search+location.hash}});"
            "document.addEventListener('click',function(e){if(d.open&&!d.contains(e.target))d.open=false});"
            "document.addEventListener('keydown',function(e){if(e.key==='Escape')d.open=false})})();</script>")
 
@@ -511,8 +518,8 @@ def lang_redirect_js(cur, key):
 
 
 def hreflang_links(key="home"):
-    return "".join(f'<link rel="alternate" hreflang="{lg}" href="{SITE_URL}{p}{TRANSLATED[key]}">' for lg, p, _ in LOCALES) + \
-        f'<link rel="alternate" hreflang="x-default" href="{SITE_URL}{TRANSLATED[key]}">'
+    return "".join(f'<link rel="alternate" hreflang="{lg}" href="{SITE_URL}{p}{loc_rel(key)}">' for lg, p, _ in LOCALES) + \
+        f'<link rel="alternate" hreflang="x-default" href="{SITE_URL}{loc_rel(key)}">'
 
 
 def n_loc(x, lang="en"):
@@ -584,6 +591,7 @@ def money_tokens(text, lang="en"):
 def page(name, title, desc, body, ctx, hero=None, scripts=""):
     nav = "".join(f'<a href="{h}"{" class=on" if h == name else ""}>{t}</a>' for h, t in nav_items(ctx))
     url = SITE_URL + ("" if name == "index.html" else name)
+    rel_ = "" if name == "index.html" else name
     og = SITE_URL + "og.png?v=" + ctx["cut"]
     return f"""<!doctype html>
 <html lang="en"><head>
@@ -591,7 +599,7 @@ def page(name, title, desc, body, ctx, hero=None, scripts=""):
 <title>{E(title)}</title>
 <meta name="description" content="{E(desc)}">
 <link rel="canonical" href="{url}">
-{(hreflang_links("home") + lang_redirect_js("en", "home")) if name == "index.html" else ""}
+{hreflang_links(rel_) + lang_redirect_js("en", rel_)}
 <meta name="theme-color" content="{ORANGE}">
 <link rel="icon" href="assets/favicon.ico" sizes="any"><link rel="icon" type="image/png" sizes="32x32" href="assets/favicon-32.png">
 <link rel="apple-touch-icon" href="assets/apple-touch-icon.png">
@@ -607,7 +615,7 @@ def page(name, title, desc, body, ctx, hero=None, scripts=""):
 <link rel="stylesheet" href="assets/builder.css?v={ctx['cut']}-b1">
 </head><body>
 <header class="top"><div class="wrap"><a class="brand" href="index.html"><img src="assets/logo-96.png" alt="" width="30" height="30">Etsy Pulse</a>
-<a class="x" href="{X_URL}" rel="noopener"><span class="fw">Follow </span>@EtsyPulse</a>{lang_menu("en", "home" if name == "index.html" else None, "/" + ("" if name == "index.html" else name))}</div></header>
+<a class="x" href="{X_URL}" rel="noopener"><span class="fw">Follow </span>@EtsyPulse</a>{lang_menu("en", rel_)}</div></header>
 <nav class="tabs" aria-label="Reports"><div class="wrap">{nav}</div></nav>
 {hero or ""}
 <main class="wrap">
@@ -1157,10 +1165,7 @@ def loc_home(ctx, P, D, lang):
     desc = T["desc"].format(date=short_date(D["day"], lang, T), shop=a["shop_name"], span=span, gain=plus_tr(a["sales_added"]),
                             niche=loc_niche(nz[0], T) if nz else "", niche_gain=plus_tr(nz[0]["sales_added"]) if nz else "")
     nv = T["nav"]
-    nav = (f'<a href="/{lp}" class=on>{nv["home"]}</a><a href="/ai.html?from={L}">{nv["ai"]}</a>'
-           + (f'<a href="/{lp}movers/">{T["movers"]["nav"]}</a>' if dm_days() else "")
-           + (f'<a href="/{lp}movers/#niches">{T["movers"]["nav_niches"]}</a>' if dm_has_niches() else "")
-           + f'<a href="/{BUILDER}?from={L}-nav">{nv["run"]}</a><a href="/?from={L}#reports">{nv["movers"]}</a>')
+    nav = loc_nav(lang, ctx, "index.html", T)   # LANG-2: same tabs as the English nav, all inside /<lang>/
     kpis = ('<div class="kpis">'
             f'<div class="kpi"><div class="v">{plus_tr(a["sales_added"])}</div><div class="l">{T["kpi_top"].format(span=span, shop=E(a["shop_name"]))}</div></div>'
             + (f'<div class="kpi"><div class="v">{E(loc_niche(nz[0], T))}</div><div class="l">{T["kpi_niche"].format(span=span, gain=plus_tr(nz[0]["sales_added"]), shops=nz[0]["shops"])}</div></div>' if nz else "")
@@ -1177,10 +1182,7 @@ def loc_home(ctx, P, D, lang):
         ins.append(T["ins_jump"].format(shop=E(j["shop_name"]), gain=plus_tr(j["sales_added"]), pct=pct_tr(j["pct_added"] / 100, 1)))
     if rz:
         ins.append(T["ins_small"].format(shop=E(rz[0]["shop_name"]), total=n_tr(rz[0]["sales_total"]), span=span, gain=plus_tr(rz[0]["sales_added"])))
-    form = (f'<form class="qform" action="/{BUILDER}" method="get" role="search">'
-            f'<input name="q" type="search" placeholder="{E(T["form_placeholder"])}" aria-label="{E(T["form_aria"])}" enterkeyhint="go" autocomplete="off">'
-            f'<input type="hidden" name="from" value="{L}-hero"><button type="submit">{E(T["form_button"])}</button></form>'
-            f'<div class="qsub">{E(T["form_sub"])} <a href="{RUN_FALLBACK}?t={L}" rel="noopener">{E(T["form_fallback"])}</a></div>')
+    form = loc_hero_cta(lang, T)
     hero = f"""<div class="hero">{PULSE_SVG}<div class="wrap">
 <div class="eyebrow">{E(T['eyebrow'].format(date=day))}</div>
 <h1>{E(T['h1'])}</h1>
@@ -1191,17 +1193,12 @@ def loc_home(ctx, P, D, lang):
     how = f"""<section id="{T.get('how_id', 'how')}"><h2>{T['how_h2']}</h2><p class="sub">{T['how_sub']}</p><div class="howtr">
 <ol><li><b>{T['how_1_t']}</b><p>{T['how_1_p']}</p></li><li><b>{T['how_2_t']}</b><p>{T['how_2_p']}</p></li><li><b>{T['how_3_t']}</b><p>{T['how_3_p']}</p></li></ol>
 <p class="note">{T['how_note']}</p>
-<p><a class="btn" href="/{BUILDER}?from={L}-how">{T['how_btn']}</a></p>
+<p><a class="btn" href="{loc_builder(L)}?from={L}-how">{T['how_btn']}</a></p>
 <p class="note">{T['how_store']} <a href="{R}site-store-search?t={L}">Etsy Search Scraper</a> · <a href="{R}site-store-tracker?t={L}">Etsy Shop Sales Tracker</a></p>
-<p class="note">{T['how_ai']} <a href="/ai.html?from={L}">{T['how_ai_link']}</a></p>
+<p class="note">{T['how_ai']} <a href="/{lp}ai.html?from={L}-how-ai">{T['how_ai_link']}</a></p>
 </div></section>"""
-    rl = "".join(f'<a href="/{h}?from={L}">{E(t)}</a>' for h, t in T["reports"].items() if h in ctx["pages"])
-    cta_ = f"""<section class="cta">
-<h2>{T['cta_h2']}</h2>
-<p>{T['cta_p']}</p>
-<a class="btn" href="/{BUILDER}?type=niche&amp;from={L}-cta">{T['cta_niche']}</a><a class="btn ghost" href="/{BUILDER}?type=rivals&amp;from={L}-cta">{T['cta_rivals']}</a>
-<div class="disc">{T['price_line']}</div>
-</section>"""
+    rl = "".join(f'<a href="/{lp}{h}">{E(t)}</a>' for h, t in T["reports"].items() if h in ctx["pages"])
+    cta_ = loc_cta(ctx, lang, T)
     body = f"""{kpis}
 <section>{insights_block(ins, T['takeaways'])}</section>
 <section><div class="dmwin">{E(dm_win(D, lang, T))}</div><h2>{T['top10_h2']}</h2><p class="sub">{T['top10_sub']}</p>
@@ -1244,6 +1241,373 @@ def loc_home(ctx, P, D, lang):
 {view_js(lang + "-home")}
 </body></html>
 """
+
+
+# ---------------------------------------------------------------- LANG-2 (Mark t627u): every public page in fr and tr
+# /fr/ and /tr/ mirror the English site page for page: home, ai.html, run.html (report builder, assets/builder.js reads
+# its UI strings from config/i18n/<lang>.json "builder"), rising.html, niche.html, movers/ and every dated movers/<day>/.
+# Strings live in config/i18n/<lang>.json "pg"; every number comes from the same data as the English page, formatted for
+# the language. Builder links stay inside the language (/fr/run.html?…&from=fr-…), Store links carry ?t=<lang>.
+LOC_NAV = [("index.html", "home"), ("ai.html", "ai"), ("movers/", "movers"), ("movers/#niches", "niches"),
+           ("run.html", "run"), ("rising.html", "rising"), ("niche.html", "niche")]
+AI_CLIENT_RX = re.compile(r"\bclaude\b|chatgpt|\bgemini\b|copilot|\bcursor\b|perplexity|openai", re.I)
+
+
+def loc_nav(lang, ctx, active, T):
+    """Same tabs in the same order as the English nav (NAV-1), labels from <lang>.json, every link inside /<lang>/."""
+    lp, nv, M = LOC_PATH[lang], T["nav"], T["movers"]
+    lab = {"home": nv["home"], "ai": nv["ai"], "movers": M["nav"], "niches": M["nav_niches"], "run": nv["run"],
+           "rising": nv["rising"], "niche": nv["niche"]}
+    out = []
+    for h, k in LOC_NAV:
+        if not (h in ctx["pages"] or (h == "movers/#niches" and "movers/" in ctx["pages"] and dm_has_niches())):
+            continue
+        href = "/" + lp + ("" if h == "index.html" else h) + (f"?from={lang}-nav" if h == BUILDER else "")
+        out.append(f'<a href="{href}"{" class=on" if h == active else ""}>{lab[k]}</a>')
+    return "".join(out)
+
+
+def loc_builder(lang):
+    return "/" + LOC_PATH[lang] + BUILDER
+
+
+def loc_link(link, lang):
+    """An English builder link (run.html?…&from=site-…) as the same link on the language's builder, from=<lang>-…"""
+    if link.startswith(BUILDER):
+        return "/" + LOC_PATH[lang] + re.sub(r"(^|[?&;])from=", lambda m: f"{m.group(1)}from={lang}-", link)
+    return link
+
+
+def money_loc(v, lang, d=2):
+    if v is None:
+        return "—"
+    s_ = f"{v:,.{d}f}"
+    if lang == "fr":
+        return s_.replace(",", "\u00a0").replace(".", ",") + "\u00a0$"
+    if lang == "tr":
+        return "$" + s_.replace(",", "#").replace(".", ",").replace("#", ".")
+    return "$" + s_
+
+
+def band_loc(lbl, lang, P):
+    """'under $15' / '$15–30' / '$60+' (niche CSV band names) in the page language."""
+    m = re.match(r"under \$(\d+)$", lbl)
+    if m:
+        return P["band_under"].format(p=money_loc(int(m.group(1)), lang, 0))
+    m = re.match(r"\$(\d+)\+$", lbl)
+    if m:
+        return P["band_plus"].format(p=money_loc(int(m.group(1)), lang, 0))
+    m = re.match(r"\$(\d+)[–-](\d+)$", lbl)
+    if m:
+        a_, b_ = m.groups()
+        return f"{a_}–{b_}\u00a0$" if lang == "fr" else f"${a_}–{b_}"
+    return lbl
+
+
+def loc_cta(ctx, lang, T):
+    lb = loc_builder(lang)
+    return f"""<section class="cta">
+<h2>{T['cta_h2']}</h2>
+<p>{T['cta_p']}</p>
+<a class="btn" href="{lb}?type=niche&amp;from={lang}-cta">{T['cta_niche']}</a><a class="btn ghost" href="{lb}?type=rivals&amp;from={lang}-cta">{T['cta_rivals']}</a>
+<div class="disc">{T['price_line']}</div>
+</section>"""
+
+
+def loc_hero_cta(lang, T, src="hero"):
+    return (f'<form class="qform" action="{loc_builder(lang)}" method="get" role="search">'
+            f'<input name="q" type="search" placeholder="{E(T["form_placeholder"])}" aria-label="{E(T["form_aria"])}" enterkeyhint="go" autocomplete="off">'
+            f'<input type="hidden" name="from" value="{lang}-{src}"><button type="submit">{E(T["form_button"])}</button></form>'
+            f'<div class="qsub">{E(T["form_sub"])} <a href="{RUN_FALLBACK}?t={lang}" rel="noopener">{E(T["form_fallback"])}</a></div>')
+
+
+def loc_report_btn(slug, actor_label, text, lang, T):
+    P = T["pg"]["common"]
+    return (f'<div class="rbtn"><span>{text}</span>'
+            f'<a href="{loc_builder(lang)}?type={REPORT_TYPE.get(slug, "niche")}&amp;from={lang}-{slug}">{P["run_yourself"]}</a></div>'
+            f'<p class="note" style="margin-top:6px">{P["report_btn_note"].format(actor=actor_label)}</p>')
+
+
+def loc_more50(link, what, ready, src, lang, T):
+    P = T["pg"]["common"]
+    if ready:
+        return (f'<div class="rbtn more50"><span>{P["more50_ready"].format(c=CUSTOM_N, what=what, p=PUBLIC_N)}</span>'
+                f'<a href="{loc_link(link, lang)}">{P["more50_btn"]}</a></div>')
+    return (f'<div class="rbtn more50"><span>{P["more50_wait"].format(c=CUSTOM_N, p=PUBLIC_N)}</span>'
+            f'<a href="{loc_link(niche_link(src=src + "-top50-niche"), lang)}">{P["more50_wait_btn"]}</a></div>')
+
+
+def loc_fresh_box(snapshot_label, rows_label, lang, T, kind="panel"):
+    P = T["pg"]["common"]
+    cad = cadence_word(kind)
+    cw = P["cad_daily"] if cad == "daily" else P["cad_weekly"] if cad == "weekly" else P["cad_n"].format(n=re.sub(r"\D", "", cad))
+    line = (P["fresh_niche"] if kind == "niche" else P["fresh_panel_daily"] if cad == "daily" else P["fresh_panel"]).format(cad=cw)
+    return (f'<div class="fresh"><div><b>{line}</b> {P["fresh_q"]} '
+            f'<a href="{loc_builder(lang)}?from={lang}-fresh">{P["fresh_btn"]}</a></div>'
+            f'<div class="snap">{P["snap"].format(label="<b>" + E(snapshot_label) + "</b>", rows="<b>" + E(rows_label) + "</b>", cad=cw)}</div></div>')
+
+
+def loc_simple_hero(lang, T, eyebrow, h1, lede, win, cta_=True):
+    return (f'<div class="hero">{PULSE_SVG}<div class="wrap" style="padding-bottom:30px"><div class="eyebrow">{eyebrow}</div>'
+            f'<h1>{h1}</h1><p class="lede">{lede}</p>{loc_hero_cta(lang, T) if cta_ else ""}'
+            + (f'<div class="chips"><span>{E(win)}</span></div>' if win else "") + '</div></div>')
+
+
+ROOT_ASSET_RX = re.compile(r'((?:href|src|poster|action)=")((?:assets|data)/)')
+
+
+def loc_page(lang, rel, title, desc, body, ctx, T, hero="", scripts="", with_cta=True, pg=None):
+    """Shell of one translated page (same layout as page()): /<lang>/<rel>. Assets and data are root-absolute."""
+    lp = LOC_PATH[lang]
+    url = SITE_URL + lp + rel
+    og = SITE_URL + "og.png?v=" + ctx["cut"]
+    pg = pg or (re.sub(r"\.html$", "", rel) or "home")
+    out = f"""<!doctype html>
+<html lang="{lang}"><head>
+<meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover">
+<title>{E(title)}</title>
+<meta name="description" content="{E(desc)}">
+<link rel="canonical" href="{url}">
+{hreflang_links(rel)}{lang_redirect_js(lang, rel)}
+<meta name="theme-color" content="{ORANGE}">
+<link rel="icon" href="/assets/favicon.ico" sizes="any"><link rel="icon" type="image/png" sizes="32x32" href="/assets/favicon-32.png">
+<link rel="apple-touch-icon" href="/assets/apple-touch-icon.png">
+<meta property="og:type" content="website"><meta property="og:site_name" content="Etsy Pulse"><meta property="og:locale" content="{T['og_locale']}">
+<meta property="og:title" content="{E(title)}"><meta property="og:description" content="{E(desc)}">
+<meta property="og:url" content="{url}"><meta property="og:image" content="{og}">
+<meta property="og:image:width" content="1200"><meta property="og:image:height" content="630">
+<meta name="twitter:card" content="summary_large_image"><meta name="twitter:site" content="@EtsyPulse">
+<meta name="twitter:title" content="{E(title)}"><meta name="twitter:description" content="{E(desc)}">
+<meta name="twitter:image" content="{og}">
+<style>{CSS}{DM_CSS}</style>
+<link rel="stylesheet" href="/assets/builder.css?v={ctx['cut']}-b1">
+</head><body>
+<header class="top"><div class="wrap"><a class="brand" href="/{lp}"><img src="/assets/logo-96.png" alt="" width="30" height="30">Etsy Pulse</a>
+<a class="x" href="{X_URL}" rel="noopener">{follow_html(T)}</a>{lang_menu(lang, rel)}</div></header>
+<nav class="tabs" aria-label="{E(T['nav'].get('aria', 'Reports'))}"><div class="wrap">{loc_nav(lang, ctx, rel or "index.html", T)}</div></nav>
+{hero or ""}
+<main class="wrap">
+{body}
+{loc_cta(ctx, lang, T) if with_cta else ""}
+</main>
+<footer><div class="wrap">
+<p>{T['footer_1']}</p>
+<p>{E(T['footer_2'].format(cut=date_loc(ctx['cut'], T), snap=date_loc(ctx['snap'], T)))}</p>
+</div></footer>
+{LANG_JS}
+{view_js(f"{lang}-{pg}")}
+{scripts}
+</body></html>
+"""
+    return ROOT_ASSET_RX.sub(r"\1/\2", out)
+
+
+def loc_rising(ctx, D, files, CL, lang):
+    T = load_loc(lang)
+    P, M = T["pg"]["rising"], T["movers"]
+    rz = D["rising"]
+    span, sd_, win = dm_span(D, lang), short_date(D["day"], lang, T), dm_win(D, lang, T)
+    ri = [P["ins"].format(shop=E(rz[0]["shop_name"]), total=n_loc(rz[0]["sales_total"], lang), gain=plus_loc(rz[0]["sales_added"], lang),
+                          span=span, pct=pct_loc(rz[0]["pct_added"] / 100, 1, lang))]
+    method = (M.get("method_1") if int(D["meta"]["window_days"]) == 1 and M.get("method_1") else M["method"]).format(n=int(D["meta"]["window_days"]))
+    body = f"""{loc_fresh_box(date_loc(D['day'], T), P["rows_label"].format(k=len(rz)), lang, T)}<section>{insights_block(ri, T["pg"]["common"]["insights_title"])}{loc_report_btn("site-rising", "Etsy Shop Sales Tracker", P["btn"], lang, T)}</section>
+<section><div class="dmwin">{E(win)}</div><h2>{P["h2"]}</h2><p class="sub">{P["sub"]}</p>
+{dm_rows(rz, "sales_added", lang, T)}
+{loc_more50(CL["rising"]["url"], P["more_what"], CL["rising"]["ready"], f"{lang}-site-rising", lang, T)}
+{dl("/" + files['rising'], P["dl"].format(k=len(rz), day=D["day"]))}<p class="note">{E(method)}</p></section>"""
+    return loc_page(lang, "rising.html", P["title"].format(date=sd_),
+                    P["desc"].format(span=span, shop=rz[0]["shop_name"], gain=plus_loc(rz[0]["sales_added"], lang)),
+                    body, ctx, T, loc_simple_hero(lang, T, P["eyebrow"], P["h1"], P["lede"], win))
+
+
+def loc_niche_insights(N, lang, T):
+    P = T["pg"]["niche"]
+    rows = [r for r in N["rows"] if (r.get("listings") or 0) >= 20]
+    out = []
+    if not rows:
+        return out
+    for r in rows[:3]:
+        bands = {k[5:]: v for k, v in r.items() if k.startswith("band ")}
+        bk, bv = max(bands.items(), key=lambda kv: kv[1] or 0)
+        out.append(P["ins_price"].format(kw=E(r["keyword"]), m=money_loc(r["price_median"], lang), a=money_loc(r["price_p25"], lang),
+                                         b=money_loc(r["price_p75"], lang), band=E(band_loc(bk, lang, P)), v=int(bv), k=int(r["listings"])))
+    hi = max(rows, key=lambda r: r["bestseller_share"])
+    lo = min(rows, key=lambda r: r["bestseller_share"])
+    if hi is not lo:
+        out.append(P["ins_badge"].format(a=pct_loc(hi["bestseller_share"], 0, lang), hi=E(hi["keyword"]), b=pct_loc(lo["bestseller_share"], 0, lang), lo=E(lo["keyword"])))
+    fs = max(rows, key=lambda r: r["free_shipping_share"])
+    out.append(P["ins_free"].format(kw=E(fs["keyword"]), p=pct_loc(fs["free_shipping_share"], 0, lang)))
+    return out
+
+
+def loc_niche_page(ctx, N, files, lang):
+    T = load_loc(lang)
+    P = T["pg"]["niche"]
+    nr = [x for x in N["rows"] if (x.get("listings") or 0) >= 20]
+    nd = date_loc(N["cut"], T)
+    cards = []
+    for x in nr:
+        bands = [(k[5:], int(v or 0)) for k, v in x.items() if k.startswith("band ")]
+        tot = sum(v for _, v in bands) or 1
+        segs = "".join(f'<i style="width:{100 * v / tot:.1f}%;background:{BAND_COLORS[i]}">{v if v / tot > .08 else ""}</i>'
+                       for i, (_, v) in enumerate(bands) if v)
+        leg = "".join(f'<span><i style="background:{BAND_COLORS[i]}"></i>{E(band_loc(lbl, lang, P))}</span>' for i, (lbl, _) in enumerate(bands))
+        frm = cat_loc(x["from_category"], T) if x["from_category"] else P["hot"]
+        cards.append(f"""<div class="nc"><h3>“{E(x['keyword'])}”</h3>
+<div class="from">{E(P["card_from"].format(cat=frm, k=int(x['listings'])))}{E(P["card_etsy"].format(n=n_loc(x['etsy_total_results'], lang))) if x.get('etsy_total_results') else ''}</div>
+<div class="stats"><div><b>{money_loc(x['price_median'], lang)}</b><span>{P["typical"]}</span></div>
+<div><b>{money_loc(x['price_p25'], lang)}–{money_loc(x['price_p75'], lang)}</b><span>{P["most"]}</span></div>
+<div><b>{pct_loc(x['bestseller_share'], 0, lang)}</b><span>{P["best"]}</span></div></div>
+<div class="bands">{segs}</div><div class="legend">{leg}</div>
+<div class="facts"><span>{P["free"]} <b>{pct_loc(x['free_shipping_share'], 0, lang)}</b></span><span>{P["reviews"]} <b>{n_loc(x['median_shop_reviews'] or 0, lang)}</b></span></div>
+<a class="more" href="{loc_link(niche_link(x['keyword'], 'site-niche-top50'), lang)}">{P["card_more"].format(c=CUSTOM_N, kw=E(x['keyword']))}</a></div>""")
+    kws = [k["keyword"] for k in N["meta"]["keywords"]]
+    missing = [k for k in kws if k not in [x["keyword"] for x in nr]]
+    miss_note = P["miss"].format(kws=", ".join(missing)) if missing else ""
+    extra = (" + " + ", ".join(N["meta"].get("extra_run_ids", []))) if N["meta"].get("extra_run_ids") else ""
+    at = (N["meta"].get("captured_at") or "")[:16].replace("T", " ")
+    body = f"""{loc_fresh_box(date_loc((N['meta'].get('captured_at') or N['cut'])[:10], T), P["rows_label"].format(listings=n_loc(N['meta']['rows']['listings'], lang), k=len(nr)), lang, T, "niche")}<section>{insights_block(loc_niche_insights(N, lang, T), T["pg"]["common"]["insights_title"])}{loc_report_btn("site-niche", "Etsy Search Scraper", P["btn"], lang, T)}</section>
+<section><h2>{P["h2"]}</h2><p class="sub">{P["sub"].format(date=nd)}</p>
+<div class="niche">{''.join(cards)}</div>
+{loc_more50(niche_link(src="site-niche-top50-any"), P["more_what"], True, f"{lang}-site-niche", lang, T)}
+{dl("/" + files['niche_summary'], P["dl_summary"].format(k=len(N['rows'])))} {dl("/" + files['niche_listings'], P["dl_listings"].format(p=PUBLIC_N, r=files['niche_listings_rows']))}
+<p class="note">{E(P["source"].format(run=N['meta']['run_id'], extra=extra, at=at, n=n_loc(N['meta']['rows']['listings'], lang), miss=miss_note))}</p></section>"""
+    return loc_page(lang, "niche.html", P["title"].format(kws=", ".join(x["keyword"] for x in nr)), P["desc"].format(date=nd),
+                    body, ctx, T, loc_simple_hero(lang, T, P["eyebrow"], P["h1"], P["lede"].format(date=nd), dm_win(dm_load(dm_days()[-1]), lang, T)))
+
+
+def builder_i18n(lang):
+    """window.EP_I18N for assets/builder.js on /<lang>/run.html. Fails the build if a T("…") string has no translation."""
+    T = load_loc(lang)
+    B = T.get("builder") or {}
+    src = open(os.path.join(ROOT, "assets", "builder.js"), encoding="utf-8").read()
+    src = re.sub(r"/\*.*?\*/", "", src, flags=re.S)
+    keys = []
+    for m in re.finditer(r'\bT\("((?:[^"\\]|\\.)*)"', src):
+        k = json.loads('"' + m.group(1).replace("\\'", "'") + '"')
+        if k not in keys:
+            keys.append(k)
+    miss = [k for k in keys if k not in B]
+    phb = [k for k in keys if k in B and sorted(set(re.findall(r"\{\w+\}", k))) != sorted(set(re.findall(r"\{\w+\}", B[k])))]
+    if miss or phb:
+        raise SystemExit(f"builder i18n ({lang}): {len(miss)} untranslated builder.js strings, {len(phb)} with wrong placeholders:\n  "
+                         + "\n  ".join([f"missing: {k[:90]}" for k in miss] + [f"placeholders: {k[:90]}" for k in phb])
+                         + f"\n  (add them to config/i18n/{lang}.json \"builder\")")
+    locale = {"fr": "fr-CA", "tr": "tr-TR"}[lang]
+    data = {"lang": lang, "locale": locale, "s": {k: B[k] for k in keys}}
+    return "<script>window.EP_I18N=" + json.dumps(data, ensure_ascii=False).replace("</", "<\\/") + ";</script>"
+
+
+def loc_run(ctx, lang):
+    T = load_loc(lang)
+    P = T["pg"]["run"]
+    hero = (f'<div class="hero">{PULSE_SVG}<div class="wrap" style="padding-bottom:52px"><div class="eyebrow">{P["eyebrow"]}</div>'
+            f'<h1>{P["h1"]}</h1><p class="lede">{P["lede"]}</p></div></div>')
+    body = f"""<div id="builder" class="bld"><noscript><div class="berr">{P["noscript"]}
+<a href="{R}site-store-search?t={lang}">Etsy Search Scraper</a> · <a href="{R}site-store-tracker?t={lang}">Etsy Shop Sales Tracker</a>.</div></noscript></div>
+<div id="progress" hidden></div>
+<div id="report" hidden></div>
+<section class="how-sec"><h2>{P["how_h2"]}</h2><p class="sub">{P["how_sub"]}</p>
+<div class="how">
+<div><b>{P["s1_t"]}</b><p>{P["s1_p"]}</p></div>
+<div><b>{P["s2_t"]}</b><p>{P["s2_p"]}</p></div>
+<div><b>{P["s3_t"]}</b><p>{P["s3_p"]}</p></div>
+</div>
+<p class="note">{P["note"]}</p></section>"""
+    return loc_page(lang, BUILDER, P["title"], P["desc"], body, ctx, T, hero, with_cta=False,
+                    scripts=builder_i18n(lang) + f'<script src="/assets/builder.js?v={ctx["cut"]}-b8" defer></script>')
+
+
+def loc_ai(ctx, files, lang):
+    """/<lang>/ai.html. Taglines, title, meta and hero stay generic ('votre chat IA' / 'yapay zekâ sohbeti'); a client is
+    named only inside its tested connect card (AI-PAGE-2: TESTED_CLIENTS), because those steps are factual instructions."""
+    T = load_loc(lang)
+    P = T["pg"]["ai"]
+    copy = lambda label=P["copy_link"]: f'<button class="abtn" type="button" data-copy="{E(MCP_URL)}">{label}</button>'
+    hero = f"""<div class="hero aih">{PULSE_SVG}<div class="wrap" style="padding-bottom:40px">
+<div><div class="eyebrow">{P["eyebrow"]}</div>
+<h1>{P["h1"]}</h1>
+<p class="lede">{P["lede"]}</p>
+<ol class="steps3"><li>{P["step1"]}</li><li>{P["step2"]}</li><li>{P["step3"]}</li></ol>
+<div class="hcta"><a class="hbtn" href="#connect">{P["hero_btn"]}</a><small>{P["hero_price"]}</small></div></div>
+<div><video autoplay muted loop playsinline preload="metadata" poster="assets/ai/etsypulse-ai-wide-poster.png" width="1200" height="676"
+aria-label="{E(P["video_aria"])}">
+<source src="assets/ai/etsypulse-ai-wide.webm" type="video/webm"><source src="assets/ai/etsypulse-ai-wide.mp4" type="video/mp4">
+<img class="poster" src="assets/ai/etsypulse-ai-wide-poster.png" alt="{E(P["video_alt"])}"></video></div>
+</div></div>"""
+    C = P["cards"]
+    untranslated = [k for k in TESTED_CLIENTS if k not in C]
+    if untranslated:
+        raise SystemExit(f"ai page ({lang}): connect card for tested client(s) {untranslated} missing in config/i18n/{lang}.json pg.ai.cards")
+    cards = {"claude": f"""<div class="app"><h3>Claude</h3><p>{C["claude"]["p"]}</p>
+<div class="acts">{copy(C["claude"]["copy"])}<a class="abtn ghost" href="{E(CLAUDE_ADD_LINK)}" target="_blank" rel="noopener">{C["claude"]["open"]}</a></div>
+<ol>{"".join(f"<li>{x}</li>" for x in C["claude"]["steps"])}</ol></div>"""}
+    cards_html = "\n".join(cards[k] for k in TESTED_CLIENTS if k in cards)
+    apps = f"""<section id="connect"><h2>{P["connect_h2"]}</h2>
+<p class="sub">{P["connect_sub"]}</p>
+<div class="urlbox"><code>{E(MCP_URL)}</code>{copy()}</div>
+<div class="apps" style="margin-top:14px">
+{cards_html}
+</div>
+<p class="note">{P["other_app"].format(link=f'<a href="{E(MCP_SETUP_LINK)}" target="_blank" rel="noopener">{P["other_app_link"]}</a>')}</p></section>"""
+    uses_html = "".join(f'<div class="use"><h3>{E(u["t"])}</h3><p>{E(u["d"])}</p><q>{E(u["p"])}</q><div class="f">{E(u["f"])}</div></div>' for u in P["uses"])
+    S = files.get("ai_sample")
+    convo, tryit_file = "", ""
+    mo = lambda v: money_loc(v, lang)
+    if S:
+        Ms, Rs = S["meta"], S["rows"]
+        kw = Ms["queries"][0]
+        n_ = len(Rs)
+        top = Rs[:10]
+        when = dt.datetime.fromisoformat(Ms["finished_at"].replace("Z", "+00:00")).astimezone(ZoneInfo("America/Toronto"))
+        day = date_loc(when.date().isoformat(), T)
+
+        def tags(r):
+            t = [x for x, on in ((P["tag_best"], r["bestseller"]), (P["tag_ad"], r["is_ad"])) if on]
+            return f" ({', '.join(t)})" if t else ""
+        lis = "".join(f"<li>{r['position']}. {E(r['shop_name'])} <b>{mo(r['price'])}</b>{tags(r)}</li>" for r in top)
+        tp = [r["price"] for r in top]
+        nb = sum(r["bestseller"] for r in top)
+        na = sum(r["is_ad"] for r in top)
+        B = [r["price"] for r in Rs if r["bestseller"]]
+        O = [r["price"] for r in Rs if not r["bestseller"]]
+        if B and O:
+            from decimal import Decimal, ROUND_HALF_UP
+            avg = lambda xs: float((sum(Decimal(repr(x)) for x in xs) / len(xs)).quantize(Decimal("0.01"), ROUND_HALF_UP))
+            ab, ao = avg(B), avg(O)
+            a2 = (P["a2"].format(lead=P["a2_yes"] if ab > ao else P["a2_no"], nb=len(B), n=n_)
+                  + f"<ul><li>{P['a2_best'].format(avg=f'<b>{mo(ab)}</b>', lo=mo(min(B)), hi=mo(max(B)))}</li>"
+                  f"<li>{P['a2_rest'].format(avg=f'<b>{mo(ao)}</b>', lo=mo(min(O)), hi=mo(max(O)))}</li></ul>"
+                  f'<div class="t">{P["a2_small"].format(nb=len(B), no=len(O))}</div>')
+        else:
+            a2 = P["a2_all" if B else "a2_none"].format(n=n_)
+        convo = f"""<section><h2>{P["convo_h2"]}</h2><p class="sub">{P["convo_sub"].format(day=day)}</p>
+<div class="convo">
+<div class="u">{P["q1"].format(kw=E(kw))}</div>
+<div class="b"><div class="t">{P["ran"].format(kw=E(kw), n=n_)}</div>{P["a1_lead"]}
+<ul>{lis}</ul>{P["a1_sum"].format(lo=mo(min(tp)), hi=mo(max(tp)), nb=nb, na=na)}</div>
+<div class="u">{P["q2"]}</div>
+<div class="b">{a2}</div>
+<div class="u">{P["q3"]}</div>
+<div class="b">{P["a3"].format(n=n_)}
+<div class="t">{P["a3_note"]}</div></div>
+</div>
+<p class="note">{P["convo_src"].format(run=E(Ms['run_id']), build=E(Ms['build_number']), kw=E(kw), n=n_, day=day)}</p></section>"""
+        tryit_file = P["try_file"].format(n=n_, kw=E(kw), csv=f'<a href="/{files["ai_sample_csv"]}">CSV</a>', day=day)
+    if not tryit_file:
+        tryit_file = P["try_file0"].format(csv=f'<a href="/{files.get("niche_listings", "data/niche-listings-latest.csv")}">CSV</a>')
+    costs = f"""<section><h2>{P["costs_h2"]}</h2>
+<div class="costs">
+<div><b>{P["c1_t"]}</b><p>{P["c1_p"]}</p></div>
+<div><b>{P["c2_t"]}</b><p>{P["c2_p"]}</p></div>
+<div><b>{P["c3_t"]}</b><p>{P["c3_p"]}</p></div>
+</div></section>"""
+    tryit = f"""<section><div class="try"><b>{P["try_b"]}</b> {tryit_file}
+{P["try_alt"].format(build=f'<a href="{loc_builder(lang)}?from={lang}-ai">{P["try_build"]}</a>', apify=f'<a href="{RUN_FALLBACK}?t={lang}" rel="noopener">{P["try_apify"]}</a>')}</p></div></section>"""
+    body = (f"<style>{AI_CSS}</style>{apps}<section><h2>{P['uses_h2']}</h2><p class=\"sub\">{P['uses_sub']}</p>"
+            f"<div class=\"uses\">{uses_html}</div></section>{convo}{costs}{tryit}")
+    js = AI_JS.replace("'Copied ✓'", json.dumps(P["copied"])).replace("'Copy this link:'", json.dumps(P["copy_prompt"]))
+    return loc_page(lang, "ai.html", P["title"], P["desc"], body, ctx, T, hero, scripts=js)
 
 
 # Turkish copy rules (TR-1). Same bans as the English site, in Turkish: no median/medyan/ortanca, no middle half, no
@@ -1332,10 +1696,23 @@ def check_tr(out_dir, en_cta_html, D):
     check_loc(out_dir, en_cta_html, D, "tr")
 
 
+def page_key(rel):
+    """'fr/movers/2026-10-07/index.html' -> ('fr', 'movers/2026-10-07/'); 'index.html' -> ('en', '')."""
+    rel = rel.replace(os.sep, "/")
+    lg = next((k for k, lp, _ in LOCALES if lp and rel.startswith(lp)), "en")
+    sub = rel[len(LOC_PATH[lg]):]
+    sub = "" if sub == "index.html" else (sub[:-len("index.html")] if sub.endswith("/index.html") else sub)
+    return lg, sub
+
+
 def check_lang(out_dir):
-    """LANG-1 (Mark t624u): every public page has ONE language button (no inline 'EN · TR' links); translated pages carry
-    hreflang en/fr/tr + x-default and the remember-choice redirect; untranslated pages none of the alternates."""
-    bad, n_ = [], 0
+    """LANG-1/LANG-2 (Mark t624u, t627u): every public page has ONE language button (no inline 'EN · TR' links), exists in
+    en, fr and tr, carries hreflang en/fr/tr + x-default and the remember-choice redirect, and its button opens the SAME
+    page in each language (the click keeps ?query and #hash). Sitemap lists every page in every language."""
+    bad, n_, seen = [], 0, {}
+    if "location.search+location.hash" not in LANG_JS:
+        bad.append("LANG_JS: switching language must keep the query string and #hash")
+    sm = open(os.path.join(out_dir, "sitemap.xml"), encoding="utf-8").read()
     for root, _, fs in os.walk(out_dir):
         for f in fs:
             if not f.endswith(".html"):
@@ -1350,23 +1727,124 @@ def check_lang(out_dir):
                 bad.append(f"{rel}: needs exactly one language button")
             if LANG_SWITCH_OLD.search(raw):
                 bad.append(f"{rel}: old inline EN · TR language links are back")
-            for lg, _, nm in LOCALES:
-                if f'data-lang="{lg}"' not in raw:
-                    bad.append(f"{rel}: language button misses {nm}")
-            key = next((k for k, sub in TRANSLATED.items() for lg, lp, _ in LOCALES if rel == lp + sub + "index.html"), None)
-            if key:
-                if hreflang_links(key) not in raw:
-                    bad.append(f"{rel}: hreflang en/fr/tr/x-default missing")
-                if "localStorage.getItem('ep_lang')" not in raw:
-                    bad.append(f"{rel}: remember-choice script missing")
-                for lg, _, _ in LOCALES:
-                    if f'href="{loc_url(lg, key)}" hreflang="{lg}"' not in raw:
-                        bad.append(f"{rel}: language button must open {loc_url(lg, key)}")
-            elif 'hreflang="x-default"' in raw:
-                bad.append(f"{rel}: hreflang alternates on a page without translations")
+            lg, sub = page_key(rel)
+            seen.setdefault(sub, set()).add(lg)
+            if f'<html lang="{lg}">' not in raw:
+                bad.append(f'{rel}: missing <html lang="{lg}">')
+            if hreflang_links(sub) not in raw:
+                bad.append(f"{rel}: hreflang en/fr/tr/x-default missing")
+            if "localStorage.getItem('ep_lang')" not in raw:
+                bad.append(f"{rel}: remember-choice script missing")
+            for lg2, _, nm in LOCALES:
+                if f'href="{loc_url(lg2, sub)}" hreflang="{lg2}" lang="{lg2}" data-lang="{lg2}" data-k=1' not in raw:
+                    bad.append(f"{rel}: language button must open {loc_url(lg2, sub)} ({nm})")
+            if f"<loc>{SITE_URL}{LOC_PATH[lg]}{sub}</loc>" not in sm:
+                bad.append(f"{rel}: not in sitemap.xml")
+    for sub, lgs in sorted(seen.items()):
+        miss = [lg for lg, _, _ in LOCALES if lg not in lgs]
+        if miss:
+            bad.append(f"/{sub}: no {'/'.join(miss)} version")
     if bad:
         raise SystemExit("lang check failed:\n  " + "\n  ".join(bad))
-    print(f"lang check ok: {n_} pages with one language button, hreflang en/fr/tr/x-default on translated pages")
+    print(f"lang check ok: {n_} pages ({len(seen)} x {len(LOCALES)} languages), one button each, same-page mapping, hreflang + sitemap")
+
+
+def money_set(text, lang="en"):
+    """Every $/¢ amount on a page, normalised across languages (fr '6 $', '0,5 ¢', '1 234,50 $'; tr '$12,50', '1.000')."""
+    t = html.unescape(re.sub(r"<[^>]+>", " ", text)).replace("\u00a0", " ").replace("\u202f", " ")
+    if lang == "fr":
+        t = re.sub(r"(\d) (?=\d{3}\b)", r"\1", t)
+        t = re.sub(r"(\d),(\d)", r"\1.\2", t)
+        t = re.sub(r"(\d+(?:\.\d+)?) ?\$", r"$\1", t)
+    elif lang == "tr":
+        t = re.sub(r"(\b[1-9]\d{0,2})\.(\d{3})(?!\d)", r"\1\2", t)   # 1.000 (thousands); $0.005 stays a decimal
+        t = re.sub(r"(\d),(\d{1,2})(?!\d)", r"\1.\2", t)
+    else:
+        t = re.sub(r"(\d),(\d{3})", r"\1\2", t)
+    return sorted(set(x.replace(" ", "") for x in re.findall(r"\$\d+(?:\.\d+)?|\d+(?:\.\d+)?\s?¢", t)))
+
+
+EN_LEFTOVER = re.compile(r"\b(?:the|and|with|your|you|this|that|what|which|from|for|of|per|run|report|sales|shops?|listings?|"
+                         r"price|prices|charge|top|niche|download|free|more|today|days?|added|lifetime|typical|how|our|we|it|is|are)\b", re.I)
+EN_OK = re.compile(r"(?:Etsy |publicrecords )?(?:Shop Sales Tracker|Search Scraper)|Apify Console → Settings → API & Integrations|Try for free|"
+                   r"Etsy Pulse by publicrecords|Etsy, Inc\.|etsy-pulse|“[^”]{1,60}”|\bRun\b", re.I)
+
+
+def check_loc_pages(out_dir, lang):
+    """LANG-2 guards for every /<lang>/ page: right lang/canonical/beacon, links stay in the language (builder from=<lang>-*,
+    Store ?t=<lang>), the language's copy bans + coverage rule, no AI client named outside the tested connect card (title,
+    meta, h1 and taglines generic), same $/¢ amounts as the English page, and no untranslated English sentences."""
+    T = load_loc(lang)
+    lp = LOC_PATH[lang]
+    bad, n_ = [], 0
+    for root, _, fs in os.walk(os.path.join(out_dir, lp)):
+        for f in fs:
+            if not f.endswith(".html"):
+                continue
+            p = os.path.join(root, f)
+            rel = os.path.relpath(p, out_dir).replace(os.sep, "/")
+            raw = open(p, encoding="utf-8").read()
+            n_ += 1
+            lg, sub = page_key(rel)
+            pg = re.sub(r"\.html$", "", sub).rstrip("/") or "home"
+            if f'<link rel="canonical" href="{SITE_URL}{lp}{sub}">' not in raw:
+                bad.append(f"{rel}: canonical must be {SITE_URL}{lp}{sub}")
+            beac = re.findall(re.escape(VIEW_BEACON) + r"\?p=([a-z0-9-]+)", raw)
+            if len(beac) != 1 or not beac[0].startswith(lang + "-") or "credentials:'omit'" not in raw:
+                bad.append(f"{rel}: needs exactly one cookieless beacon p={lang}-* (has {beac})")
+            body_ = re.sub(r'(?is)<details class="lsel">.*?</details>|<link rel="alternate"[^>]*>', " ", raw)
+            for h in re.findall(r'(?:href|action)="([^"]*)"', body_):
+                hu = html.unescape(h)
+                if hu.startswith(SITE_URL):
+                    hu = "/" + hu[len(SITE_URL):]
+                if re.match(r"/(?!assets/|data/)", hu) and not hu.startswith("/" + lp):
+                    bad.append(f"{rel}: link to an English page '{hu[:60]}'")
+                if re.match(r"(?:assets|data)/", hu):
+                    bad.append(f"{rel}: relative asset link '{hu[:60]}' (must be root-absolute)")
+                if re.search(r"(?:^|/)run\.html", hu):
+                    if not hu.startswith("/" + lp + BUILDER):
+                        bad.append(f"{rel}: builder link outside {lp} '{hu[:60]}'")
+                    fm = re.search(r"[?&]from=([^&#]*)", hu)
+                    if fm and not fm.group(1).startswith(lang + "-"):
+                        bad.append(f"{rel}: builder link tag from={fm.group(1)} (needs {lang}-*)")
+                if hu.startswith(R + "site-") and f"t={lang}" not in hu:
+                    bad.append(f"{rel}: Store link without ?t={lang} '{hu[:70]}'")
+            for v in re.findall(r'name="from" value="([^"]*)"', raw):
+                if not v.startswith(lang + "-"):
+                    bad.append(f"{rel}: form from={v} (needs {lang}-*)")
+            # copy rules: a client may be named only inside its tested connect card on ai.html
+            raw_ = re.sub(r'(?s)<div class="app">.*?</div>\s*</div>|<div class="app">.*?</ol></div>', " ", raw) if sub == "ai.html" else raw
+            vt = visible_text(raw_)
+            metas = " ".join(html.unescape(x) for x in DESC_RX.findall(raw))
+            bad += loc_copy_bad(rel, vt, metas, lang)
+            for mt in AI_CLIENT_RX.finditer(vt + " " + metas):
+                bad.append(f"{rel}: AI client named outside its connect card '{mt.group(0)}' (use the generic AI chat wording)")
+            h1 = re.search(r"<h1>(.*?)</h1>", raw, re.S)
+            ttl = re.search(r"<title>(.*?)</title>", raw, re.S)
+            for part in ((h1.group(1) if h1 else ""), (ttl.group(1) if ttl else ""), metas):
+                if AI_CLIENT_RX.search(html.unescape(part)):
+                    bad.append(f"{rel}: AI client named in title/meta/h1")
+            if COVERAGE_DESC.search(metas):
+                bad.append(f"{rel}: shop-coverage count in a meta description/title (DAILY-1)")
+            # same $/¢ amounts as the English page
+            enp = os.path.join(out_dir, (sub + "index.html") if (sub == "" or sub.endswith("/")) else sub)
+            if sub and os.path.exists(enp):
+                ev = visible_text(open(enp, encoding="utf-8").read())
+                lv = visible_text(raw)
+                if money_set(lv, lang) != money_set(ev):
+                    bad.append(f"{rel}: $/¢ amounts {money_set(lv, lang)} != English page {money_set(ev)}")
+            # untranslated English: sentences of common English words outside product names / quoted search terms
+            left = EN_OK.sub(" ", visible_text(re.sub(r'(?is)<a class="nm"[^>]*>.*?</a>|<span class="nm"[^>]*>.*?</span>|<h3>“.*?”</h3>|<li>\d+\. .*?</li>|<div class="snap">.*?</div>', " ", raw)))
+            hits = [m.group(0) for m in re.finditer(r"(?:\b[A-Za-z']+\b[ ,]+){0,2}\b[A-Za-z']+\b", left)
+                    if len(EN_LEFTOVER.findall(m.group(0))) >= 2]
+            if hits:
+                bad.append(f"{rel}: untranslated English? {hits[:4]}")
+    if lang and (T.get("builder")):
+        bt = " ".join(T["builder"].values())
+        bad += loc_copy_bad(f"{lp}{BUILDER} (builder strings)", visible_text(bt), "", lang)
+    if bad:
+        raise SystemExit(f"{lang} pages check failed:\n  " + "\n  ".join(bad))
+    print(f"{lang} pages check ok: {n_} pages, beacons {lang}-*, links stay in /{lp}, bans, no client names, $/¢ = English")
 
 
 # ---------------------------------------------------------------- EXACT-1 guard
@@ -1765,9 +2243,10 @@ def dm_tagline(lang, T, price_disc, src):
              "or connect our tools to your AI chat and just ask.")
         b1, b2 = "Run a report in your browser →", "Use it in your AI chat →"
     sep = "&amp;" if "?" in L["browser"] else "?"
+    lp = "/" + LOC_PATH[lang].rstrip("/") if lang != "en" else ""   # LANG-2: /fr/run.html, /fr/ai.html
     return (f'<section class="tagline"><h2>{E(C["tagline"][lang])}</h2><p>{E(p)}</p>'
-            f'<a class="btn" href="{L["browser"]}{sep}from={src}">{E(b1)}</a>'
-            f'<a class="btn ghost" href="{cta_l["claude"]}{"&amp;" if "?" in cta_l["claude"] else "?"}from={src}">{E(b2)}</a>'
+            f'<a class="btn" href="{lp}{L["browser"]}{sep}from={src}">{E(b1)}</a>'
+            f'<a class="btn ghost" href="{lp}{cta_l["claude"]}{"&amp;" if "?" in cta_l["claude"] else "?"}from={src}">{E(b2)}</a>'
             f'<div class="disc">{price_disc}</div></section>')
 
 
@@ -1780,11 +2259,12 @@ def dm_page(out_dir, D, days, ctx, lang="en", archive=False):
     top = D["movers"][0]
     tr = lang != "en"   # any translated locale (tr, fr)
     pl = lambda x: plus_loc(x, lang)
-    path = (f"{LOC_PATH[lang]}movers/" if tr else (f"movers/{day}/" if archive else "movers/"))
+    rel = f"movers/{day}/" if archive else "movers/"   # LANG-2: every day exists in every language
+    path = LOC_PATH[lang] + rel
     url = SITE_URL + path
     sd = short_date(day, lang, T)
     if tr:
-        title = M["title"].format(date=sd)
+        title = M["title"].format(date=sd + (f" {day[:4]}" if archive else ""))
         h1 = M["h1"].format(date=sd)
         win = (M["win_1"] if w == 1 else M["win_n"]).format(n=w, frm=short_date(frm, lang, T), to=sd)
         lede = M["lede"]
@@ -1808,25 +2288,22 @@ def dm_page(out_dir, D, days, ctx, lang="en", archive=False):
                   f"{'one day' if w == 1 else f'{w} days'} earlier, both read on those exact dates. Nothing is scaled or estimated. "
                   "Shops we didn't read on both dates, rounded counters, counters that went down and implausible jumps are left out. "
                   "These are the biggest movers among the shops we read, not all of Etsy.")
-    beacon = f"{lang}-movers" if tr else ("movers-day" if archive else "movers-daily")
+    beacon = (f"{lang}-movers-day" if archive else f"{lang}-movers") if tr else ("movers-day" if archive else "movers-daily")
+    lp = LOC_PATH[lang]
     if tr:
-        lp = LOC_PATH[lang]
-        nav = (f'<a href="/{lp}">{T["nav"]["home"]}</a><a href="/ai.html?from={lang}-movers">{T["nav"]["ai"]}</a>'
-               f'<a href="/{lp}movers/" class=on>{M["nav"]}</a>'
-               + (f'<a href="/{lp}movers/#niches">{M["nav_niches"]}</a>' if D.get("niches") else "")
-               + f'<a href="/{BUILDER}?from={lang}-movers-nav">{T["nav"]["run"]}</a>')
+        nav = loc_nav(lang, ctx, "movers/", T)
     else:
         nav = "".join(f'<a href="/{"" if h == "index.html" else h}"{" class=on" if h == "movers/" else ""}>{t}</a>' for h, t in nav_items(ctx))
-    # LANG-1: archive days are English only; their language button opens today's list in each language
-    lsw = lang_menu(lang, "movers")
-    alt = (hreflang_links("movers") + lang_redirect_js(lang, "movers")) if not archive else ""
+    # LANG-2: every day (latest and archive) exists in en/fr/tr, so the button opens the same day in each language
+    lsw = lang_menu(lang, rel)
+    alt = hreflang_links(rel) + lang_redirect_js(lang, rel)
     arch = ""
     past = [x for x in reversed(days) if x != day][:30]
-    if not tr and past:
-        arch = ('<section><h2>Earlier days</h2><div class="arch">' +
-                "".join(f'<a href="/movers/{x}/">{short_date(x)}, {x[:4]}</a>' for x in past) + "</div></section>")
+    if past:
+        arch = (f'<section><h2>{M["earlier"] if tr else "Earlier days"}</h2><div class="arch">' +
+                "".join(f'<a href="/{lp}movers/{x}/">{short_date(x, lang, T) if tr else short_date(x)}, {x[:4]}</a>' for x in past) + "</div></section>")
     if archive:
-        arch = f'<p class="note"><a href="/movers/">See today\'s movers →</a></p>' + arch
+        arch = f'<p class="note"><a href="/{lp}movers/">{M["see_today"] if tr else "See today&#x27;s movers →"}</a></p>' + arch
     NC = movers_cfg().get("niche_list", {})
     nich_sec, jump = "", ""
     if D.get("niches"):
@@ -1910,7 +2387,9 @@ def build_daily_movers(out_dir, ctx):
         return []
     paths = []
     for dday in days:
-        paths.append(dm_page(out_dir, dm_load(dday), days, ctx, "en", archive=True))
+        Dd = dm_load(dday)
+        for lg, _, _ in LOCALES:   # LANG-2: /movers/<day>/, /fr/movers/<day>/, /tr/movers/<day>/
+            paths.append(dm_page(out_dir, Dd, days, ctx, lg, archive=True))
     D = dm_load(days[-1])
     paths.insert(0, dm_page(out_dir, D, days, ctx, "en"))
     paths.insert(1, dm_page(out_dir, D, days, ctx, "tr"))
@@ -1946,8 +2425,9 @@ def check_movers(out_dir, en_cta_html):
             if E(tag) not in raw:
                 bad.append(f"{rel}: CTA tagline from config/movers.json missing")
             for k in ("browser", "claude"):
-                if f'href="{C["cta_links"][k]}' not in raw:
-                    bad.append(f"{rel}: CTA link {C['cta_links'][k]} missing")
+                want = ("/" + LOC_PATH[lg].rstrip("/") if tr else "") + C["cta_links"][k]
+                if f'href="{want}' not in raw:
+                    bad.append(f"{rel}: CTA link {want} missing")
             for dsc in DESC_RX.findall(raw):
                 dsc = html.unescape(dsc)
                 if ok_desc.search(dsc) or COVERAGE_DESC.search(dsc):
@@ -2207,7 +2687,7 @@ These are not all of Etsy: they are the shops and niches we read.</p>
 <p class="note">Sign-in uses Apify's own OAuth screen; we never see your password. Apify offers one permission level (full account access): this page uses it only to start the report you asked for and read its results. The key stays in this browser tab and is gone when you close it. Remove the approval any time in Apify Console → Settings → API &amp; Integrations.</p></section>"""
     w(BUILDER, page(BUILDER, "Build your own Etsy report: prices, bestsellers, top shops, shop sales | Etsy Pulse",
                     "Type a niche or a few Etsy shops and get a live report: price bands, Bestseller share, top shops, sales pace, CSV. Free Apify sign-in, no code.",
-                    body, ctx, builder_hero, scripts=f'<script src="assets/builder.js?v={cut}-b7" defer></script>'))
+                    body, ctx, builder_hero, scripts=f'<script src="assets/builder.js?v={cut}-b8" defer></script>'))
 
     # ---- AI page
     w("ai.html", ai_page(ctx, files))
@@ -2218,6 +2698,15 @@ These are not all of Etsy: they are the shops and niches we read.</p>
     # ---- LANG-1: French home
     os.makedirs(os.path.join(out_dir, "fr"), exist_ok=True)
     w(os.path.join("fr", "index.html"), loc_home(ctx, P, D, "fr"))
+    # ---- LANG-2 (Mark t627u): every other page in fr and tr (movers days come from build_daily_movers)
+    for lg in ("fr", "tr"):
+        lp_ = LOC_PATH[lg]
+        w(lp_ + "ai.html", loc_ai(ctx, files, lg))
+        w(lp_ + BUILDER, loc_run(ctx, lg))
+        if "rising.html" in pages:
+            w(lp_ + "rising.html", loc_rising(ctx, D, files, CL, lg))
+        if "niche.html" in pages:
+            w(lp_ + "niche.html", loc_niche_page(ctx, N, files, lg))
 
     # ---- DAILY MOVERS (t613u)
     dm_paths = build_daily_movers(out_dir, ctx)
@@ -2227,16 +2716,15 @@ These are not all of Etsy: they are the shops and niches we read.</p>
         fh.write(f"User-agent: *\nAllow: /\nSitemap: {SITE_URL}sitemap.xml\n")
     with open(os.path.join(out_dir, "sitemap.xml"), "w") as fh:
         fh.write('<?xml version="1.0" encoding="UTF-8"?>\n<urlset xmlns="http://www.sitemaps.org/schemas/sitemap/0.9">\n')
-        for p in pages:
-            fh.write(f"  <url><loc>{SITE_URL}{'' if p == 'index.html' else p}</loc><lastmod>{snap}</lastmod></url>\n")
-        fh.write(f"  <url><loc>{SITE_URL}{TR_PATH}</loc><lastmod>{snap}</lastmod></url>\n")
-        fh.write(f"  <url><loc>{SITE_URL}{FR_PATH}</loc><lastmod>{snap}</lastmod></url>\n")
+        for lg, lp_, _ in LOCALES:   # LANG-2: every page in every language
+            for p in pages:
+                if p != "movers/":
+                    fh.write(f"  <url><loc>{SITE_URL}{lp_}{'' if p == 'index.html' else p}</loc><lastmod>{snap}</lastmod></url>\n")
         for p in dm_paths:
-            if p != "movers/":
-                fh.write(f"  <url><loc>{SITE_URL}{p}</loc><lastmod>{p.strip('/').split('/')[-1] if p[-11:-1].count('-') == 2 else dm_days()[-1]}</lastmod></url>\n")
+            fh.write(f"  <url><loc>{SITE_URL}{p}</loc><lastmod>{p.strip('/').split('/')[-1] if p[-11:-1].count('-') == 2 else dm_days()[-1]}</lastmod></url>\n")
         fh.write("</urlset>\n")
     open(os.path.join(out_dir, ".nojekyll"), "w").close()
-    report = {"cut": cut, "snapshot": snap, "pages": pages, "locales": {"tr": TR_PATH + "index.html", "fr": FR_PATH + "index.html"}, "og": og_ok,
+    report = {"cut": cut, "snapshot": snap, "pages": pages, "locales": {lg: [lp_ + ("" if p == "index.html" else p) for p in pages] for lg, lp_, _ in LOCALES if lp_}, "og": og_ok,
               "rows": {"movers": len(D["movers"]), "niches": len(D["niches"]), "rising": len(D["rising"]),
                        "niche_keywords": len([x for x in (N["rows"] if N else []) if (x.get("listings") or 0) >= 20])},
               "public_max_rows": PUBLIC_N, "daily_movers": dm_paths,
@@ -2252,6 +2740,8 @@ These are not all of Etsy: they are the shops and niches we read.</p>
     check_exact(out_dir, D)
     check_movers(out_dir, cta(ctx))
     check_lang(out_dir)
+    for lg in ("fr", "tr"):
+        check_loc_pages(out_dir, lg)
     print(json.dumps(report))
 
 

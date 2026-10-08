@@ -6,6 +6,14 @@
  */
 (function () {
   "use strict";
+  /* LANG-2 (Mark t627u): UI strings go through T("English", {vars}). /fr/run.html and /tr/run.html set window.EP_I18N =
+   * {lang, locale, s: {English: translation}} before this script (config/i18n/<lang>.json "builder"); the build fails if a
+   * T() string has no translation, so a locale page never falls back to English. */
+  var I18N = window.EP_I18N || {}, LG = I18N.lang || "en", LOC = I18N.locale || "en-US";
+  function T(str, v) {
+    var r = I18N.s && Object.prototype.hasOwnProperty.call(I18N.s, str) ? I18N.s[str] : str;
+    return v ? r.replace(/\{(\w+)\}/g, function (m, k) { return v[k] != null ? v[k] : m; }) : r;
+  }
   var CFG = {
     clientId: "zgo08rBVHw2gUc3ZI",   // DOMAIN-1: DCR client 2026-10-07 23:2x ET, redirects www.etsypulse.ca + github.io + localhost (old 41bogEetbPU2ZVmGm = github.io only)
     authUrl: "https://console.apify.com/authorize/oauth",
@@ -19,60 +27,60 @@
     tracker: { id: "iSqAcbENkn1ZdUMm1", name: "Etsy Shop Sales Tracker", store: "https://publicrecords-redirect.publicrecords.workers.dev/r/site-store-tracker",
       start: 0.005, unit: 0.003, unitName: "shop", platform: 0 },   // PRICE-2: exactly $0.005/run + $0.003/shop; standard runs, user pays no platform usage
   };
-  var BLOCKED_NOTE = "If Etsy blocks a search, you get the most recent cached results, clearly dated, at the same rate; if there's nothing cached, you pay nothing.";
+  var BLOCKED_NOTE = T("If Etsy blocks a search, you get the most recent cached results, clearly dated, at the same rate; if there's nothing cached, you pay nothing.");
   var BLOCKS = {
-    kpis: "Headline numbers", takeaways: "Plain-English takeaways", prices: "Price bands chart", badges: "Badges chart",
-    bestprice: "Bestseller vs the rest", shops: "Top shops chart", shoptable: "Shop leaderboard", compare: "Keyword comparison",
-    velocity: "Sales pace chart", rivals: "Side-by-side shop charts", table: "Full data table",
+    kpis: T("Headline numbers"), takeaways: T("Plain-English takeaways"), prices: T("Price bands chart"), badges: T("Badges chart"),
+    bestprice: T("Bestseller vs the rest"), shops: T("Top shops chart"), shoptable: T("Shop leaderboard"), compare: T("Keyword comparison"),
+    velocity: T("Sales pace chart"), rivals: T("Side-by-side shop charts"), table: T("Full data table"),
   };
   var TYPES = {
-    niche: { actor: "search", title: "Niche price snapshot", icon: "💲",
-      blurb: "What the top Etsy results cost for your keyword: price range, sweet spot, badges, who ranks.",
+    niche: { actor: "search", title: T("Niche price snapshot"), icon: "💲",
+      blurb: T("What the top Etsy results cost for your keyword: price range, sweet spot, badges, who ranks."),
       blocks: ["kpis", "takeaways", "prices", "badges", "shops", "table"],
       cols: ["position", "title", "price", "shop_name", "review_count", "rating_value", "bestseller", "free_shipping"] },
-    compare: { actor: "search", title: "Compare keywords", icon: "⚖️",
-      blurb: "Put 2 to 5 keywords side by side: prices, competition, bestseller share.",
+    compare: { actor: "search", title: T("Compare keywords"), icon: "⚖️",
+      blurb: T("Put 2 to 5 keywords side by side: prices, competition, bestseller share."),
       blocks: ["kpis", "takeaways", "compare", "prices", "table"],
       cols: ["query", "position", "title", "price", "shop_name", "review_count", "bestseller"] },
-    bestsellers: { actor: "search", title: "What wins: badge check", icon: "🏅",
-      blurb: "Which listings carry Bestseller, Popular Now and Star Seller badges, and what they charge.",
+    bestsellers: { actor: "search", title: T("What wins: badge check"), icon: "🏅",
+      blurb: T("Which listings carry Bestseller, Popular Now and Star Seller badges, and what they charge."),
       blocks: ["kpis", "takeaways", "badges", "bestprice", "table"],
       cols: ["position", "title", "price", "shop_name", "bestseller", "popular_now", "star_seller", "etsys_pick", "review_count"] },
-    competitors: { actor: "search", title: "Top shops in a niche", icon: "🏪",
-      blurb: "Which shops own the top results for your keyword: spots held, best rank, prices, reviews.",
+    competitors: { actor: "search", title: T("Top shops in a niche"), icon: "🏪",
+      blurb: T("Which shops own the top results for your keyword: spots held, best rank, prices, reviews."),
       blocks: ["kpis", "takeaways", "shops", "shoptable", "table"],
       cols: ["position", "shop_name", "title", "price", "review_count", "bestseller"] },
-    velocity: { actor: "tracker", title: "Shop sales tracker", icon: "📈",
-      blurb: "Lifetime sales, sales per day and 7-day change for shops you name that are in our panel.",
+    velocity: { actor: "tracker", title: T("Shop sales tracker"), icon: "📈",
+      blurb: T("Lifetime sales, sales per day and 7-day change for shops you name that are in our panel."),
       blocks: ["kpis", "takeaways", "velocity", "table"],
       cols: ["shop", "sales_count", "sales_per_day", "delta_7d", "units_day", "reviews_count", "rating", "as_of"] },
-    rivals: { actor: "tracker", title: "Competitor comparison", icon: "🥊",
-      blurb: "Line up 2 to 10 shops: sales pace, lifetime sales, reviews, followers, listings.",
+    rivals: { actor: "tracker", title: T("Competitor comparison"), icon: "🥊",
+      blurb: T("Line up 2 to 10 shops: sales pace, lifetime sales, reviews, followers, listings."),
       blocks: ["kpis", "takeaways", "velocity", "rivals", "table"],
       cols: ["shop", "sales_per_day", "delta_7d", "sales_count", "reviews_count", "admirers", "listings_active", "rating"] },
-    category: { actor: "tracker", title: "Category leaders", icon: "🏆",
-      blurb: "The fastest-selling shops in an Etsy category, from our shop panel.",
+    category: { actor: "tracker", title: T("Category leaders"), icon: "🏆",
+      blurb: T("The fastest-selling shops in an Etsy category, from our shop panel."),
       blocks: ["kpis", "takeaways", "velocity", "table"],
       cols: ["shop", "category", "sales_per_day", "delta_7d", "sales_count", "reviews_count", "as_of"] },
-    breakouts: { actor: "tracker", title: "Breakout shops", icon: "🚀",
-      blurb: "Shops whose last 7 days are far above their own usual pace (needs 7+ days of reads).",
+    breakouts: { actor: "tracker", title: T("Breakout shops"), icon: "🚀",
+      blurb: T("Shops whose last 7 days are far above their own usual pace (needs 7+ days of reads)."),
       blocks: ["kpis", "takeaways", "velocity", "table"],
       cols: ["shop", "category", "delta_7d", "lift_7d", "sales_per_day", "sales_count", "breakout_p"] },
   };
   var LABELS = {
-    position: "Rank", title: "Listing", price: "Price", currency: "Currency", shop_name: "Shop", rating_value: "Rating",
-    review_count: "Reviews", review_count_approx: "Reviews rounded", bestseller: "Bestseller", star_seller: "Star Seller",
-    popular_now: "Popular now", etsys_pick: "Etsy's Pick", free_shipping: "Free shipping", is_ad: "Ad", query: "Keyword",
-    page: "Page", total_results: "Etsy results", listing_id: "Listing ID", url: "Listing link", shop_url: "Shop link",
-    shop_id: "Shop ID", surface: "Card type", source: "Source", data_source: "Data source",
-    shop: "Shop", headline: "Headline", category: "Category", sales_count: "Lifetime sales", sales_precision: "Sales precision",
-    as_of: "Read on", read_interval_days: "Days between reads", delta_last: "Sales since last read",
-    sales_per_day: "Sales per day", delta_7d: "Sales, last 7 days", delta_28d: "Sales, last 28 days",
-    units_day: "Est. sales/day", units_lo: "Est. low", units_hi: "Est. high", lift_7d: "7-day lift", breakout: "Breakout",
-    breakout_p: "Breakout odds", reviews_count: "Reviews", rating: "Rating", admirers: "Followers", listings_active: "Active listings",
-    first_seen: "First seen", last_changed: "Last change", history_days: "Days of history", vintage_event: "Counter reset",
-    snapshot_date: "Snapshot", snapshot_stale: "Snapshot stale", velocity_null_reason: "Why no pace",
-    sales_precision_prev: "Prev precision", sales_precision_last: "Last precision",
+    position: T("Rank"), title: T("Listing"), price: T("Price"), currency: T("Currency"), shop_name: T("Shop"), rating_value: T("Rating"),
+    review_count: T("Reviews"), review_count_approx: T("Reviews rounded"), bestseller: T("Bestseller"), star_seller: T("Star Seller"),
+    popular_now: T("Popular now"), etsys_pick: T("Etsy's Pick"), free_shipping: T("Free shipping"), is_ad: T("Ad"), query: T("Keyword"),
+    page: T("Page"), total_results: T("Etsy results"), listing_id: T("Listing ID"), url: T("Listing link"), shop_url: T("Shop link"),
+    shop_id: T("Shop ID"), surface: T("Card type"), source: T("Source"), data_source: T("Data source"),
+    shop: T("Shop"), headline: T("Headline"), category: T("Category"), sales_count: T("Lifetime sales"), sales_precision: T("Sales precision"),
+    as_of: T("Read on"), read_interval_days: T("Days between reads"), delta_last: T("Sales since last read"),
+    sales_per_day: T("Sales per day"), delta_7d: T("Sales, last 7 days"), delta_28d: T("Sales, last 28 days"),
+    units_day: T("Est. sales/day"), units_lo: T("Est. low"), units_hi: T("Est. high"), lift_7d: T("7-day lift"), breakout: T("Breakout"),
+    breakout_p: T("Breakout odds"), reviews_count: T("Reviews"), rating: T("Rating"), admirers: T("Followers"), listings_active: T("Active listings"),
+    first_seen: T("First seen"), last_changed: T("Last change"), history_days: T("Days of history"), vintage_event: T("Counter reset"),
+    snapshot_date: T("Snapshot"), snapshot_stale: T("Snapshot stale"), velocity_null_reason: T("Why no pace"),
+    sales_precision_prev: T("Prev precision"), sales_precision_last: T("Last precision"),
   };
   var MONEY_COLS = { price: 1 }, BOOL_HINT = /^(bestseller|star_seller|popular_now|etsys_pick|free_shipping|is_ad|breakout|vintage_event|snapshot_stale|review_count_approx)$/;
   var CATS = [], COV = null;
@@ -86,12 +94,14 @@
 
   function beacon(name, extra) {
     try {
-      var u = CFG.worker + "/e/" + name + "?t=" + encodeURIComponent(state.type || "") + (extra ? "&" + extra : "");
+      var u = CFG.worker + "/e/" + name + "?t=" + encodeURIComponent(state.type || "") + (LG !== "en" ? "&lang=" + LG : "") + (extra ? "&" + extra : "");
       if (navigator.sendBeacon) navigator.sendBeacon(u); else fetch(u, { method: "POST", mode: "no-cors", keepalive: true });
     } catch (e) {}
   }
   function redirectUri() {
-    var p = location.pathname.replace(/\/run(\.html)?$/, "/run.html");
+    /* The Apify OAuth app knows one redirect: /run.html. /fr/run.html and /tr/run.html sign in through it and the
+     * EN page sends the visitor back to their language (pending.lang, see boot). */
+    var p = location.pathname.replace(/^\/(fr|tr)\//, "/").replace(/\/run(\.html)?$/, "/run.html");
     if (!/run\.html$/.test(p)) p = p.replace(/\/?$/, "/run.html");
     return location.origin + p;
   }
@@ -101,11 +111,16 @@
   /* ------------------------------------------------------------------ numbers */
   function median(a) { a = a.filter(isFinite).sort(function (x, y) { return x - y; }); if (!a.length) return null; var m = a.length >> 1; return a.length % 2 ? a[m] : (a[m - 1] + a[m]) / 2; }
   function quant(a, q) { a = a.filter(isFinite).sort(function (x, y) { return x - y; }); if (!a.length) return null; var i = (a.length - 1) * q, lo = Math.floor(i), hi = Math.ceil(i); return a[lo] + (a[hi] - a[lo]) * (i - lo); }
-  function num(x, d) { if (x == null || x === "" || !isFinite(x)) return "–"; return Number(x).toLocaleString("en-US", { maximumFractionDigits: d == null ? 0 : d }); }
+  function num(x, d) { if (x == null || x === "" || !isFinite(x)) return "–"; return Number(x).toLocaleString(LOC, { maximumFractionDigits: d == null ? 0 : d }); }
   function cur(rows) { var c = (rows.find(function (r) { return r.currency; }) || {}).currency || "$"; return c.length > 3 ? c + " " : c; }
-  function money(x, c) { if (x == null || !isFinite(x)) return "–"; return (c || "$") + Number(x).toLocaleString("en-US", { minimumFractionDigits: x < 100 ? 2 : 0, maximumFractionDigits: x < 100 ? 2 : 0 }); }
-  function pct(x, d) { return x == null || !isFinite(x) ? "–" : (100 * x).toFixed(d || 0) + "%"; }
-  function usd(x) { return "$" + (x < 1 ? x.toFixed(3).replace(/0$/, "") : x.toFixed(2)); }
+  function money(x, c) {
+    if (x == null || !isFinite(x)) return "–";
+    var v = Number(x).toLocaleString(LOC, { minimumFractionDigits: x < 100 ? 2 : 0, maximumFractionDigits: x < 100 ? 2 : 0 });
+    c = c || "$"; return LG === "fr" ? v + "\u00a0" + c.trim() : c + v;
+  }
+  function dec(v) { return LG === "en" ? v : v.replace(".", ","); }
+  function pct(x, d) { if (x == null || !isFinite(x)) return "–"; var v = dec((100 * x).toFixed(d || 0)); return LG === "tr" ? "%" + v : LG === "fr" ? v + "\u00a0%" : v + "%"; }
+  function usd(x) { var v = x < 1 ? x.toFixed(3).replace(/0$/, "") : x.toFixed(2); return LG === "fr" ? dec(v) + "\u00a0$" : "$" + v; }  /* TR keeps "$0.005" like tr.json's price line */
   function share(rows, f) { return rows.length ? rows.filter(function (r) { return r[f] === true; }).length / rows.length : null; }
 
   /* ------------------------------------------------------------------ inputs → Actor input JSON */
@@ -133,43 +148,44 @@
       var kws = lines(val("f-queries")), mps = lines(val("f-market")), cats = lines(val("f-caturls"));
       var fill = val("f-fill") !== false && document.getElementById("f-fill") ? val("f-fill") : true;
       var maxN = fill ? LIMITS.perKwMax : LIMITS.perKwMaxFast;
-      var n = int("f-perkw"); if (n == null || n < 1) { n = 20; if (val("f-perkw") !== "") errors.push("Listings per keyword must be at least 1."); }
-      if (n > maxN) { warns.push("Etsy shows at most 20 pages per search, so " + num(maxN) + " is the most one keyword can return" + (fill ? "" : " in fast mode") + ". Using " + num(maxN) + "."); n = maxN; }
+      var n = int("f-perkw"); if (n == null || n < 1) { n = 20; if (val("f-perkw") !== "") errors.push(T("Listings per keyword must be at least 1.")); }
+      if (n > maxN) { warns.push(fill ? T("Etsy shows at most 20 pages per search, so {n} is the most one keyword can return. Using {n}.", { n: num(maxN) })
+        : T("Etsy shows at most 20 pages per search, so {n} is the most one keyword can return in fast mode. Using {n}.", { n: num(maxN) })); n = maxN; }
       var pages = int("f-pages"); var autoPages = clamp(Math.ceil(n / (fill ? LIMITS.perPage : LIMITS.perPageFast)), 1, LIMITS.pages);
       pages = pages ? clamp(pages, 1, LIMITS.pages) : autoPages;
       var base = { sort: val("f-sort") || "relevance", maxPages: pages, fillLazyCards: !!fill, source: val("f-source") || "etsypulse-site-builder" };
       var purls = lines(val("f-proxyurls"));
       base.proxyConfiguration = val("f-proxymode") === "own" && purls.length ? { useApifyProxy: false, proxyUrls: purls }
         : { useApifyProxy: true, apifyProxyGroups: ["RESIDENTIAL"], apifyProxyCountry: val("f-region") || "US" };
-      if (val("f-proxymode") === "own" && !purls.length) errors.push("Add at least one proxy URL, or switch back to Apify's proxy.");
+      if (val("f-proxymode") === "own" && !purls.length) errors.push(T("Add at least one proxy URL, or switch back to Apify's proxy."));
       var mn = int("f-minprice"), mx = int("f-maxprice"), days = int("f-days");
       if (mn != null) base.minPrice = mn; if (mx != null) base.maxPrice = mx; if (days != null && days > 0) base.max_processing_days = days;
       if (val("f-shipto")) base.ship_to = val("f-shipto");
       ["is_best_seller", "is_star_seller", "free_shipping", "is_discounted", "instant_download", "is_handmade_only", "is_personalizable"].forEach(function (k) { if (val("f-" + k)) base[k] = true; });
-      if (mn != null && mx != null && mx > 0 && mx < mn) errors.push("The highest price is below the lowest price.");
-      cats = cats.filter(function (u) { if (!/^https?:\/\/(www\.)?etsy\.com\/c\//i.test(u)) { errors.push("Category links must look like https://www.etsy.com/c/jewelry/necklaces"); return false; } return true; })
+      if (mn != null && mx != null && mx > 0 && mx < mn) errors.push(T("The highest price is below the lowest price."));
+      cats = cats.filter(function (u) { if (!/^https?:\/\/(www\.)?etsy\.com\/c\//i.test(u)) { errors.push(T("Category links must look like https://www.etsy.com/c/jewelry/necklaces")); return false; } return true; })
         .map(function (u) { return u.split("?")[0]; });
       var timeout = tmin ? clamp(tmin, 1, 1440) * 60 : clamp(600 + pages * 90, 900, 3600);
       var cap = capFor(ACTORS.search.start + n * ACTORS.search.unit);
       var mk = function (label, extra) { plan.jobs.push({ label: label, input: Object.assign({}, base, extra, { maxItems: n }), cap: cap, memory: mem, timeout: timeout }); };
       kws.forEach(function (k) { mk(k, { queries: [k] }); });
-      mps.forEach(function (k) { mk(k + " (market page)", { marketPhrases: [k] }); });
-      cats.forEach(function (u) { mk(u.replace(/^https?:\/\/(www\.)?etsy\.com\/c\//, "category: "), { categoryUrls: [u] }); });
-      if (!plan.jobs.length) errors.push("Type at least one keyword.");
-      if (plan.jobs.length > LIMITS.inputsMax) errors.push("Up to " + LIMITS.inputsMax + " keywords per report (you have " + plan.jobs.length + "). Split it into two reports.");
-      if (state.type === "compare" && plan.jobs.length < 2) errors.push("Comparing needs at least 2 keywords, one per line.");
+      mps.forEach(function (k) { mk(T("{k} (market page)", { k: k }), { marketPhrases: [k] }); });
+      cats.forEach(function (u) { mk(T("category: {c}", { c: u.replace(/^https?:\/\/(www\.)?etsy\.com\/c\//, "") }), { categoryUrls: [u] }); });
+      if (!plan.jobs.length) errors.push(T("Type at least one keyword."));
+      if (plan.jobs.length > LIMITS.inputsMax) errors.push(T("Up to {max} keywords per report (you have {n}). Split it into two reports.", { max: LIMITS.inputsMax, n: plan.jobs.length }));
+      if (state.type === "compare" && plan.jobs.length < 2) errors.push(T("Comparing needs at least 2 keywords, one per line."));
       plan.combined = Object.assign({}, base, { maxItems: n * Math.max(1, plan.jobs.length) });
       if (kws.length) plan.combined.queries = kws; if (mps.length) plan.combined.marketPhrases = mps; if (cats.length) plan.combined.categoryUrls = cats;
       plan.perKw = n; plan.rows = n * plan.jobs.length;
       plan.est = plan.jobs.length * ACTORS.search.start + plan.rows * ACTORS.search.unit;
       plan.max = plan.jobs.reduce(function (s, j) { return s + j.cap; }, 0);
       plan.platform = 0;
-      if (plan.jobs.length > 1) warns.push(plan.jobs.length + " keywords run as " + plan.jobs.length + " separate Apify runs (each gets exactly " + num(n) + " listings and its own $0.005 start fee).");
+      if (plan.jobs.length > 1) warns.push(T("{k} keywords run as {k} separate Apify runs (each gets exactly {n} listings and its own {fee} start fee).", { k: plan.jobs.length, n: num(n), fee: usd(ACTORS.search.start) }));
     } else {
       var named = state.type === "velocity" || state.type === "rivals";
       var shops = lines(val(named ? "f-shops" : "f-shops2")).map(shopName).filter(Boolean), inp = {};
       var maxShops = int("f-maxshops"); if (!maxShops) maxShops = shops.length || 20;
-      if (maxShops > LIMITS.shopsMax) { warns.push("The tracker returns at most " + num(LIMITS.shopsMax) + " shops per run. Using " + num(LIMITS.shopsMax) + "."); maxShops = LIMITS.shopsMax; }
+      if (maxShops > LIMITS.shopsMax) { warns.push(T("The tracker returns at most {n} shops per run. Using {n}.", { n: num(LIMITS.shopsMax) })); maxShops = LIMITS.shopsMax; }
       if (shops.length) { inp.shops = shops; maxShops = Math.min(maxShops, shops.length); }
       var kw = lines(val("f-shopkw")); if (kw.length) inp.keywords = kw;
       var catv = val(named ? "f-category2" : "f-category"); if (catv) inp.category = catv;
@@ -177,12 +193,12 @@
       if (val("f-since")) inp.since = val("f-since");
       if (state.type === "breakouts" || val("f-breakout")) inp.breakoutOnly = true;
       inp.maxShops = maxShops;
-      if (named && !shops.length) errors.push("Add at least one shop name or link.");
-      if (state.type === "rivals" && shops.length === 1) errors.push("Comparing needs at least 2 shops.");
-      if (shops.length > LIMITS.shopsMax) errors.push("Up to " + num(LIMITS.shopsMax) + " shops per report.");
-      if (state.type === "category" && !inp.category && !kw.length && !shops.length && !inp.minSales) errors.push("Pick a category (or add shop-name words or a lifetime-sales floor under Advanced options).");
+      if (named && !shops.length) errors.push(T("Add at least one shop name or link."));
+      if (state.type === "rivals" && shops.length === 1) errors.push(T("Comparing needs at least 2 shops."));
+      if (shops.length > LIMITS.shopsMax) errors.push(T("Up to {n} shops per report.", { n: num(LIMITS.shopsMax) }));
+      if (state.type === "category" && !inp.category && !kw.length && !shops.length && !inp.minSales) errors.push(T("Pick a category (or add shop-name words or a lifetime-sales floor under Advanced options)."));
       var trows = maxShops, tcap = capFor(ACTORS.tracker.start + trows * ACTORS.tracker.unit);
-      plan.jobs.push({ label: shops.length ? shops.length + " shops" : (inp.category ? unesc(inp.category) : "panel"), input: inp, cap: tcap, memory: mem, timeout: tmin ? clamp(tmin, 1, 1440) * 60 : 900 });
+      plan.jobs.push({ label: shops.length ? T("{n} shops", { n: shops.length }) : (inp.category ? unesc(inp.category) : T("panel")), input: inp, cap: tcap, memory: mem, timeout: tmin ? clamp(tmin, 1, 1440) * 60 : 900 });
       plan.combined = inp; plan.rows = trows;
       plan.est = ACTORS.tracker.start + trows * ACTORS.tracker.unit;
       plan.max = tcap; plan.platform = ACTORS.tracker.platform;
@@ -199,8 +215,8 @@
 
   function renderForm(q) {
     var app = $("#builder");
-    var groups = [["search", "About a keyword or niche", "Live Etsy search, via our Etsy Search Scraper"],
-      ["tracker", "About specific shops", "Public sales counters from our shop panel, via our Etsy Shop Sales Tracker"]];
+    var groups = [["search", T("About a keyword or niche"), T("Live Etsy search, via our Etsy Search Scraper")],
+      ["tracker", T("About specific shops"), T("Public sales counters from our shop panel, via our Etsy Shop Sales Tracker")]];
     var cards = groups.map(function (g) {
       return '<div class="tgroup"><div class="tgh"><b>' + g[1] + "</b><small>" + g[2] + '</small></div><div class="tcards">' +
         Object.keys(TYPES).filter(function (k) { return TYPES[k].actor === g[0]; }).map(function (k) {
@@ -208,66 +224,70 @@
           return '<button type="button" class="tcard" data-type="' + k + '" aria-pressed="false"><span class="ti">' + t.icon + '</span><span class="tt">' + t.title + '</span><span class="tb">' + t.blurb + "</span></button>";
         }).join("") + "</div></div>";
     }).join("");
-    var catOpts = opt("", "Any category") + CATS.map(function (c) { return opt(c.v, c.l); }).join("");
-    var countries = [["US", "United States"], ["GB", "United Kingdom"], ["CA", "Canada"], ["AU", "Australia"], ["DE", "Germany"], ["FR", "France"], ["NL", "Netherlands"], ["IT", "Italy"], ["ES", "Spain"], ["IE", "Ireland"], ["NZ", "New Zealand"], ["SE", "Sweden"], ["DK", "Denmark"], ["NO", "Norway"], ["CH", "Switzerland"], ["AT", "Austria"], ["BE", "Belgium"], ["PL", "Poland"], ["JP", "Japan"], ["IN", "India"]];
+    var catOpts = opt("", T("Any category")) + CATS.map(function (c) { return opt(c.v, c.l); }).join("");
+    var countries = ["US", "GB", "CA", "AU", "DE", "FR", "NL", "IT", "ES", "IE", "NZ", "SE", "DK", "NO", "CH", "AT", "BE", "PL", "JP", "IN"].map(function (c) {
+      var nm = { US: "United States", GB: "United Kingdom", CA: "Canada", AU: "Australia", DE: "Germany", FR: "France", NL: "Netherlands", IT: "Italy", ES: "Spain", IE: "Ireland", NZ: "New Zealand", SE: "Sweden", DK: "Denmark", NO: "Norway", CH: "Switzerland", AT: "Austria", BE: "Belgium", PL: "Poland", JP: "Japan", IN: "India" }[c];
+      try { if (LG !== "en" && window.Intl && Intl.DisplayNames) nm = new Intl.DisplayNames([LOC], { type: "region" }).of(c) || nm; } catch (e) {}
+      return [c, nm];
+    });
     app.innerHTML =
-      '<div class="bstep"><div class="bh"><i>1</i><h2>Pick a report</h2></div>' + cards + "</div>" +
-      '<div class="bstep" id="step2"><div class="bh"><i>2</i><h2>Tell it what to look at</h2></div>' +
+      '<div class="bstep"><div class="bh"><i>1</i><h2>' + T("Pick a report") + '</h2></div>' + cards + "</div>" +
+      '<div class="bstep" id="step2"><div class="bh"><i>2</i><h2>' + T("Tell it what to look at") + '</h2></div>' +
       '<div data-for="search">' +
-        field("f-queries", "Keywords <em>(one per line)</em>", '<textarea id="f-queries" rows="2" placeholder="ceramic mug&#10;personalized dog collar"></textarea>') +
+        field("f-queries", T("Keywords <em>(one per line)</em>"), '<textarea id="f-queries" rows="2" placeholder="ceramic mug&#10;personalized dog collar"></textarea>') +
         '<div class="frow">' +
-        field("f-perkw", "Listings per keyword", '<input id="f-perkw" type="number" min="1" max="1200" step="1" inputmode="numeric" value="20">' +
-          '<span class="quick" data-target="f-perkw"><button type="button" data-v="20">20</button><button type="button" data-v="60">60</button><button type="button" data-v="200">200</button><button type="button" data-v="500">500</button><button type="button" data-v="1200">max</button></span>', "Any number from 1 to 1,200 (Etsy shows at most 20 pages per search).") +
-        field("f-sort", "Which listings Etsy returns", "<select id=f-sort>" + opt("relevance", "Etsy's best match (default)") + opt("top_reviews", "Most reviewed") + opt("newest", "Newest") + opt("price_asc", "Cheapest first") + opt("price_desc", "Most expensive first") + "</select>") +
+        field("f-perkw", T("Listings per keyword"), '<input id="f-perkw" type="number" min="1" max="1200" step="1" inputmode="numeric" value="20">' +
+          '<span class="quick" data-target="f-perkw"><button type="button" data-v="20">20</button><button type="button" data-v="60">60</button><button type="button" data-v="200">200</button><button type="button" data-v="500">500</button><button type="button" data-v="1200">' + T("max") + '</button></span>', T("Any number from 1 to 1,200 (Etsy shows at most 20 pages per search).")) +
+        field("f-sort", T("Which listings Etsy returns"), "<select id=f-sort>" + opt("relevance", T("Etsy's best match (default)")) + opt("top_reviews", T("Most reviewed")) + opt("newest", T("Newest")) + opt("price_asc", T("Cheapest first")) + opt("price_desc", T("Most expensive first")) + "</select>") +
         "</div></div>" +
       '<div data-for="tracker">' +
-        '<div data-show="velocity rivals">' + field("f-shops", "Shop names or links <em>(one per line)</em>", '<textarea id="f-shops" rows="3" placeholder="CaitlynMinimalist&#10;https://www.etsy.com/shop/OrelCeramics"></textarea>', "Only shops in our panel return a row, and you pay only for rows returned. A shop that isn't in the panel returns nothing.") + "</div>" +
+        '<div data-show="velocity rivals">' + field("f-shops", T("Shop names or links <em>(one per line)</em>"), '<textarea id="f-shops" rows="3" placeholder="CaitlynMinimalist&#10;https://www.etsy.com/shop/OrelCeramics"></textarea>', T("Only shops in our panel return a row, and you pay only for rows returned. A shop that isn't in the panel returns nothing.")) + "</div>" +
         '<p class="hint covnote" data-show="velocity rivals category breakouts" id="covnote" hidden></p>' +
         '<div class="frow">' +
-        '<div data-show="category breakouts">' + field("f-category", "Category", "<select id=f-category>" + catOpts + "</select>") + "</div>" +
-        '<div data-show="category breakouts">' + field("f-maxshops", "How many shops (at most)", '<input id="f-maxshops" type="number" min="1" max="20000" inputmode="numeric" value="20">' +
-          '<span class="quick" data-target="f-maxshops"><button type="button" data-v="20">20</button><button type="button" data-v="100">100</button><button type="button" data-v="500">500</button><button type="button" data-v="2000">2,000</button></span>', "Any number up to 20,000. You only pay for shops returned.") + "</div>" +
+        '<div data-show="category breakouts">' + field("f-category", T("Category"), "<select id=f-category>" + catOpts + "</select>") + "</div>" +
+        '<div data-show="category breakouts">' + field("f-maxshops", T("How many shops (at most)"), '<input id="f-maxshops" type="number" min="1" max="20000" inputmode="numeric" value="20">' +
+          '<span class="quick" data-target="f-maxshops"><button type="button" data-v="20">20</button><button type="button" data-v="100">100</button><button type="button" data-v="500">500</button><button type="button" data-v="2000">' + num(2000) + '</button></span>', T("Any number up to 20,000. You only pay for shops returned.")) + "</div>" +
         "</div></div></div>" +
-      '<details class="adv bstep" id="adv"><summary>Advanced options <small>filters, ranking, columns, every Actor setting</small></summary><div class="advin">' +
+      '<details class="adv bstep" id="adv"><summary>' + T("Advanced options") + ' <small>' + T("filters, ranking, columns, every Actor setting") + '</small></summary><div class="advin">' +
         '<div data-for="search">' +
-          sub("Search filters (applied by Etsy)") +
-          '<div class="frow">' + field("f-minprice", "Lowest price", '<input id="f-minprice" type="number" min="0" inputmode="numeric" placeholder="any">', "Whole units of the shopper's currency.") +
-          field("f-maxprice", "Highest price", '<input id="f-maxprice" type="number" min="0" inputmode="numeric" placeholder="any">') +
-          field("f-days", "Ready to ship within (days)", '<input id="f-days" type="number" min="1" max="60" inputmode="numeric" placeholder="any">') + "</div>" +
-          '<div class="chks">' + check("f-is_best_seller", "Bestsellers only") + check("f-is_star_seller", "Star Seller shops only") + check("f-free_shipping", "Free shipping only") +
-          check("f-is_discounted", "On sale only") + check("f-instant_download", "Digital downloads only") + check("f-is_handmade_only", "Handmade only") + check("f-is_personalizable", "Personalizable only") + "</div>" +
-          sub("What to search besides keywords") +
-          field("f-market", "Etsy market pages <em>(one phrase per line)</em>", '<textarea id="f-market" rows="2" placeholder="personalized dog collar"></textarea>', "Etsy's /market/ page for a phrase. Each line is one more run.") +
-          field("f-caturls", "Etsy category links <em>(one per line)</em>", '<textarea id="f-caturls" rows="2" placeholder="https://www.etsy.com/c/jewelry/necklaces"></textarea>', "Read in Etsy's default order. Each line is one more run.") +
-          sub("Where and how Etsy is read") +
-          '<div class="frow">' + field("f-shipto", "Only listings that ship to", "<select id=f-shipto>" + opt("", "Anywhere") + countries.map(function (c) { return opt(c[0], c[1]); }).join("") + "</select>") +
-          field("f-region", "See prices as a shopper in", "<select id=f-region>" + countries.map(function (c) { return opt(c[0], c[1], c[0] === "US"); }).join("") + "</select>", "Sets the proxy country; Etsy shows that country's currency.") +
-          field("f-pages", "Pages per keyword", '<input id="f-pages" type="number" min="1" max="20" inputmode="numeric" placeholder="auto">', "Leave empty: worked out from the listing count.") + "</div>" +
-          check("f-fill", "Return every listing on each page (recommended; off = 12 per page, faster)", true) +
-          '<div class="frow">' + field("f-proxymode", "Proxy", "<select id=f-proxymode>" + opt("apify", "Apify residential (recommended)") + opt("own", "My own proxy URLs") + "</select>", "Etsy blocks datacenter IPs. Apify's proxy cost is included in the price.") +
-          field("f-source", "Label for this run", '<input id="f-source" placeholder="etsypulse-site-builder">', "Copied onto every row; handy for filtering later.") + "</div>" +
-          '<div data-show-proxy>' + field("f-proxyurls", "Proxy URLs <em>(one per line)</em>", '<textarea id="f-proxyurls" rows="2" placeholder="http://user:pass@host:port"></textarea>') + "</div>" +
+          sub(T("Search filters (applied by Etsy)")) +
+          '<div class="frow">' + field("f-minprice", T("Lowest price"), '<input id="f-minprice" type="number" min="0" inputmode="numeric" placeholder="' + T("any") + '">', T("Whole units of the shopper's currency.")) +
+          field("f-maxprice", T("Highest price"), '<input id="f-maxprice" type="number" min="0" inputmode="numeric" placeholder="' + T("any") + '">') +
+          field("f-days", T("Ready to ship within (days)"), '<input id="f-days" type="number" min="1" max="60" inputmode="numeric" placeholder="' + T("any") + '">') + "</div>" +
+          '<div class="chks">' + check("f-is_best_seller", T("Bestsellers only")) + check("f-is_star_seller", T("Star Seller shops only")) + check("f-free_shipping", T("Free shipping only")) +
+          check("f-is_discounted", T("On sale only")) + check("f-instant_download", T("Digital downloads only")) + check("f-is_handmade_only", T("Handmade only")) + check("f-is_personalizable", T("Personalizable only")) + "</div>" +
+          sub(T("What to search besides keywords")) +
+          field("f-market", T("Etsy market pages <em>(one phrase per line)</em>"), '<textarea id="f-market" rows="2" placeholder="' + esc(T("personalized dog collar")) + '"></textarea>', T("Etsy's /market/ page for a phrase. Each line is one more run.")) +
+          field("f-caturls", T("Etsy category links <em>(one per line)</em>"), '<textarea id="f-caturls" rows="2" placeholder="https://www.etsy.com/c/jewelry/necklaces"></textarea>', T("Read in Etsy's default order. Each line is one more run.")) +
+          sub(T("Where and how Etsy is read")) +
+          '<div class="frow">' + field("f-shipto", T("Only listings that ship to"), "<select id=f-shipto>" + opt("", T("Anywhere")) + countries.map(function (c) { return opt(c[0], c[1]); }).join("") + "</select>") +
+          field("f-region", T("See prices as a shopper in"), "<select id=f-region>" + countries.map(function (c) { return opt(c[0], c[1], c[0] === "US"); }).join("") + "</select>", T("Sets the proxy country; Etsy shows that country's currency.")) +
+          field("f-pages", T("Pages per keyword"), '<input id="f-pages" type="number" min="1" max="20" inputmode="numeric" placeholder="' + T("auto") + '">', T("Leave empty: worked out from the listing count.")) + "</div>" +
+          check("f-fill", T("Return every listing on each page (recommended; off = 12 per page, faster)"), true) +
+          '<div class="frow">' + field("f-proxymode", T("Proxy"), "<select id=f-proxymode>" + opt("apify", T("Apify residential (recommended)")) + opt("own", T("My own proxy URLs")) + "</select>", T("Etsy blocks datacenter IPs. Apify's proxy cost is included in the price.")) +
+          field("f-source", T("Label for this run"), '<input id="f-source" placeholder="etsypulse-site-builder">', T("Copied onto every row; handy for filtering later.")) + "</div>" +
+          '<div data-show-proxy>' + field("f-proxyurls", T("Proxy URLs <em>(one per line)</em>"), '<textarea id="f-proxyurls" rows="2" placeholder="http://user:pass@host:port"></textarea>') + "</div>" +
         "</div>" +
         '<div data-for="tracker">' +
-          sub("Which shops") +
-          '<div data-show="category breakouts">' + field("f-shops2", "Only these shops <em>(optional, one per line)</em>", '<textarea id="f-shops2" rows="2" placeholder="leave empty for the whole category"></textarea>') + "</div>" +
-          '<div data-show="velocity rivals">' + field("f-category2", "Only shops in this category <em>(optional)</em>", "<select id=f-category2>" + catOpts + "</select>") + "</div>" +
-          field("f-shopkw", "Words in the shop name or headline <em>(optional)</em>", '<input id="f-shopkw" placeholder="e.g. ceramics, wedding">', "Any of the words matches.") +
-          '<div class="frow">' + field("f-minsales", "At least this many lifetime sales", '<input id="f-minsales" type="number" min="0" inputmode="numeric" placeholder="0">') +
-          field("f-minrate", "At least this many sales a day (estimated)", '<input id="f-minrate" type="number" min="0" inputmode="numeric" placeholder="0">') +
-          field("f-since", "Numbers changed on or after", '<input id="f-since" type="date">') + "</div>" +
-          '<div data-show="velocity rivals category">' + check("f-breakout", "Breakout shops only (last 7 days far above their usual pace)") + "</div>" +
-          '<div data-show="velocity rivals">' + field("f-maxshops2", "How many shops (at most)", '<input id="f-maxshops2" type="number" min="1" max="20000" inputmode="numeric" placeholder="all you listed">') + "</div>" +
+          sub(T("Which shops")) +
+          '<div data-show="category breakouts">' + field("f-shops2", T("Only these shops <em>(optional, one per line)</em>"), '<textarea id="f-shops2" rows="2" placeholder="' + T("leave empty for the whole category") + '"></textarea>') + "</div>" +
+          '<div data-show="velocity rivals">' + field("f-category2", T("Only shops in this category <em>(optional)</em>"), "<select id=f-category2>" + catOpts + "</select>") + "</div>" +
+          field("f-shopkw", T("Words in the shop name or headline <em>(optional)</em>"), '<input id="f-shopkw" placeholder="' + T("e.g. ceramics, wedding") + '">', T("Any of the words matches.")) +
+          '<div class="frow">' + field("f-minsales", T("At least this many lifetime sales"), '<input id="f-minsales" type="number" min="0" inputmode="numeric" placeholder="0">') +
+          field("f-minrate", T("At least this many sales a day (estimated)"), '<input id="f-minrate" type="number" min="0" inputmode="numeric" placeholder="0">') +
+          field("f-since", T("Numbers changed on or after"), '<input id="f-since" type="date">') + "</div>" +
+          '<div data-show="velocity rivals category">' + check("f-breakout", T("Breakout shops only (last 7 days far above their usual pace)")) + "</div>" +
+          '<div data-show="velocity rivals">' + field("f-maxshops2", T("How many shops (at most)"), '<input id="f-maxshops2" type="number" min="1" max="20000" inputmode="numeric" placeholder="' + T("all you listed") + '">') + "</div>" +
         "</div>" +
-        sub("After the run: rank and filter the results") +
-        '<p class="hint">Applied to what comes back, so you can keep e.g. the 10 cheapest, the 25 with the most reviews, or only shops gaining 50+ sales a week. You can change this on the report too.</p>' +
+        sub(T("After the run: rank and filter the results")) +
+        '<p class="hint">' + T("Applied to what comes back, so you can keep e.g. the 10 cheapest, the 25 with the most reviews, or only shops gaining 50+ sales a week. You can change this on the report too.") + '</p>' +
         '<div id="refine-b"></div>' +
-        sub("Report sections") + '<div class="blocks" id="blockpick"></div>' +
-        sub("Columns in the table and spreadsheet") + '<div class="chks" id="colpick"></div>' +
-        sub("Run settings") +
-        '<div class="frow">' + field("f-memory", "Memory per run", "<select id=f-memory>" + opt("", "Auto") + opt("1024", "1 GB") + opt("2048", "2 GB") + opt("4096", "4 GB") + "</select>", "Auto is fine. More memory doesn't change the Actor price.") +
-        field("f-timeout", "Stop a run after (minutes)", '<input id="f-timeout" type="number" min="1" max="1440" inputmode="numeric" placeholder="auto">', "Auto: 15–60 min depending on size. Rows read before a stop are kept.") +
-        field("f-parallel", "Keywords running at once", "<select id=f-parallel>" + opt("1", "1") + opt("2", "2") + opt("3", "3", true) + opt("4", "4") + opt("5", "5") + "</select>", "Apify's free plan allows 5 runs at a time.") + "</div>" +
+        sub(T("Report sections")) + '<div class="blocks" id="blockpick"></div>' +
+        sub(T("Columns in the table and spreadsheet")) + '<div class="chks" id="colpick"></div>' +
+        sub(T("Run settings")) +
+        '<div class="frow">' + field("f-memory", T("Memory per run"), "<select id=f-memory>" + opt("", T("Auto")) + opt("1024", "1 GB") + opt("2048", "2 GB") + opt("4096", "4 GB") + "</select>", T("Auto is fine. More memory doesn't change the Actor price.")) +
+        field("f-timeout", T("Stop a run after (minutes)"), '<input id="f-timeout" type="number" min="1" max="1440" inputmode="numeric" placeholder="' + T("auto") + '">', T("Auto: 15–60 min depending on size. Rows read before a stop are kept.")) +
+        field("f-parallel", T("Keywords running at once"), "<select id=f-parallel>" + opt("1", "1") + opt("2", "2") + opt("3", "3", true) + opt("4", "4") + opt("5", "5") + "</select>", T("Apify's free plan allows 5 runs at a time.")) + "</div>" +
       "</div></details>" +
       '<div class="brun" id="brun"></div>';
     $$(".tcard", app).forEach(function (b) { b.onclick = function () { setType(b.dataset.type); }; });
@@ -288,7 +308,7 @@
     // named-shop reports: default "how many" = number of shops listed
     if ((k === "velocity" || k === "rivals") && (prev === "category" || prev === "breakouts")) $("#f-maxshops").value = $("#f-maxshops2").value || "";
     if ((k === "category" || k === "breakouts") && !$("#f-maxshops").value) $("#f-maxshops").value = 20;
-    $("#f-queries").placeholder = k === "compare" ? "ceramic mug\nstoneware mug\nhandmade mug" : "ceramic mug\npersonalized dog collar";
+    $("#f-queries").placeholder = k === "compare" ? T("ceramic mug\nstoneware mug\nhandmade mug") : T("ceramic mug\npersonalized dog collar");
     renderPicks(); renderRefine(); refresh();
   }
 
@@ -319,9 +339,9 @@
   var RANKABLE = {
     search: ["price", "review_count", "rating_value", "position", "total_results"],
     tracker: ["sales_per_day", "delta_7d", "delta_28d", "sales_count", "units_day", "lift_7d", "reviews_count", "admirers", "listings_active", "rating", "delta_last"] };
-  var RANK_WORD = { price: "Price", review_count: "Reviews", rating_value: "Rating", position: "Etsy rank (1 = top)", total_results: "Etsy results for the search",
-    sales_per_day: "Sales per day", delta_7d: "Sales gained, last 7 days", delta_28d: "Sales gained, last 28 days", sales_count: "Lifetime sales", units_day: "Estimated sales per day",
-    lift_7d: "7-day lift vs usual", reviews_count: "Reviews", admirers: "Followers (favorites)", listings_active: "Active listings", rating: "Rating", delta_last: "Sales since last read" };
+  var RANK_WORD = { price: T("Price"), review_count: T("Reviews"), rating_value: T("Rating"), position: T("Etsy rank (1 = top)"), total_results: T("Etsy results for the search"),
+    sales_per_day: T("Sales per day"), delta_7d: T("Sales gained, last 7 days"), delta_28d: T("Sales gained, last 28 days"), sales_count: T("Lifetime sales"), units_day: T("Estimated sales per day"),
+    lift_7d: T("7-day lift vs usual"), reviews_count: T("Reviews"), admirers: T("Followers (favorites)"), listings_active: T("Active listings"), rating: T("Rating"), delta_last: T("Sales since last read") };
   function ftype(f) { return NUMERIC[f] ? "num" : BOOL_HINT.test(f) ? "bool" : "text"; }
   function renderRefine() {
     if (state.inRefine) return; state.inRefine = true;
@@ -331,17 +351,17 @@
     var actor = TYPES[state.type].actor, R = state.refine;
     var fields = knownCols(actor).filter(function (f) { return !/url$|_id$|^surface$|^source$/.test(f); });
     var html = '<div class="refine"><div class="frow rank">' +
-      field("rf-by", "Rank by", "<select id=\"rf-by\">" + opt("", "Don't rank (keep Etsy's order)") + RANKABLE[actor].map(function (f) { return opt(f, RANK_WORD[f] || LABELS[f], R.by === f); }).join("") + "</select>") +
-      field("rf-dir", "Keep", "<select id=\"rf-dir\">" + opt("top", "Top (highest first)", R.dir === "top") + opt("bottom", "Bottom (lowest first)", R.dir === "bottom") + "</select>") +
-      field("rf-n", "How many", '<input id="rf-n" type="number" min="1" inputmode="numeric" placeholder="all" value="' + esc(R.n) + '">') + "</div>" +
+      field("rf-by", T("Rank by"), "<select id=\"rf-by\">" + opt("", T("Don't rank (keep Etsy's order)")) + RANKABLE[actor].map(function (f) { return opt(f, RANK_WORD[f] || LABELS[f], R.by === f); }).join("") + "</select>") +
+      field("rf-dir", T("Keep"), "<select id=\"rf-dir\">" + opt("top", T("Top (highest first)"), R.dir === "top") + opt("bottom", T("Bottom (lowest first)"), R.dir === "bottom") + "</select>") +
+      field("rf-n", T("How many"), '<input id="rf-n" type="number" min="1" inputmode="numeric" placeholder="' + T("all") + '" value="' + esc(R.n) + '">') + "</div>" +
       '<div class="flist">' + R.filters.map(function (fl, i) {
-        var ty = ftype(fl.f), ops = ty === "num" ? [[">=", "at least"], ["<=", "at most"], [">", "more than"], ["<", "less than"], ["=", "exactly"], ["!=", "not"]]
-          : ty === "bool" ? [["yes", "is yes"], ["no", "is no"]] : [["has", "contains"], ["not", "doesn't contain"], ["is", "is exactly"]];
-        return '<div class="fl" data-i="' + i + '"><select class="rf-f" aria-label="Field">' + fields.map(function (f) { return opt(f, LABELS[f] || f, fl.f === f); }).join("") + "</select>" +
-          '<select class="rf-op" aria-label="Condition">' + ops.map(function (o) { return opt(o[0], o[1], fl.op === o[0]); }).join("") + "</select>" +
-          (ty === "bool" ? "" : '<input class="rf-v" aria-label="Value" ' + (ty === "num" ? 'type="number" inputmode="decimal"' : "") + ' value="' + esc(fl.v) + '">') +
-          '<button type="button" class="rf-x" aria-label="Remove filter">✕</button></div>';
-      }).join("") + '</div><button type="button" class="btn2" id="rf-add">+ Add a filter</button></div>';
+        var ty = ftype(fl.f), ops = ty === "num" ? [[">=", T("at least")], ["<=", T("at most")], [">", T("more than")], ["<", T("less than")], ["=", T("exactly")], ["!=", T("not")]]
+          : ty === "bool" ? [["yes", T("is yes")], ["no", T("is no")]] : [["has", T("contains")], ["not", T("doesn't contain")], ["is", T("is exactly")]];
+        return '<div class="fl" data-i="' + i + '"><select class="rf-f" aria-label="' + T("Field") + '">' + fields.map(function (f) { return opt(f, LABELS[f] || f, fl.f === f); }).join("") + "</select>" +
+          '<select class="rf-op" aria-label="' + T("Condition") + '">' + ops.map(function (o) { return opt(o[0], o[1], fl.op === o[0]); }).join("") + "</select>" +
+          (ty === "bool" ? "" : '<input class="rf-v" aria-label="' + T("Value") + '" ' + (ty === "num" ? 'type="number" inputmode="decimal"' : "") + ' value="' + esc(fl.v) + '">') +
+          '<button type="button" class="rf-x" aria-label="' + T("Remove filter") + '">✕</button></div>';
+      }).join("") + '</div><button type="button" class="btn2" id="rf-add">' + T("+ Add a filter") + '</button></div>';
     ["#refine-b", "#refine-r"].forEach(function (sel) { var box = $(sel); if (box) box.innerHTML = html.replace(/id="rf-/g, 'id="' + sel.slice(1) + "-rf-").replace(/for="rf-/g, 'for="' + sel.slice(1) + "-rf-"); });
     $$(".refine").forEach(function (box) {
       var pre = box.parentNode.id + "-rf-";
@@ -356,7 +376,7 @@
       box.addEventListener("input", function (e) { if (e.target.matches("input")) { upd(); if (state.result) { clearTimeout(state.rt); state.rt = setTimeout(function () { renderReport(true); }, 350); } } });
       $("#rf-add", box) || null;
       $$("button", box).forEach(function (b) {
-        if (b.id === "rf-add" || b.textContent.indexOf("Add a filter") >= 0) b.onclick = function () { upd(); var f0 = RANKABLE[actor][0]; state.refine.filters.push({ f: f0, op: ">=", v: "" }); renderRefine(); };
+        if (/(^|-)rf-add$/.test(b.id)) b.onclick = function () { upd(); var f0 = RANKABLE[actor][0]; state.refine.filters.push({ f: f0, op: ">=", v: "" }); renderRefine(); };
         if (b.classList.contains("rf-x")) b.onclick = function () { upd(); state.refine.filters.splice(+b.closest(".fl").dataset.i, 1); renderRefine(); if (state.result) renderReport(); };
       });
     });
@@ -383,9 +403,11 @@
   }
   function refineWords() {
     var R = state.refine || {}, w = [];
-    if (R.by) w.push((R.dir === "bottom" ? "lowest" : "highest") + " " + (RANK_WORD[R.by] || LABELS[R.by]).toLowerCase() + " first" + (parseInt(R.n, 10) > 0 ? ", " + R.dir + " " + R.n : ""));
-    else if (parseInt(R.n, 10) > 0) w.push("first " + R.n);
-    (R.filters || []).forEach(function (f) { if (ftype(f.f) === "bool" || f.v !== "") w.push((LABELS[f.f] || f.f) + " " + ({ ">=": "≥", "<=": "≤", ">": ">", "<": "<", "=": "=", "!=": "≠", yes: "= yes", no: "= no", has: "contains", not: "doesn't contain", is: "is" }[f.op]) + (ftype(f.f) === "bool" ? "" : " " + f.v)); });
+    var hasN = parseInt(R.n, 10) > 0, fw = (RANK_WORD[R.by] || LABELS[R.by] || "").toLowerCase();
+    if (R.by) w.push(R.dir === "bottom" ? (hasN ? T("lowest {f} first, bottom {n}", { f: fw, n: R.n }) : T("lowest {f} first", { f: fw }))
+      : (hasN ? T("highest {f} first, top {n}", { f: fw, n: R.n }) : T("highest {f} first", { f: fw })));
+    else if (hasN) w.push(T("first {n}", { n: R.n }));
+    (R.filters || []).forEach(function (f) { if (ftype(f.f) === "bool" || f.v !== "") w.push((LABELS[f.f] || f.f) + " " + ({ ">=": "≥", "<=": "≤", ">": ">", "<": "<", "=": "=", "!=": "≠", yes: T("= yes"), no: T("= no"), has: T("contains"), not: T("doesn't contain"), is: T("is") }[f.op]) + (ftype(f.f) === "bool" ? "" : " " + f.v)); });
     return w.join(" · ");
   }
 
@@ -393,29 +415,30 @@
     var plan = buildPlan(), t = TYPES[state.type], a = ACTORS[t.actor], tok = ss.get("ep_tok");
     var mx = $("#f-proxymode"); $$("[data-show-proxy]").forEach(function (el) { el.hidden = !mx || mx.value !== "own"; });
     var empty = !plan.jobs.length || !plan.rows;
-    var nUnits = t.actor === "search" ? num(plan.rows) + " listings" : "up to " + num(plan.rows) + " shops";
+    var nUnits = t.actor === "search" ? T("{n} listings", { n: num(plan.rows) }) : T("up to {n} shops", { n: num(plan.rows) });
     var errs = plan.errors.length && state.tried ? '<div class="berr">' + plan.errors.map(esc).join("<br>") + "</div>" : "";
     var warns = plan.warns.length ? '<div class="bwarn">' + plan.warns.map(esc).join("<br>") + "</div>" : "";
-    var who = state.user ? '<div class="who">Signed in to Apify as <b>' + esc(state.user.username) + '</b> · <a href="#" id="signout">sign out</a></div>' : "";
+    var who = state.user ? '<div class="who">' + T("Signed in to Apify as {u}", { u: "<b>" + esc(state.user.username) + "</b>" }) + ' · <a href="#" id="signout">' + T("sign out") + '</a></div>' : "";
     var fallbackHref = CFG.worker + "/r/site-run?a=" + t.actor + "&t=" + state.type + (t.actor === "search" && plan.combined.queries ? "&q=" + encodeURIComponent(plan.combined.queries.slice(0, 5).join(", ")) : "") + utmPass();
-    var plat = plan.platform ? " + Apify platform usage, usually under " + usd(plan.platform) + " per run (billed separately for this tool)" : " (Apify platform usage included)";
-    var conf = plan.bigConfirm ? '<label class="bigconf"><input type="checkbox" id="bigok"' + (state.bigok === plan.max ? " checked" : "") + "><span>Yes, run it: this report can cost up to <b>" + usd(plan.max + plan.platform) + "</b> on my Apify account.</span></label>" : "";
+    var plat = plan.platform ? T(" + Apify platform usage, usually under {p} per run (billed separately for this tool)", { p: usd(plan.platform) }) : T(" (Apify platform usage included)");
+    var conf = plan.bigConfirm ? '<label class="bigconf"><input type="checkbox" id="bigok"' + (state.bigok === plan.max ? " checked" : "") + "><span>" + T("Yes, run it: this report can cost up to {p} on my Apify account.", { p: "<b>" + usd(plan.max + plan.platform) + "</b>" }) + "</span></label>" : "";
     $("#brun").innerHTML = errs + warns +
-      (empty ? '<div class="cost"><b>' + (t.actor === "search" ? "Add a keyword above to see the price" : "Add a shop above to see the price") + '</b><span>' + usd(a.unit) + " per " + (t.actor === "search" ? "listing" : "shop") + " + " + usd(a.start) + " per run" + plat + "." + (t.actor === "search" ? " " + BLOCKED_NOTE : "") + "</span></div>" :
-      '<div class="cost"><b>About ' + usd(plan.est) + ", at most " + usd(plan.max) + '</b><span>' + nUnits + " × " + usd(a.unit) + " + " + usd(a.start) + " start fee" + (plan.jobs.length > 1 ? " × " + plan.jobs.length + " runs" : "") + plat +
-      ". You pay only for rows delivered; Apify stops the run at the maximum." + (t.actor === "search" ? " " + BLOCKED_NOTE : "") + " Apify's free plan includes $5 of usage every month, no card needed.</span></div>") + conf +
-      '<button type="button" class="runbtn" id="runbtn">' + (tok ? "Run my report →" : "Sign in with Apify &amp; run →") + "</button>" + who +
-      (tok ? "" : '<p class="perm">Apify will ask you to approve <b>Etsy Pulse by publicrecords</b>. Apify only offers one permission level (full account access), so here is exactly what we do with it: start this report on your account and read its results, from this page. The key stays in this browser tab, is deleted when you close it, and never touches our servers. You can remove the approval any time in Apify Console → Settings → API &amp; Integrations.</p>') +
-      '<p class="alt"><a href="#" id="demo">See an example report first</a> · <a href="#" id="showfb">Rather run it inside Apify?</a></p>' +
-      '<div id="fb" class="fb"' + (state.fbOpen ? "" : " hidden") + '><ol><li><a class="btn2" href="' + esc(fallbackHref) + '" target="_blank" rel="noopener">Open the ' + a.name + " on Apify</a> (free sign-up if you're new).</li>" +
-      "<li>Above the form, switch the input view from <b>Manual</b> to <b>JSON</b>, then paste these settings:<pre id=fbjson>" + esc(JSON.stringify(plan.combined, null, 2)) + '</pre><button type="button" class="btn2" id="copyjson">Copy settings</button></li>' +
-      "<li>Press <b>Start</b>. When it finishes, open <b>Export</b> to download a spreadsheet (CSV or Excel).</li></ol></div>";
+      (empty ? '<div class="cost"><b>' + (t.actor === "search" ? T("Add a keyword above to see the price") : T("Add a shop above to see the price")) + '</b><span>' +
+        (t.actor === "search" ? T("{u} per listing + {s} per run", { u: usd(a.unit), s: usd(a.start) }) : T("{u} per shop + {s} per run", { u: usd(a.unit), s: usd(a.start) })) + plat + "." + (t.actor === "search" ? " " + BLOCKED_NOTE : "") + "</span></div>" :
+      '<div class="cost"><b>' + T("About {e}, at most {m}", { e: usd(plan.est), m: usd(plan.max) }) + '</b><span>' + nUnits + " × " + usd(a.unit) + " + " + T("{s} start fee", { s: usd(a.start) }) + (plan.jobs.length > 1 ? " × " + T("{k} runs", { k: plan.jobs.length }) : "") + plat +
+      ". " + T("You pay only for rows delivered; Apify stops the run at the maximum.") + (t.actor === "search" ? " " + BLOCKED_NOTE : "") + " " + T("Apify's free plan includes {f} of usage every month, no card needed.", { f: LG === "fr" ? "5\u00a0$" : "$5" }) + "</span></div>") + conf +
+      '<button type="button" class="runbtn" id="runbtn">' + (tok ? T("Run my report →") : T("Sign in with Apify &amp; run →")) + "</button>" + who +
+      (tok ? "" : '<p class="perm">' + T("Apify will ask you to approve <b>Etsy Pulse by publicrecords</b>. Apify only offers one permission level (full account access), so here is exactly what we do with it: start this report on your account and read its results, from this page. The key stays in this browser tab, is deleted when you close it, and never touches our servers. You can remove the approval any time in Apify Console → Settings → API &amp; Integrations.") + '</p>') +
+      '<p class="alt"><a href="#" id="demo">' + T("See an example report first") + '</a> · <a href="#" id="showfb">' + T("Rather run it inside Apify?") + '</a></p>' +
+      '<div id="fb" class="fb"' + (state.fbOpen ? "" : " hidden") + '><ol><li>' + T("{link} (free sign-up if you're new).", { link: '<a class="btn2" href="' + esc(fallbackHref) + '" target="_blank" rel="noopener">' + T("Open the {a} on Apify", { a: a.name }) + "</a>" }) + "</li>" +
+      "<li>" + T("Above the form, switch the input view from <b>Manual</b> to <b>JSON</b>, then paste these settings:") + "<pre id=fbjson>" + esc(JSON.stringify(plan.combined, null, 2)) + '</pre><button type="button" class="btn2" id="copyjson">' + T("Copy settings") + '</button></li>' +
+      "<li>" + T("Press <b>Start</b>. When it finishes, open <b>Export</b> to download a spreadsheet (CSV or Excel).") + "</li></ol></div>";
     $("#runbtn").onclick = function () { go(buildPlan()); };
     var bk = $("#bigok"); if (bk) bk.onchange = function () { state.bigok = bk.checked ? plan.max : null; };
-    var sb = $("#stickyrun"); if (sb) sb.innerHTML = "<span>" + esc(t.title) + (empty ? "" : " · about " + usd(plan.est)) + "</span><button type=\"button\">Run ↓</button>";
+    var sb = $("#stickyrun"); if (sb) sb.innerHTML = "<span>" + esc(t.title) + (empty ? "" : " · " + T("about {e}", { e: usd(plan.est) })) + "</span><button type=\"button\">" + T("Run ↓") + "</button>";
     $("#demo").onclick = function (e) { e.preventDefault(); demo(); };
     $("#showfb").onclick = function (e) { e.preventDefault(); state.fbOpen = !state.fbOpen; $("#fb").hidden = !state.fbOpen; if (state.fbOpen) beacon("fallback-open"); };
-    $("#copyjson").onclick = function () { navigator.clipboard && navigator.clipboard.writeText(JSON.stringify(plan.combined, null, 2)); this.textContent = "Copied ✓"; beacon("fallback-copy"); };
+    $("#copyjson").onclick = function () { navigator.clipboard && navigator.clipboard.writeText(JSON.stringify(plan.combined, null, 2)); this.textContent = T("Copied ✓"); beacon("fallback-copy"); };
     var so = $("#signout"); if (so) so.onclick = function (e) { e.preventDefault(); ss.del("ep_tok"); state.user = null; refresh(); };
   }
   function utmPass() { var p = new URLSearchParams(location.search), o = ""; p.forEach(function (v, k) { if (/^utm_/.test(k)) o += "&" + k + "=" + encodeURIComponent(v); }); return o; }
@@ -427,7 +450,7 @@
   async function signIn(autorun) {
     var verifier = rand(48), st = rand(16);
     var challenge = b64url(await crypto.subtle.digest("SHA-256", new TextEncoder().encode(verifier)));
-    ss.set("ep_pending", { verifier: verifier, state: st, type: state.type, blocks: state.blocks, cols: state.cols, refine: state.refine, bigok: state.bigok, form: snapshotForm(), autorun: !!autorun, at: Date.now() });
+    ss.set("ep_pending", { verifier: verifier, state: st, type: state.type, blocks: state.blocks, cols: state.cols, refine: state.refine, bigok: state.bigok, form: snapshotForm(), autorun: !!autorun, lang: LG, at: Date.now() });
     beacon("signin-start");
     location.href = CFG.authUrl + "?" + new URLSearchParams({ response_type: "code", client_id: CFG.clientId, redirect_uri: redirectUri(),
       scope: "full_api_access", state: st, code_challenge: challenge, code_challenge_method: "S256" }).toString();
@@ -436,31 +459,31 @@
   async function finishSignIn(params) {
     var p = ss.get("ep_pending"); ss.del("ep_pending");
     history.replaceState(null, "", location.pathname);
-    if (!p || p.state !== params.get("state")) { return { error: "That sign-in link expired or came from another tab. Please press the button again." }; }
-    if (params.get("error")) { beacon("signin-denied"); return { pending: p, error: params.get("error") === "access_denied" ? "No problem: you didn't approve, so nothing ran." : "Apify sign-in didn't finish (" + params.get("error") + ")." }; }
+    if (!p || p.state !== params.get("state")) { return { error: T("That sign-in link expired or came from another tab. Please press the button again.") }; }
+    if (params.get("error")) { beacon("signin-denied"); return { pending: p, error: params.get("error") === "access_denied" ? T("No problem: you didn't approve, so nothing ran.") : T("Apify sign-in didn't finish ({e}).", { e: params.get("error") }) }; }
     try {
       var r = await fetch(CFG.tokenUrl, { method: "POST", headers: { "content-type": "application/x-www-form-urlencoded" },
         body: new URLSearchParams({ grant_type: "authorization_code", code: params.get("code"), redirect_uri: redirectUri(), client_id: CFG.clientId, code_verifier: p.verifier }).toString() });
       var j = await r.json();
-      if (!r.ok || !j.access_token) throw new Error(j.error_description || j.error || "token exchange failed");
+      if (!r.ok || !j.access_token) throw new Error(j.error_description || j.error || T("token exchange failed"));
       ss.set("ep_tok", j.access_token);
       beacon("signin-ok");
       return { pending: p };
-    } catch (e) { return { pending: p, error: "Apify sign-in didn't finish: " + e.message }; }
+    } catch (e) { return { pending: p, error: T("Apify sign-in didn't finish: {e}", { e: e.message }) }; }
   }
 
   async function api(path, opts) {
     opts = opts || {}; var tok = ss.get("ep_tok");
     var r = await fetch(CFG.api + path, { method: opts.method || "GET", headers: Object.assign({ Authorization: "Bearer " + tok }, opts.body ? { "content-type": "application/json" } : {}), body: opts.body ? JSON.stringify(opts.body) : undefined });
     var j = null; try { j = await r.json(); } catch (e) {}
-    if (r.status === 401) { ss.del("ep_tok"); state.user = null; throw Object.assign(new Error("Your Apify sign-in expired. Press the button to sign in again."), { code: 401 }); }
-    if (!r.ok) { var m = (j && j.error && (j.error.message || j.error.type)) || ("HTTP " + r.status); throw Object.assign(new Error(friendly(m, j)), { code: r.status }); }
+    if (r.status === 401) { ss.del("ep_tok"); state.user = null; throw Object.assign(new Error(T("Your Apify sign-in expired. Press the button to sign in again.")), { code: 401 }); }
+    if (!r.ok) { var m = (j && j.error && (j.error.message || j.error.type)) || ("HTTP " + r.status); throw Object.assign(new Error(friendly(m, j)), { code: r.status, raw: m }); }
     return j && j.data !== undefined ? j.data : j;
   }
   function friendly(m, j) {
     var t = (j && j.error && j.error.type) || "";
-    if (/usage|limit|credit|payment|insufficient|exceed/i.test(m + t)) return "Apify says your account is out of usage for this month (" + m + "). The free plan resets monthly; a paid plan lifts the limit.";
-    if (/memory/i.test(m + t)) return "Apify says your account is already running other jobs (" + m + "). Wait for them to finish and try again.";
+    if (/usage|limit|credit|payment|insufficient|exceed/i.test(m + t)) return T("Apify says your account is out of usage for this month ({m}). The free plan resets monthly; a paid plan lifts the limit.", { m: m });
+    if (/memory/i.test(m + t)) return T("Apify says your account is already running other jobs ({m}). Wait for them to finish and try again.", { m: m });
     return m;
   }
   async function loadUser() { try { state.user = await api("/users/me"); } catch (e) { if (e.code === 401) state.user = null; } }
@@ -491,11 +514,11 @@
     var draw = function (msg) {
       var done = jobs.filter(function (j) { return /SUCCEEDED|FAILED|ABORTED|TIMED|error/.test(j.status); }).length, rows = jobs.reduce(function (s, j) { return s + (j.rows || 0); }, 0);
       var list = jobs.length > 12 ? jobs.filter(function (j) { return !/waiting|SUCCEEDED/.test(j.status); }).slice(0, 12) : jobs;
-      prog.innerHTML = '<div class="pcard"><h2>Running your report…</h2><p class="sub">' + (msg || (jobs.length > 1 ? done + " of " + jobs.length + " runs finished · " + num(rows) + " rows so far. " : "") + "Keep this tab open. Small reports take 1–3 minutes; big ones longer.") + "</p>" +
+      prog.innerHTML = '<div class="pcard"><h2>' + T("Running your report…") + '</h2><p class="sub">' + (msg || (jobs.length > 1 ? T("{d} of {k} runs finished · {r} rows so far.", { d: done, k: jobs.length, r: num(rows) }) + " " : "") + T("Keep this tab open. Small reports take 1–3 minutes; big ones longer.")) + "</p>" +
         list.map(function (j) {
           var ok = j.status === "SUCCEEDED", bad = /FAILED|ABORTED|TIMED|error/i.test(j.status);
           return '<div class="pj' + (ok ? " ok" : bad ? " bad" : j.status === "waiting" ? " wait" : "") + '"><span class="dot"></span><b>' + esc(j.label) + "</b><span>" + esc(statusWord(j)) + "</span></div>";
-        }).join("") + (jobs.length > 12 ? '<p class="note">Showing runs in progress; ' + jobs.filter(function (j) { return j.status === "waiting"; }).length + " waiting.</p>" : "") + "</div>";
+        }).join("") + (jobs.length > 12 ? '<p class="note">' + T("Showing runs in progress; {w} waiting.", { w: jobs.filter(function (j) { return j.status === "waiting"; }).length }) + "</p>" : "") + "</div>";
     };
     draw(); beacon("run-start", "n=" + jobs.length + "&rows=" + plan.rows);
     async function startJob(j) {
@@ -504,7 +527,7 @@
           j.run = await api("/acts/" + a.id + "/runs?memory=" + j.memory + "&timeout=" + j.timeout + "&maxTotalChargeUsd=" + j.cap, { method: "POST", body: j.input });
           j.status = j.run.status; return;
         } catch (e) {
-          if (/already running other jobs|memory|concurren/i.test(e.message) && attempt < 29) { j.status = "waiting"; j.wait = "waiting for a free slot on your Apify account"; draw(); await sleep(15000); continue; }
+          if (/already running other jobs|memory|concurren/i.test(e.raw || e.message) && attempt < 29) { j.status = "waiting"; j.wait = T("waiting for a free slot on your Apify account"); draw(); await sleep(15000); continue; }
           j.status = "error"; j.err = e.message; return;
         }
       }
@@ -513,7 +536,7 @@
       while (j.run && /READY|RUNNING/.test(j.status)) {
         await sleep(4000);
         try { var r = await api("/actor-runs/" + j.run.id); j.run = r; j.status = r.status; var ds = await api("/datasets/" + r.defaultDatasetId); j.rows = ds.itemCount || 0; } catch (e) {}
-        draw(Date.now() - t0 > 300000 && jobs.length === 1 ? "Still reading Etsy. Big reports and Etsy slow-downs take longer; it will finish or stop at your time limit, and you keep every row read." : null);
+        draw(Date.now() - t0 > 300000 && jobs.length === 1 ? T("Still reading Etsy. Big reports and Etsy slow-downs take longer; it will finish or stop at your time limit, and you keep every row read.") : null);
       }
     }
     var queue = jobs.slice();
@@ -521,7 +544,7 @@
     var workers = []; for (var w = 0; w < Math.min(par, jobs.length); w++) { workers.push(worker()); await sleep(300); }
     await Promise.all(workers);
     if (jobs.every(function (j) { return j.status === "error"; })) {
-      prog.innerHTML = '<div class="pcard bad"><h2>That didn\'t start</h2><p>' + esc(jobs[0].err) + '</p><p><button type="button" class="btn2" id="retry">Try again</button></p></div>';
+      prog.innerHTML = '<div class="pcard bad"><h2>' + T("That didn't start") + '</h2><p>' + esc(jobs[0].err) + '</p><p><button type="button" class="btn2" id="retry">' + T("Try again") + '</button></p></div>';
       $("#retry").onclick = function () { runPlan(buildPlan()); }; beacon("run-fail-start"); refresh(); return;
     }
     var rows = [], runs = [];
@@ -529,29 +552,29 @@
       var j = jobs[i]; if (!j.run) continue;
       runs.push({ id: j.run.id, label: j.label, status: j.status });
       try {
-        draw("Collecting results… " + num(rows.length) + " rows");
+        draw(T("Collecting results… {r} rows", { r: num(rows.length) }));
         var items = await allItems(j.run.defaultDatasetId);
         items.forEach(function (r) { if (t.actor === "search" && !r.query) r.query = j.label; rows.push(r); });
       } catch (e) {}
     }
     var bad = jobs.filter(function (j) { return j.status !== "SUCCEEDED"; });
     state.result = { type: state.type, actor: t.actor, rows: rows, runs: runs, at: new Date().toISOString(), live: true,
-      warn: bad.length ? bad.slice(0, 5).map(function (j) { return j.label + ": " + statusWord(j); }).join("; ") + (bad.length > 5 ? " (+" + (bad.length - 5) + " more)" : "") : "" };
+      warn: bad.length ? bad.slice(0, 5).map(function (j) { return j.label + ": " + statusWord(j); }).join("; ") + (bad.length > 5 ? " " + T("(+{k} more)", { k: bad.length - 5 }) : "") : "" };
     try { if (rows.length <= 3000) ss.set("ep_last", state.result); else ss.del("ep_last"); } catch (e) {}
     beacon(rows.length ? "run-ok" : "run-empty", "rows=" + rows.length);
     prog.hidden = true; state.page = 1; rep.dataset.shown = ""; renderReport(); refresh();
   }
   function statusWord(j) {
-    return { waiting: j.wait || "waiting its turn", starting: "starting…", READY: "queued at Apify…", RUNNING: "reading Etsy… " + (j.rows ? num(j.rows) + " rows so far" : ""), SUCCEEDED: "done · " + num(j.rows) + " rows",
-      FAILED: "failed. You are only charged for rows delivered; please try again in a few minutes", "TIMED-OUT": "hit the time limit · " + num(j.rows) + " rows kept", ABORTED: "stopped · " + num(j.rows) + " rows kept", error: "didn't start: " + (j.err || "") }[j.status] || j.status;
+    return { waiting: j.wait || T("waiting its turn"), starting: T("starting…"), READY: T("queued at Apify…"), RUNNING: T("reading Etsy…") + (j.rows ? " " + T("{r} rows so far", { r: num(j.rows) }) : ""), SUCCEEDED: T("done · {r} rows", { r: num(j.rows) }),
+      FAILED: T("failed. You are only charged for rows delivered; please try again in a few minutes"), "TIMED-OUT": T("hit the time limit · {r} rows kept", { r: num(j.rows) }), ABORTED: T("stopped · {r} rows kept", { r: num(j.rows) }), error: T("didn't start: {e}", { e: j.err || "" }) }[j.status] || j.status;
   }
 
   async function demo() {
-    var t = TYPES[state.type], f = t.actor === "search" ? "assets/sample-search.json" : "assets/sample-tracker.json";
+    var t = TYPES[state.type], f = t.actor === "search" ? "/assets/sample-search.json" : "/assets/sample-tracker.json";
     var j = await (await fetch(f)).json(), rows = j.rows;
     if (t.actor === "search" && state.type !== "compare") rows = rows.filter(function (r) { return r.query === "aprons"; });
     state.result = { type: state.type, actor: t.actor, rows: rows, runs: [], at: j.captured, live: false,
-      demo: t.actor === "search" ? "Example: a real run of our Etsy Search Scraper captured " + j.captured + " (Apify run " + j.run + ")." : "Example: real rows from our Etsy Shop Sales Tracker, snapshot " + j.captured + ". Current numbers will differ." };
+      demo: t.actor === "search" ? T("Example: a real run of our Etsy Search Scraper captured {d} (Apify run {r}).", { d: j.captured, r: j.run }) : T("Example: real rows from our Etsy Shop Sales Tracker, snapshot {d}. Current numbers will differ.", { d: j.captured }) };
     $("#report").dataset.shown = ""; state.page = 1; beacon("demo"); renderReport();
   }
 
@@ -572,7 +595,7 @@
     var c = cur(state.result.rows);
     return cuts.slice(0, -1).map(function (lo, i) {
       var hi = cuts[i + 1], n = prices.filter(function (p) { return p >= lo && p < hi; }).length;
-      return [hi === Infinity ? c + lo + "+" : lo === 0 ? "under " + c + hi : c + lo + "–" + c + hi, n];
+      return [hi === Infinity ? money(lo, c).replace(/[.,]00(?=\D|$)/, "") + "+" : lo === 0 ? T("under {p}", { p: money(hi, c).replace(/[.,]00(?=\D|$)/, "") }) : money(lo, c).replace(/[.,]00(?=\D|$)/, "") + "–" + money(hi, c).replace(/[.,]00(?=\D|$)/, ""), n];
     });
   }
 
@@ -585,44 +608,52 @@
         rev: Math.max.apply(null, a.map(function (r) { return r.review_count || 0; })), bs: a.filter(function (r) { return r.bestseller; }).length, url: a[0].shop_url };
     }).sort(function (a, b) { return b.n - a.n || a.best - b.best; });
     var totalRes = qs.map(function (q) { return (byQ[q][0] || {}).total_results; }).filter(Boolean);
-    if (B.kpis) out.push(kpis([[num(rows.length), "listings read" + (qs.length > 1 ? " across " + qs.length + " keywords" : "")], [money(med, c), "typical price"],
-      [money(p25, c) + "–" + money(p75, c), "most charge"], [pct(bs), "carry a Bestseller badge"]].concat(totalRes.length === 1 ? [[num(totalRes[0]), "results Etsy shows for this search"]] : [[pct(fs), "offer free shipping"]])));
-    if (med != null) tk.push("Most of these listings charge <b>" + money(p25, c) + "–" + money(p75, c) + "</b>; the typical price is <b>" + money(med, c) + "</b>. Pricing inside that range puts you where the top sellers already are.");
+    if (B.kpis) out.push(kpis([[num(rows.length), qs.length > 1 ? T("listings read across {k} keywords", { k: qs.length }) : T("listings read")], [money(med, c), T("typical price")],
+      [money(p25, c) + "–" + money(p75, c), T("most charge")], [pct(bs), T("carry a Bestseller badge")]].concat(totalRes.length === 1 ? [[num(totalRes[0]), T("results Etsy shows for this search")]] : [[pct(fs), T("offer free shipping")]])));
+    if (med != null) tk.push(T("Most of these listings charge {r}; the typical price is {m}. Pricing inside that range puts you where the top sellers already are.", { r: "<b>" + money(p25, c) + "–" + money(p75, c) + "</b>", m: "<b>" + money(med, c) + "</b>" }));
     var bsr = rows.filter(function (r) { return r.bestseller; }), rest = rows.filter(function (r) { return !r.bestseller; });
     var mb = median(bsr.map(function (r) { return r.price; })), mr = median(rest.map(function (r) { return r.price; }));
-    if (bsr.length >= 3 && rest.length >= 3) tk.push("<b>" + pct(bs) + "</b> carry a Bestseller badge. Their typical price is <b>" + money(mb, c) + "</b> vs <b>" + money(mr, c) + "</b> for the rest" + (mb > mr * 1.1 ? ": buyers here pay up for proven listings." : mb < mr * .9 ? ": the badge goes to the cheaper end." : ": about the same, so the badge isn't about price here."));
-    if (shopList.length && shopList[0].n > 1) tk.push("<b>" + esc(shopList[0].shop) + "</b> holds " + shopList[0].n + " of the " + rows.length + " spots" + (shopList[1] && shopList[1].n > 1 ? ", then " + esc(shopList[1].shop) + " (" + shopList[1].n + ")" : "") + "; " + (shopList.filter(function (s) { return s.n === 1; }).length) + " other shops have one listing each.");
-    else if (shopList.length) tk.push("Every listing here comes from a different shop (" + shopList.length + " shops): nobody dominates this search.");
+    if (bsr.length >= 3 && rest.length >= 3) { var bv = { s: "<b>" + pct(bs) + "</b>", a: "<b>" + money(mb, c) + "</b>", b: "<b>" + money(mr, c) + "</b>" };
+      tk.push(mb > mr * 1.1 ? T("{s} carry a Bestseller badge. Their typical price is {a} vs {b} for the rest: buyers here pay up for proven listings.", bv)
+        : mb < mr * .9 ? T("{s} carry a Bestseller badge. Their typical price is {a} vs {b} for the rest: the badge goes to the cheaper end.", bv)
+        : T("{s} carry a Bestseller badge. Their typical price is {a} vs {b} for the rest: about the same, so the badge isn't about price here.", bv)); }
+    if (shopList.length && shopList[0].n > 1) { var sv = { a: "<b>" + esc(shopList[0].shop) + "</b>", n: shopList[0].n, t: rows.length, o: shopList.filter(function (s) { return s.n === 1; }).length };
+      if (shopList[1] && shopList[1].n > 1) { sv.b = esc(shopList[1].shop); sv.m = shopList[1].n; tk.push(T("{a} holds {n} of the {t} spots, then {b} ({m}); {o} other shops have one listing each.", sv)); }
+      else tk.push(T("{a} holds {n} of the {t} spots; {o} other shops have one listing each.", sv)); }
+    else if (shopList.length) tk.push(T("Every listing here comes from a different shop ({n} shops): nobody dominates this search.", { n: shopList.length }));
     var revs = rows.map(function (r) { return r.review_count; }).filter(isFinite);
-    if (revs.length) tk.push("A typical listing shows <b>" + num(median(revs)) + "</b> reviews on its card" + (median(revs) < 300 ? ", a low bar: newer shops can compete here." : median(revs) > 2000 ? ", a high bar: established shops own this search." : "."));
+    if (revs.length) { var rv = { r: "<b>" + num(median(revs)) + "</b>" };
+      tk.push(median(revs) < 300 ? T("A typical listing shows {r} reviews on its card, a low bar: newer shops can compete here.", rv) : median(revs) > 2000 ? T("A typical listing shows {r} reviews on its card, a high bar: established shops own this search.", rv) : T("A typical listing shows {r} reviews on its card.", rv)); }
     var cached = rows.filter(function (r) { return r.data_source === "cache"; });
-    if (cached.length) { var asof = cached.map(function (r) { return r.as_of; }).filter(Boolean).sort()[0]; tk.push("Heads-up: Etsy blocked the live search, so <b>" + num(cached.length) + "</b> of these listings come from our most recent cached results" + (asof ? ", read on <b>" + esc(String(asof).slice(0, 10)) + "</b>" : "") + "."); }
-    if (fs != null) tk.push("<b>" + pct(fs) + "</b> offer free shipping" + (fs >= .5 ? ", so buyers here expect it." : "."));
+    if (cached.length) { var asof = cached.map(function (r) { return r.as_of; }).filter(Boolean).sort()[0], cv = { n: "<b>" + num(cached.length) + "</b>", d: asof ? "<b>" + esc(String(asof).slice(0, 10)) + "</b>" : "" };
+      tk.push(asof ? T("Heads-up: Etsy blocked the live search, so {n} of these listings come from our most recent cached results, read on {d}.", cv) : T("Heads-up: Etsy blocked the live search, so {n} of these listings come from our most recent cached results.", cv)); }
+    if (fs != null) tk.push(fs >= .5 ? T("{s} offer free shipping, so buyers here expect it.", { s: "<b>" + pct(fs) + "</b>" }) : T("{s} offer free shipping.", { s: "<b>" + pct(fs) + "</b>" }));
     if (qs.length > 1) {
       var stats = qs.map(function (q) { var a = byQ[q]; return { q: q, med: median(a.map(function (r) { return r.price; })), bs: share(a, "bestseller"), tr: (a[0] || {}).total_results }; });
       var hi = stats.slice().sort(function (a, b) { return b.med - a.med; })[0], lo = stats.slice().sort(function (a, b) { return a.med - b.med; })[0];
-      tk.unshift("<b>“" + esc(hi.q) + "”</b> has the highest typical price (" + money(hi.med, c) + "), <b>“" + esc(lo.q) + "”</b> the lowest (" + money(lo.med, c) + ").");
-      var trs = stats.filter(function (s) { return s.tr; }); if (trs.length > 1) { var least = trs.sort(function (a, b) { return a.tr - b.tr; })[0]; tk.push("Least crowded: <b>“" + esc(least.q) + "”</b> with " + num(least.tr) + " Etsy results."); }
+      tk.unshift(T("{a} has the highest typical price ({p}), {b} the lowest ({q}).", { a: "<b>“" + esc(hi.q) + "”</b>", p: money(hi.med, c), b: "<b>“" + esc(lo.q) + "”</b>", q: money(lo.med, c) }));
+      var trs = stats.filter(function (s) { return s.tr; }); if (trs.length > 1) { var least = trs.sort(function (a, b) { return a.tr - b.tr; })[0]; tk.push(T("Least crowded: {q} with {n} Etsy results.", { q: "<b>“" + esc(least.q) + "”</b>", n: num(least.tr) })); }
     }
-    if (B.takeaways && tk.length) out.push('<div class="insights"><h3>What this means for you</h3><ul>' + tk.map(function (x) { return "<li>" + x + "</li>"; }).join("") + "</ul></div>");
+    if (B.takeaways && tk.length) out.push('<div class="insights"><h3>' + T("What this means for you") + '</h3><ul>' + tk.map(function (x) { return "<li>" + x + "</li>"; }).join("") + "</ul></div>");
     if (B.compare && qs.length > 1) {
       var rowsC = qs.map(function (q) { var a = byQ[q], pr = a.map(function (r) { return r.price; }); return { q: q, n: a.length, med: median(pr), p25: quant(pr, .25), p75: quant(pr, .75), bs: share(a, "bestseller"), fs: share(a, "free_shipping"), rv: median(a.map(function (r) { return r.review_count; })), tr: (a[0] || {}).total_results }; });
-      out.push(card("Keyword comparison", bars(rowsC.map(function (r) { return [r.q, r.med]; }), function (v) { return money(v, c); }) +
-        '<div class="tscroll"><table class="dt"><thead><tr><th>Keyword</th><th>Listings</th><th>Typical price</th><th>Most charge</th><th>Bestseller</th><th>Free ship</th><th>Typical reviews</th><th>Etsy results</th></tr></thead><tbody>' +
-        rowsC.map(function (r) { return "<tr><td>" + esc(r.q) + "</td><td>" + r.n + "</td><td>" + money(r.med, c) + "</td><td>" + money(r.p25, c) + "–" + money(r.p75, c) + "</td><td>" + pct(r.bs) + "</td><td>" + pct(r.fs) + "</td><td>" + num(r.rv) + "</td><td>" + num(r.tr) + "</td></tr>"; }).join("") + "</tbody></table></div>", "Typical price per keyword."));
+      out.push(card(T("Keyword comparison"), bars(rowsC.map(function (r) { return [r.q, r.med]; }), function (v) { return money(v, c); }) +
+        '<div class="tscroll"><table class="dt"><thead><tr>' + [T("Keyword"), T("Listings"), T("Typical price"), T("Most charge"), T("Bestseller"), T("Free ship"), T("Typical reviews"), T("Etsy results")].map(function (h) { return "<th>" + h + "</th>"; }).join("") + '</tr></thead><tbody>' +
+        rowsC.map(function (r) { return "<tr><td>" + esc(r.q) + "</td><td>" + r.n + "</td><td>" + money(r.med, c) + "</td><td>" + money(r.p25, c) + "–" + money(r.p75, c) + "</td><td>" + pct(r.bs) + "</td><td>" + pct(r.fs) + "</td><td>" + num(r.rv) + "</td><td>" + num(r.tr) + "</td></tr>"; }).join("") + "</tbody></table></div>", T("Typical price per keyword.")));
     }
     if (B.prices && prices.length) {
-      if (qs.length > 1) out.push(card("Price bands", qs.map(function (q) { var pr = byQ[q].map(function (r) { return r.price; }).filter(isFinite); return "<h4>“" + esc(q) + "”</h4>" + bars(priceBands(pr), function (v) { return v + " listings"; }); }).join(""), "Bands split at each keyword's quarter points."));
-      else out.push(card("Price bands", bars(priceBands(prices), function (v) { return v + " listings"; }), "Listings per price band (bands split at the quarter points)."));
+      var nl = function (v) { return T("{n} listings", { n: num(v) }); };
+      if (qs.length > 1) out.push(card(T("Price bands"), qs.map(function (q) { var pr = byQ[q].map(function (r) { return r.price; }).filter(isFinite); return "<h4>“" + esc(q) + "”</h4>" + bars(priceBands(pr), nl); }).join(""), T("Bands split at each keyword's quarter points.")));
+      else out.push(card(T("Price bands"), bars(priceBands(prices), nl), T("Listings per price band (bands split at the quarter points).")));
     }
-    if (B.badges) out.push(card("Badges in the top results", bars([["Bestseller", share(rows, "bestseller")], ["Popular now", share(rows, "popular_now")], ["Star Seller", share(rows, "star_seller")], ["Etsy's Pick", share(rows, "etsys_pick")], ["Free shipping", share(rows, "free_shipping")]], function (v) { return pct(v); }), "Share of listings carrying each badge."));
-    if (B.bestprice && bsr.length && rest.length) out.push(card("Bestsellers vs the rest", '<div class="kpis two">' +
-      '<div class="kpi"><div class="v">' + money(mb, c) + '</div><div class="l">typical price, ' + bsr.length + " Bestseller listings</div></div>" +
-      '<div class="kpi"><div class="v">' + money(mr, c) + '</div><div class="l">typical price, ' + rest.length + " other listings</div></div>" +
-      '<div class="kpi"><div class="v">' + num(median(bsr.map(function (r) { return r.review_count; }))) + '</div><div class="l">typical reviews, Bestsellers</div></div>' +
-      '<div class="kpi"><div class="v">' + num(median(rest.map(function (r) { return r.review_count; }))) + '</div><div class="l">typical reviews, others</div></div></div>'));
-    if (B.shops && shopList.length) out.push(card("Shops with the most spots", bars(shopList.slice(0, 10).map(function (s) { return [s.shop, s.n]; }), function (v) { return v + (v === 1 ? " spot" : " spots"); }), "Listings each shop has in these results (top 10)."));
-    if (B.shoptable && shopList.length) out.push(card("Shop leaderboard", '<div class="tscroll"><table class="dt"><thead><tr><th>Shop</th><th>Spots</th><th>Best rank</th><th>Typical price</th><th>Most reviews</th><th>Bestsellers</th></tr></thead><tbody>' +
+    if (B.badges) out.push(card(T("Badges in the top results"), bars([[T("Bestseller"), share(rows, "bestseller")], [T("Popular now"), share(rows, "popular_now")], [T("Star Seller"), share(rows, "star_seller")], [T("Etsy's Pick"), share(rows, "etsys_pick")], [T("Free shipping"), share(rows, "free_shipping")]], function (v) { return pct(v); }), T("Share of listings carrying each badge.")));
+    if (B.bestprice && bsr.length && rest.length) out.push(card(T("Bestsellers vs the rest"), '<div class="kpis two">' +
+      '<div class="kpi"><div class="v">' + money(mb, c) + '</div><div class="l">' + T("typical price, {n} Bestseller listings", { n: bsr.length }) + "</div></div>" +
+      '<div class="kpi"><div class="v">' + money(mr, c) + '</div><div class="l">' + T("typical price, {n} other listings", { n: rest.length }) + "</div></div>" +
+      '<div class="kpi"><div class="v">' + num(median(bsr.map(function (r) { return r.review_count; }))) + '</div><div class="l">' + T("typical reviews, Bestsellers") + '</div></div>' +
+      '<div class="kpi"><div class="v">' + num(median(rest.map(function (r) { return r.review_count; }))) + '</div><div class="l">' + T("typical reviews, others") + '</div></div></div>'));
+    if (B.shops && shopList.length) out.push(card(T("Shops with the most spots"), bars(shopList.slice(0, 10).map(function (s) { return [s.shop, s.n]; }), function (v) { return v === 1 ? T("1 spot") : T("{n} spots", { n: v }); }), T("Listings each shop has in these results (top 10).")));
+    if (B.shoptable && shopList.length) out.push(card(T("Shop leaderboard"), '<div class="tscroll"><table class="dt"><thead><tr>' + [T("Shop"), T("Spots"), T("Best rank"), T("Typical price"), T("Most reviews"), T("Bestsellers")].map(function (h) { return "<th>" + h + "</th>"; }).join("") + '</tr></thead><tbody>' +
       shopList.slice(0, 25).map(function (s) { return '<tr><td><a href="' + esc(s.url) + '" rel="nofollow noopener" target="_blank">' + esc(s.shop) + "</a></td><td>" + s.n + "</td><td>#" + s.best + "</td><td>" + money(s.med, c) + "</td><td>" + num(s.rev) + "</td><td>" + s.bs + "</td></tr>"; }).join("") + "</tbody></table></div>"));
     return out;
   }
@@ -633,23 +664,25 @@
     var byPace = rows.slice().sort(function (a, b) { return (pace(b) || -1) - (pace(a) || -1); });
     var sum = rows.reduce(function (s, r) { return s + (pace(r) || 0); }, 0), br = rows.filter(function (r) { return r.breakout; });
     var has7 = rows.filter(function (r) { return r.delta_7d != null; });
-    if (B.kpis) out.push(kpis([[num(rows.length), "shops in this report"], [num(sum, 0), "sales a day, all of them together"],
-      [byPace[0] ? esc(byPace[0].shop) : "–", "fastest: " + (byPace[0] ? num(pace(byPace[0]), 1) + " sales/day" : "")], [num(br.length), "breakout shops"]]));
-    if (byPace[0]) tk.push("<b>" + esc(byPace[0].shop) + "</b> is selling about <b>" + num(pace(byPace[0]), 1) + "</b> a day" + (byPace[1] ? ", ahead of " + esc(byPace[1].shop) + " (" + num(pace(byPace[1]), 1) + ")." : "."));
-    if (has7.length) { var t7 = has7.slice().sort(function (a, b) { return b.delta_7d - a.delta_7d; })[0]; tk.push("Biggest last-7-days total: <b>" + esc(t7.shop) + "</b> with <b>" + num(t7.delta_7d) + "</b> sales."); }
-    else tk.push("7-day totals appear once a shop has 7 days of reads; until then we show the measured pace between reads.");
-    if (br.length) tk.push("<b>" + br.length + "</b> shop" + (br.length > 1 ? "s are" : " is") + " breaking out: last 7 days far above their own prior 4 weeks (" + br.slice(0, 3).map(function (r) { return esc(r.shop); }).join(", ") + ").");
+    if (B.kpis) out.push(kpis([[num(rows.length), T("shops in this report")], [num(sum, 0), T("sales a day, all of them together")],
+      [byPace[0] ? esc(byPace[0].shop) : "–", byPace[0] ? T("fastest: {v} sales/day", { v: num(pace(byPace[0]), 1) }) : T("fastest:")], [num(br.length), T("breakout shops")]]));
+    if (byPace[0]) { var pv = { a: "<b>" + esc(byPace[0].shop) + "</b>", v: "<b>" + num(pace(byPace[0]), 1) + "</b>" };
+      if (byPace[1]) { pv.b = esc(byPace[1].shop); pv.w = num(pace(byPace[1]), 1); tk.push(T("{a} is selling about {v} a day, ahead of {b} ({w}).", pv)); } else tk.push(T("{a} is selling about {v} a day.", pv)); }
+    if (has7.length) { var t7 = has7.slice().sort(function (a, b) { return b.delta_7d - a.delta_7d; })[0]; tk.push(T("Biggest last-7-days total: {a} with {n} sales.", { a: "<b>" + esc(t7.shop) + "</b>", n: "<b>" + num(t7.delta_7d) + "</b>" })); }
+    else tk.push(T("7-day totals appear once a shop has 7 days of reads; until then we show the measured pace between reads."));
+    if (br.length) { var bl = br.slice(0, 3).map(function (r) { return esc(r.shop); }).join(", ");
+      tk.push(br.length > 1 ? T("{n} shops are breaking out: last 7 days far above their own prior 4 weeks ({l}).", { n: "<b>" + br.length + "</b>", l: bl }) : T("{n} shop is breaking out: last 7 days far above its own prior 4 weeks ({l}).", { n: "<b>" + br.length + "</b>", l: bl })); }
     var young = rows.filter(function (r) { return r.sales_count != null && r.sales_count < 1000 && (pace(r) || 0) >= 3; });
-    if (young.length) tk.push("Small but quick: " + young.slice(0, 3).map(function (r) { return "<b>" + esc(r.shop) + "</b> (" + num(r.sales_count) + " lifetime, " + num(pace(r), 1) + "/day)"; }).join(", ") + ".");
+    if (young.length) tk.push(T("Small but quick: {l}.", { l: young.slice(0, 3).map(function (r) { return "<b>" + esc(r.shop) + "</b> (" + T("{s} lifetime, {v}/day", { s: num(r.sales_count), v: num(pace(r), 1) }) + ")"; }).join(", ") }));
     var rounded = rows.filter(function (r) { return r.sales_precision === "rounded"; }).length;
-    if (rounded) tk.push(rounded + " shop" + (rounded > 1 ? "s show" : " shows") + " a rounded sales counter on Etsy (e.g. 12.3k), so small daily changes can hide until the counter ticks over.");
-    var stale = rows.filter(function (r) { return r.snapshot_stale; }).length; if (stale) tk.push("Heads-up: " + stale + " rows come from a snapshot older than 48 hours.");
-    if (!rows.length) tk.push("No shops matched. Only shops in our panel return rows; shops you named that aren't in it return nothing (and cost nothing).");
-    if (B.takeaways) out.push('<div class="insights"><h3>What this means for you</h3><ul>' + tk.map(function (x) { return "<li>" + x + "</li>"; }).join("") + "</ul></div>");
-    if (B.velocity && rows.length) out.push(card("Sales pace", bars(byPace.slice(0, 20).map(function (r) { return [r.shop, pace(r)]; }), function (v, x) { return v == null ? "–" : num(v, 1) + "/day"; }), "Measured sales per day between the last two reads (model estimate where no measured pace yet)."));
+    if (rounded) tk.push(rounded > 1 ? T("{n} shops show a rounded sales counter on Etsy (e.g. 12.3k), so small daily changes can hide until the counter ticks over.", { n: rounded }) : T("1 shop shows a rounded sales counter on Etsy (e.g. 12.3k), so small daily changes can hide until the counter ticks over."));
+    var stale = rows.filter(function (r) { return r.snapshot_stale; }).length; if (stale) tk.push(T("Heads-up: {n} rows come from a snapshot older than 48 hours.", { n: stale }));
+    if (!rows.length) tk.push(T("No shops matched. Only shops in our panel return rows; shops you named that aren't in it return nothing (and cost nothing)."));
+    if (B.takeaways) out.push('<div class="insights"><h3>' + T("What this means for you") + '</h3><ul>' + tk.map(function (x) { return "<li>" + x + "</li>"; }).join("") + "</ul></div>");
+    if (B.velocity && rows.length) out.push(card(T("Sales pace"), bars(byPace.slice(0, 20).map(function (r) { return [r.shop, pace(r)]; }), function (v, x) { return v == null ? "–" : T("{v}/day", { v: num(v, 1) }); }), T("Measured sales per day between the last two reads (model estimate where no measured pace yet).")));
     if (B.rivals && rows.length > 1) {
-      var m = [["sales_count", "Lifetime sales"], ["delta_7d", "Sales, last 7 days"], ["reviews_count", "Reviews"], ["admirers", "Followers"], ["listings_active", "Active listings"]];
-      out.push(card("Side by side", '<div class="grid2">' + m.filter(function (k) { return rows.some(function (r) { return r[k[0]] != null; }); }).map(function (k) {
+      var m = [["sales_count", T("Lifetime sales")], ["delta_7d", T("Sales, last 7 days")], ["reviews_count", T("Reviews")], ["admirers", T("Followers")], ["listings_active", T("Active listings")]];
+      out.push(card(T("Side by side"), '<div class="grid2">' + m.filter(function (k) { return rows.some(function (r) { return r[k[0]] != null; }); }).map(function (k) {
         return "<div><h4>" + k[1] + "</h4>" + bars(rows.slice().sort(function (a, b) { return (b[k[0]] || 0) - (a[k[0]] || 0); }).map(function (r) { return [r.shop, r[k[0]]]; }), function (v) { return num(v); }) + "</div>";
       }).join("") + "</div>"));
     }
@@ -661,7 +694,7 @@
     if (typeof v === "boolean" || BOOL_HINT.test(c)) return "<td>" + (v === true ? "✓" : v === false ? "" : esc(v)) + "</td>";
     if (c === "title" && r.url) return '<td class="wide"><a href="' + esc(r.url) + '" target="_blank" rel="nofollow noopener">' + esc(v) + "</a></td>";
     if ((c === "shop_name" || c === "shop") && r.shop_url) return '<td><a href="' + esc(r.shop_url) + '" target="_blank" rel="nofollow noopener">' + esc(v) + "</a></td>";
-    if (/url$/.test(c)) return '<td><a href="' + esc(v) + '" target="_blank" rel="nofollow noopener">open</a></td>';
+    if (/url$/.test(c)) return '<td><a href="' + esc(v) + '" target="_blank" rel="nofollow noopener">' + T("open") + '</a></td>';
     if (MONEY_COLS[c]) return '<td class="n">' + money(v, r.currency && r.currency.length <= 3 ? r.currency : "") + "</td>";
     if (typeof v === "number") return '<td class="n">' + num(v, Math.abs(v) < 10 && v % 1 ? 2 : Math.abs(v) < 100 && v % 1 ? 1 : 0) + "</td>";
     return "<td>" + esc(c === "category" ? unesc(v) : v) + "</td>";
@@ -677,7 +710,7 @@
       return '<th data-c="' + c + '" aria-sort="' + (s && s.c === c ? (s.d > 0 ? "ascending" : "descending") : "none") + '">' + esc(LABELS[c] || c) + (s && s.c === c ? (s.d > 0 ? " ▲" : " ▼") : "") + "</th>";
     }).join("") + "</tr></thead><tbody>";
     return head + rows.slice(0, shown).map(function (r) { return "<tr>" + cs.map(function (c) { return fmtCell(c, r[c], r); }).join("") + "</tr>"; }).join("") + "</tbody></table></div>" +
-      (rows.length > shown ? '<p class="more"><button type="button" class="btn2" id="more">Show ' + num(Math.min(per, rows.length - shown)) + " more (" + num(rows.length - shown) + ' left)</button> <span class="note">The spreadsheet always has every row.</span></p>' : "");
+      (rows.length > shown ? '<p class="more"><button type="button" class="btn2" id="more">' + T("Show {a} more ({b} left)", { a: num(Math.min(per, rows.length - shown)), b: num(rows.length - shown) }) + '</button> <span class="note">' + T("The spreadsheet always has every row.") + '</span></p>' : "");
   }
   function csv(rows, all) {
     var cs = all ? Object.keys(rows.reduce(function (o, r) { Object.keys(r).forEach(function (k) { o[k] = 1; }); return o; }, {})) : cols(rows);
@@ -694,19 +727,19 @@
     var t = TYPES[R.type], B = {}; state.blocks.forEach(function (b) { B[b] = 1; });
     var all = R.rows || [], rows = applyRefine(all), rw = refineWords();
     if (!quiet || !$("#rbody")) {
-      var when = R.live ? new Date(R.at).toLocaleString([], { dateStyle: "medium", timeStyle: "short" }) : R.at;
+      var when = R.live ? new Date(R.at).toLocaleString(LG === "en" ? [] : [LOC], { dateStyle: "medium", timeStyle: "short" }) : R.at;
       var colsAvail = Object.keys(all.reduce(function (o, r) { Object.keys(r).forEach(function (k) { o[k] = 1; }); return o; }, {}));
-      rep.innerHTML = '<div class="rhead"><div class="eyebrow">Etsy Pulse · Custom report</div><h2 id="rtitle"></h2><p class="sub" id="rsub"></p>' +
-        (R.demo ? '<div class="demo">' + esc(R.demo) + ' <a href="#builder">Run it on your own ' + (R.actor === "search" ? "keyword" : "shops") + " →</a></div>" : "") +
-        (R.warn ? '<div class="berr">Some parts didn\'t finish: ' + esc(R.warn) + ". You were only charged for rows delivered.</div>" : "") +
-        '<div class="ract"><button type="button" class="btn2 pri" id="dlcsv">⬇ Spreadsheet (CSV)</button><button type="button" class="btn2" id="dlall">⬇ All fields</button><button type="button" class="btn2" id="print">🖨 Print / save PDF</button>' +
-        (R.runs && R.runs.length ? '<a class="btn2" target="_blank" rel="noopener" href="https://console.apify.com/view/runs/' + esc(R.runs[0].id) + '">Open run in Apify</a>' : "") +
-        '<a class="btn2" href="#builder">New report</a></div>' +
-        '<details class="adv noprint" id="rctl"' + (state.rctlOpen ? " open" : "") + '><summary>Rank, filter and choose what\'s shown</summary><div class="advin">' +
-        sub("Rank and filter") + '<div id="refine-r"></div>' +
-        sub("Sections") + '<div class="blocks" id="rblocks">' + blocksFor(R.actor).map(function (b) {
+      rep.innerHTML = '<div class="rhead"><div class="eyebrow">' + T("Etsy Pulse · Custom report") + '</div><h2 id="rtitle"></h2><p class="sub" id="rsub"></p>' +
+        (R.demo ? '<div class="demo">' + esc(R.demo) + ' <a href="#builder">' + (R.actor === "search" ? T("Run it on your own keyword →") : T("Run it on your own shops →")) + "</a></div>" : "") +
+        (R.warn ? '<div class="berr">' + T("Some parts didn't finish: {w}. You were only charged for rows delivered.", { w: esc(R.warn) }) + "</div>" : "") +
+        '<div class="ract"><button type="button" class="btn2 pri" id="dlcsv">' + T("⬇ Spreadsheet (CSV)") + '</button><button type="button" class="btn2" id="dlall">' + T("⬇ All fields") + '</button><button type="button" class="btn2" id="print">' + T("🖨 Print / save PDF") + '</button>' +
+        (R.runs && R.runs.length ? '<a class="btn2" target="_blank" rel="noopener" href="https://console.apify.com/view/runs/' + esc(R.runs[0].id) + '">' + T("Open run in Apify") + '</a>' : "") +
+        '<a class="btn2" href="#builder">' + T("New report") + '</a></div>' +
+        '<details class="adv noprint" id="rctl"' + (state.rctlOpen ? " open" : "") + '><summary>' + T("Rank, filter and choose what's shown") + '</summary><div class="advin">' +
+        sub(T("Rank and filter")) + '<div id="refine-r"></div>' +
+        sub(T("Sections")) + '<div class="blocks" id="rblocks">' + blocksFor(R.actor).map(function (b) {
           return '<label class="pill"><input type="checkbox" value="' + b + '"' + (B[b] ? " checked" : "") + "><span>" + BLOCKS[b] + "</span></label>"; }).join("") + "</div>" +
-        sub("Columns") + '<div class="chks" id="rcols">' +
+        sub(T("Columns")) + '<div class="chks" id="rcols">' +
         colsAvail.map(function (c) { return '<label class="chk"><input type="checkbox" value="' + c + '"' + (state.cols.indexOf(c) >= 0 ? " checked" : "") + "> <span>" + esc(LABELS[c] || c) + "</span></label>"; }).join("") + "</div></div></details></div>" +
         '<div id="rbody"></div>';
       rep.hidden = false;
@@ -719,13 +752,13 @@
       renderRefine();
     }
     var parts = R.actor === "search" ? searchReport(rows, B) : trackerReport(rows, B);
-    var subj = R.actor === "search" ? Object.keys(groupBy(all, "query")).slice(0, 6).map(function (q) { return "“" + q + "”"; }).join(", ") + (Object.keys(groupBy(all, "query")).length > 6 ? "…" : "") : all.length + " shops";
-    $("#rtitle").textContent = t.title + ": " + subj;
-    var when2 = R.live ? new Date(R.at).toLocaleString([], { dateStyle: "medium", timeStyle: "short" }) : R.at;
-    $("#rsub").innerHTML = esc(when2) + " · " + (rows.length !== all.length ? "<b>" + num(rows.length) + " of " + num(all.length) + " rows</b>" : num(all.length) + " rows") + " · " + esc(ACTORS[R.actor].name) + " by publicrecords on Apify" + (rw ? '<br><span class="rw">Showing: ' + esc(rw) + "</span>" : "");
-    $("#rbody").innerHTML = (rows.length ? parts.join("") : '<div class="insights"><h3>No rows to show</h3><ul><li>' + (all.length ? "Your filters remove every row. Loosen them under “Rank, filter and choose what's shown”." : R.actor === "search" ? "Etsy returned no listings for this search with these filters, or blocked our reads this time (if a search is blocked and we have no cached results for it, you pay nothing). Try fewer filters or run again." : "No shops matched these settings. Shops you named that aren't in our panel yet are added now and appear from the next daily read.") + "</li></ul></div>") +
-      (B.table && rows.length ? card("All rows", tableHtml(rows), "Tap a column name to sort. Pick columns under “Rank, filter and choose what's shown”.") : "") +
-      '<p class="note">Data: public Etsy pages read by our ' + esc(ACTORS[R.actor].name) + " (publicrecords). Not affiliated with Etsy, Inc." + (R.actor === "search" ? " Prices are what Etsy shows a shopper in the chosen country." : " Sales come from each shop's public sales counter; pace is measured between our reads.") + "</p>";
+    var subj = R.actor === "search" ? Object.keys(groupBy(all, "query")).slice(0, 6).map(function (q) { return "“" + q + "”"; }).join(", ") + (Object.keys(groupBy(all, "query")).length > 6 ? "…" : "") : T("{n} shops", { n: all.length });
+    $("#rtitle").textContent = t.title + (LG === "fr" ? "\u00a0: " : ": ") + subj;
+    var when2 = R.live ? new Date(R.at).toLocaleString(LG === "en" ? [] : [LOC], { dateStyle: "medium", timeStyle: "short" }) : R.at;
+    $("#rsub").innerHTML = esc(when2) + " · " + (rows.length !== all.length ? "<b>" + T("{a} of {b} rows", { a: num(rows.length), b: num(all.length) }) + "</b>" : T("{n} rows", { n: num(all.length) })) + " · " + T("{a} by publicrecords on Apify", { a: esc(ACTORS[R.actor].name) }) + (rw ? '<br><span class="rw">' + T("Showing: {w}", { w: esc(rw) }) + "</span>" : "");
+    $("#rbody").innerHTML = (rows.length ? parts.join("") : '<div class="insights"><h3>' + T("No rows to show") + '</h3><ul><li>' + (all.length ? T("Your filters remove every row. Loosen them under “Rank, filter and choose what's shown”.") : R.actor === "search" ? T("Etsy returned no listings for this search with these filters, or blocked our reads this time (if a search is blocked and we have no cached results for it, you pay nothing). Try fewer filters or run again.") : T("No shops matched these settings. Shops you named that aren't in our panel yet are added now and appear from the next daily read.")) + "</li></ul></div>") +
+      (B.table && rows.length ? card(T("All rows"), tableHtml(rows), T("Tap a column name to sort. Pick columns under “Rank, filter and choose what's shown”.")) : "") +
+      '<p class="note">' + T("Data: public Etsy pages read by our {a} (publicrecords). Not affiliated with Etsy, Inc.", { a: esc(ACTORS[R.actor].name) }) + " " + (R.actor === "search" ? T("Prices are what Etsy shows a shopper in the chosen country.") : T("Sales come from each shop's public sales counter; pace is measured between our reads.")) + "</p>";
     $$("th[data-c]", rep).forEach(function (th) { th.onclick = function () { var c = th.dataset.c; state.sort = state.sort && state.sort.c === c ? { c: c, d: -state.sort.d } : { c: c, d: /^(position|rank|title|shop|shop_name|query)$/.test(c) ? 1 : -1 }; renderReport(true); var tb = $(".sortable", rep); if (tb) tb.scrollIntoView({ block: "nearest" }); }; });
     var mb = $("#more"); if (mb) mb.onclick = function () { state.page = (state.page || 1) + 1; renderReport(true); };
     if (!rep.dataset.shown) { rep.dataset.shown = 1; rep.scrollIntoView({ behavior: "smooth", block: "start" }); }
@@ -735,8 +768,8 @@
   function covNote() {
     var el = $("#covnote"); if (!el || !COV || COV.shops_measured == null) return;
     /* t619u: no shop-coverage counts in public copy. */
-    var t = "New shops get a sales figure after their second daily read; until then, sales per day and 7-day change come back empty.";
-    if (!COV.shops_measured_7d_span) t += " No shop has 7 days of reads yet, so Breakout shops returns nothing for now.";
+    var t = T("New shops get a sales figure after their second daily read; until then, sales per day and 7-day change come back empty.");
+    if (!COV.shops_measured_7d_span) t += " " + T("No shop has 7 days of reads yet, so Breakout shops returns nothing for now.");
     el.textContent = t; el.hidden = false;
   }
   function stickyBar() {
@@ -791,8 +824,12 @@
   /* ------------------------------------------------------------------ boot */
   async function boot() {
     var params = new URLSearchParams(location.search);
-    try { CATS = await (await fetch("assets/tracker-categories.json")).json(); } catch (e) { CATS = []; }
-    try { COV = await (await fetch("data/coverage.json")).json(); } catch (e) { COV = null; }
+    if (params.get("code") || params.get("error")) {
+      var pl = (ss.get("ep_pending") || {}).lang;
+      if (pl && pl !== LG && /^(en|fr|tr)$/.test(pl)) { location.replace("/" + (pl === "en" ? "" : pl + "/") + "run.html" + location.search); return; }
+    }
+    try { CATS = await (await fetch("/assets/tracker-categories.json")).json(); } catch (e) { CATS = []; }
+    try { COV = await (await fetch("/data/coverage.json")).json(); } catch (e) { COV = null; }
     renderForm(params.get("q") || ""); covNote(); stickyBar();
     var type = TYPES[params.get("type")] ? params.get("type") : "niche";
     setType(type);
