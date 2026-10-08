@@ -7,6 +7,7 @@ Daily Etsy market reports (7-day sales gains, refreshed every day a new snapshot
 | Report | Page | What it shows | Source |
 |---|---|---|---|
 | Overview | `index.html` | Headline numbers, this week's takeaways, links to every report | all below |
+| Daily Movers | `movers/` (+ `movers/<date>/` archive, `tr/movers/`) | "Etsy's biggest movers, <date>": top 10 shops by sales added in the shortest window the panel reads (2 days today, 24h automatically once daily reads exist), plus the biggest jumps for their size (1,000+ sales); CTA tagline from `config/movers.json` | `data/daily-movers/<snapshot>/` (`scripts/movers_rank.py`) |
 | Top Movers | `movers.html` | Top 10 shops (≥500 lifetime sales) by 7-day sales gain | `data/panel/<cut>/movers.csv` |
 | Hot Categories | `categories.html` | Top 10 categories by combined 7-day gain, with shops gaining, typical shop and leader | `data/panel/<cut>/categories.csv` |
 | Rising Shops | `rising.html` | Top 10 shops with 500–999 lifetime sales by 7-day gain | `data/panel/<cut>/rising.csv` |
@@ -25,6 +26,18 @@ robot words (median, middle half, page 1, 7-day pace) in visible text, CSV heade
 
 Every report page has a "What this means for sellers" block generated from the same rows, and a CSV download
 (`data/<report>-<cut>.csv`, plus `-latest.csv` aliases). Nothing is estimated beyond the 7-day scaling described below.
+
+## Daily Movers (Mark t613u)
+
+`config/movers.json` is the one place for the ranking knobs (window preference, min valid shops, guards, exclusions, % list
+base) and the CTA tagline (EN/TR) with its two links (browser → `/run.html`, AI chat → `/ai.html`). `scripts/movers_rank.py`
+defines the ranking: sales added = public sales counter on the snapshot date minus the counter exactly *w* days earlier
+(no scaling); shops without both reads, rounded counters, counters that went down, jumps > 50% of the earlier counter,
+vintage events, snapshot mismatches, duplicates and config exclusions are dropped. The box publish loop runs it right after
+the panel export, commits `data/daily-movers/<snapshot>/` with the panel cut, and then renders the X card + draft post
+(`/workspace/x-etsypulse/make_movers_card.py` → `/workspace/x-etsypulse/movers/<date>-card.png`, `-post.txt`, `-post-tr.txt`;
+never posted). Too few valid shops = skipped, yesterday's page stays. `check_movers` in `build_site.py` enforces tagline,
+CTA links, one beacon per page, no coverage counts in meta/og, price line = EN home CTA.
 
 ## Pipeline
 

@@ -1,0 +1,34 @@
+{
+  "_note": "Daily Biggest Movers (Mark t613u 2026-10-08). The ONE place that defines the ranking (read by scripts/movers_rank.py) and the CTA tagline (read by scripts/build_site.py and the X card/post maker). Window: the shortest of window_days_preferred for which at least min_valid_shops shops have an exact sales-counter pair ending on the snapshot date. Today the panel reads each shop every 2 days, so 1-day pairs do not exist yet and the window is 2 days; once daily reads exist the page switches to 24h on its own.",
+  "window_days_preferred": [
+    1,
+    2
+  ],
+  "min_valid_shops": 500,
+  "top_n": 10,
+  "pct_list": {
+    "enabled": true,
+    "min_base_sales": 1000,
+    "min_added": 25
+  },
+  "guards": {
+    "max_jump_ratio": 0.5,
+    "require_exact_precision": true,
+    "drop_vintage_events": true,
+    "require_snapshot_match": true
+  },
+  "exclude_shops": [],
+  "exclude_note": "Lowercase Etsy shop names never ranked (e.g. Mark's own shops). None known as of 2026-10-08.",
+  "tagline": {
+    "en": "Your niche next. Live reports in your browser or your AI chat.",
+    "tr": "Sıra senin nişinde. Canlı rapor tarayıcında ya da yapay zekâ sohbetinde."
+  },
+  "cta_links": {
+    "browser": "/run.html",
+    "claude": "/ai.html"
+  },
+  "x_post_url": "https://www.etsypulse.ca/movers/",
+  "x_out_dir": "/workspace/x-etsypulse/movers",
+  "x_teaser_rows": 3,
+  "tagline_note": "Mark t616u: generic AI wording in the tagline (no client named). Swap here only."
+}

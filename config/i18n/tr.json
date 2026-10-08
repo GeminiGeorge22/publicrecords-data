@@ -88,5 +88,38 @@
   "price_line": "Ücretsiz girişten sonra araçlarımızı (Apify üzerinde, publicrecords) kendi Apify hesabında çalıştırır. Sonuç başına ödeme. 1 anahtar kelime (ilk 20 ilan) 13¢'den başlar. 1.000 ilan başına $6 + çalıştırma başına 0.5¢. Etsy bir aramayı engellerse önbellekteki en güncel sonuçları, tarihi açıkça yazılı olarak, aynı ücretle alırsın; önbellekte bir şey yoksa hiçbir şey ödemezsin. Ücretsiz Apify planında ayda $5 kullanım dahil.",
   "footer_1": "<b>Etsy Pulse</b>, publicrecords tarafından yayımlanır. Veriler kendi araçlarımızdan gelir: publicrecords Etsy Shop Sales Tracker paneli (herkese açık mağaza satış sayaçları) ve Apify üzerindeki publicrecords Etsy Search Scraper. Bu araçları biz geliştirdik ve satıyoruz; bağlantıları buna göre değerlendir.",
   "footer_2": "Kesit {cut} (sayaçlar {snap} itibarıyla). Etsy, Inc. ile bağlantılı değildir; Etsy, Inc. tarafından onaylanmamış veya desteklenmemiştir. Etsy, Etsy, Inc.'in ticari markasıdır.",
-  "kpi_total": "{min}+ toplam satışı olan ve satışı artan mağazaların toplam 7 günlük artışı"
+  "kpi_total": "{min}+ toplam satışı olan ve satışı artan mağazaların toplam 7 günlük artışı",
+  "movers": {
+    "_note": "Daily movers page /tr/movers/ (Mark t613u). Tagline lives in config/movers.json, not here.",
+    "nav": "⚡ Günün yükselenleri",
+    "title": "Etsy'de satışı en çok artanlar, {date} | Etsy Pulse",
+    "h1": "Etsy'de satışı en çok artanlar, {date}",
+    "eyebrow": "Etsy Pulse · Günlük yükselenler",
+    "lede": "En çok satış ekleyen Etsy mağazaları, doğrudan herkese açık Etsy satış sayaçlarından. Her gün yeni liste.",
+    "win_1": "24 saatte eklenen satış, {frm} → {to}",
+    "win_n": "{n} günde eklenen satış, {frm} → {to}",
+    "desc": "Bugünün Etsy yükselenleri: {shop}, {gain} satış ({win}). Herkese açık Etsy satış sayaçlarından günlük ilk 10.",
+    "h2_added": "Eklenen satışa göre ilk 10",
+    "sub_added": "Etsy'de açmak için bir mağazaya dokun. Çubuk = 1. sıraya göre büyüklük.",
+    "h2_pct": "Büyüklüğüne göre en büyük sıçramalar",
+    "sub_pct": "Eklenen satışın, mağazanın önceki toplam satışına oranı; {min}+ satışı olanlar.",
+    "cols": [
+      "#",
+      "Mağaza",
+      "Kategori",
+      "Toplam satış",
+      "Önce",
+      "1. sıraya göre"
+    ],
+    "col_added": "Eklenen satış",
+    "col_pct": "Artış",
+    "row_total": "toplam satış",
+    "row_before": "önce ",
+    "row_sales": "satış",
+    "tag_p": "Her niş, her mağaza listesi: aynı raporu burada, tarayıcında oluştur ya da araçlarımızı yapay zekâ sohbetine bağla ve sadece sor.",
+    "tag_btn_browser": "Tarayıcında rapor çalıştır →",
+    "tag_btn_ai": "Yapay zekâ sohbetinde kullan →",
+    "method_h": "Nasıl sayıyoruz",
+    "method": "Eklenen satış = mağazanın herkese açık Etsy satış sayacının son gündeki değeri eksi {n} gün önceki değeri; ikisi de tam o tarihlerde okunur. Hiçbir şey ölçeklenmez ya da tahmin edilmez. İki tarihte de okunmayan mağazalar, yuvarlanmış sayaçlar, düşen sayaçlar ve mantıksız sıçramalar dışarıda bırakılır. Bunlar okuduğumuz mağazalar arasındaki en büyük yükselenler, Etsy'nin tamamı değil."
+  }
 }

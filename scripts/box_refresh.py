@@ -205,9 +205,11 @@ def do_publish(force=False, latest=None):
         backup = f"/tmp/etsypulse-cut-{cut}-bak"
         shutil.rmtree(backup, ignore_errors=True)
         shutil.copytree(cut_dir, backup)
+    dm_before = set(os.listdir(DM_ROOT)) if os.path.isdir(DM_ROOT) else set()
     try:
         sh(sys.executable, "scripts/export_panel_cut.py", "--cut-date", cut)
         meta = json.load(open(os.path.join(cut_dir, "meta.json")))
+        movers_status = daily_movers_export()
         why = completeness(meta, prev)   # prev = the cut live before this export (read before it ran)
         if why and not force:
             raise ValueError("incomplete_after_export:" + why)
@@ -221,15 +223,46 @@ def do_publish(force=False, latest=None):
         if backup:
             shutil.copytree(backup, cut_dir)
         sh("git", "checkout", "-q", "--", "data/panel", check=False)
+        for d_ in (set(os.listdir(DM_ROOT)) if os.path.isdir(DM_ROOT) else set()) - dm_before:
+            shutil.rmtree(os.path.join(DM_ROOT, d_), ignore_errors=True)
+        sh("git", "checkout", "-q", "--", "data/daily-movers", check=False)
         log_once("publish", "publish", "skipped" if isinstance(e, ValueError) else "error",
                  hf_snapshot=latest["snapshot_date"], reason=str(e)[-300:].replace(" ", "_").replace("\n", "_"))
         return False
-    sha = commit_push(["data/panel"], f"daily publish {cut} (snapshot {meta['snapshot_date']}, {meta['snapshot_rows']} rows)")
+    sha = commit_push(["data/panel", "data/daily-movers"], f"daily publish {cut} (snapshot {meta['snapshot_date']}, {meta['snapshot_rows']} rows; daily movers {movers_status})")
+    if sha and movers_status == "ok":
+        movers_card()
     log("publish", "ok" if sha else "unchanged", cut=cut, snapshot=meta["snapshot_date"], rows=meta["snapshot_rows"],
         prev_rows=(prev or {}).get("snapshot_rows"), movers=meta["rows"]["movers"], categories=meta["rows"]["categories"],
         rising=meta["rows"]["rising"], commit=sha or "-")
     save_state(published=sig_of(meta))
     return True
+
+
+DM_ROOT = os.path.join(ROOT, "data", "daily-movers")
+MOVERS_CARD = "/workspace/x-etsypulse/make_movers_card.py"
+
+
+def daily_movers_export():
+    """DAILY MOVERS (Mark t613u): data/daily-movers/<snapshot>/ from the same HF snapshot (scripts/movers_rank.py, ranking in
+    config/movers.json). Never blocks the panel publish: too few valid shops (rc 3) or an error just keeps yesterday's page."""
+    before = set(os.listdir(DM_ROOT)) if os.path.isdir(DM_ROOT) else set()
+    r = sh(sys.executable, "scripts/movers_rank.py", "export", check=False)
+    st = "ok" if r.returncode == 0 else ("skipped" if r.returncode == 3 else "error")
+    if st != "ok":   # never leave a half-written day behind
+        for d_ in (set(os.listdir(DM_ROOT)) if os.path.isdir(DM_ROOT) else set()) - before:
+            shutil.rmtree(os.path.join(DM_ROOT, d_), ignore_errors=True)
+    tail = (r.stdout.strip().splitlines() or [""])[-1] if st != "error" else (r.stderr or r.stdout)[-200:]
+    log("movers", st, detail=tail.replace(" ", "")[:300])
+    return st
+
+
+def movers_card():
+    """X card + draft post text for the newest daily movers day (box-only, never posted)."""
+    if not os.path.exists(MOVERS_CARD):
+        return
+    r = subprocess.run([sys.executable, MOVERS_CARD, "--repo", ROOT], capture_output=True, text=True)
+    log("movers_card", "ok" if r.returncode == 0 else "error", out=(r.stdout or r.stderr).strip()[-200:].replace(" ", ""))
 
 
 def sig_of(meta):
