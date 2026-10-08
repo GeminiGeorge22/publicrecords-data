@@ -17,8 +17,9 @@
     search: { id: "JbNpPvG1Z7YtM9onP", name: "Etsy Search Scraper", store: "https://apify.com/publicrecords/etsy-search-scraper",
       start: 0.005, unit: 0.006, unitName: "listing" },
     tracker: { id: "iSqAcbENkn1ZdUMm1", name: "Etsy Shop Sales Tracker", store: "https://apify.com/publicrecords/etsy-shop-velocity",
-      start: 0.005, unit: 0.003, unitName: "shop", platform: 0.02 },
+      start: 0.005, unit: 0.003, unitName: "shop", platform: 0 },   // PRICE-2: exactly $0.005/run + $0.003/shop; standard runs, user pays no platform usage
   };
+  var BLOCKED_NOTE = "If Etsy blocks a search, you get the most recent cached results, clearly dated, at the same rate; if there's nothing cached, you pay nothing.";
   var BLOCKS = {
     kpis: "Headline numbers", takeaways: "Plain-English takeaways", prices: "Price bands chart", badges: "Badges chart",
     bestprice: "Bestseller vs the rest", shops: "Top shops chart", shoptable: "Shop leaderboard", compare: "Keyword comparison",
@@ -63,7 +64,7 @@
     review_count: "Reviews", review_count_approx: "Reviews rounded", bestseller: "Bestseller", star_seller: "Star Seller",
     popular_now: "Popular now", etsys_pick: "Etsy's Pick", free_shipping: "Free shipping", is_ad: "Ad", query: "Keyword",
     page: "Page", total_results: "Etsy results", listing_id: "Listing ID", url: "Listing link", shop_url: "Shop link",
-    shop_id: "Shop ID", surface: "Card type", source: "Source",
+    shop_id: "Shop ID", surface: "Card type", source: "Source", data_source: "Data source",
     shop: "Shop", headline: "Headline", category: "Category", sales_count: "Lifetime sales", sales_precision: "Sales precision",
     as_of: "Read on", read_interval_days: "Days between reads", delta_last: "Sales since last read",
     sales_per_day: "Sales per day", delta_7d: "Sales, last 7 days", delta_28d: "Sales, last 28 days",
@@ -293,7 +294,7 @@
 
   function knownCols(actor) {
     return actor === "search"
-      ? ["position", "title", "price", "currency", "shop_name", "rating_value", "review_count", "review_count_approx", "bestseller", "popular_now", "star_seller", "etsys_pick", "free_shipping", "is_ad", "query", "page", "total_results", "url", "shop_url", "listing_id", "shop_id", "surface", "source"]
+      ? ["position", "title", "price", "currency", "shop_name", "rating_value", "review_count", "review_count_approx", "bestseller", "popular_now", "star_seller", "etsys_pick", "free_shipping", "is_ad", "query", "page", "total_results", "url", "shop_url", "listing_id", "shop_id", "surface", "source", "data_source", "as_of"]
       : ["shop", "title", "headline", "category", "sales_count", "sales_precision", "sales_per_day", "delta_last", "delta_7d", "delta_28d", "units_day", "units_lo", "units_hi", "lift_7d", "breakout", "breakout_p", "reviews_count", "rating", "admirers", "listings_active", "as_of", "read_interval_days", "first_seen", "last_changed", "history_days", "vintage_event", "snapshot_date", "snapshot_stale", "shop_url"];
   }
   function blocksFor(actor) {
@@ -400,9 +401,9 @@
     var plat = plan.platform ? " + Apify platform usage, usually under " + usd(plan.platform) + " per run (billed separately for this tool)" : " (Apify platform usage included)";
     var conf = plan.bigConfirm ? '<label class="bigconf"><input type="checkbox" id="bigok"' + (state.bigok === plan.max ? " checked" : "") + "><span>Yes, run it: this report can cost up to <b>" + usd(plan.max + plan.platform) + "</b> on my Apify account.</span></label>" : "";
     $("#brun").innerHTML = errs + warns +
-      (empty ? '<div class="cost"><b>' + (t.actor === "search" ? "Add a keyword above to see the price" : "Add a shop above to see the price") + '</b><span>' + usd(a.unit) + " per " + (t.actor === "search" ? "listing" : "shop") + " + " + usd(a.start) + " per run" + plat + ".</span></div>" :
+      (empty ? '<div class="cost"><b>' + (t.actor === "search" ? "Add a keyword above to see the price" : "Add a shop above to see the price") + '</b><span>' + usd(a.unit) + " per " + (t.actor === "search" ? "listing" : "shop") + " + " + usd(a.start) + " per run" + plat + "." + (t.actor === "search" ? " " + BLOCKED_NOTE : "") + "</span></div>" :
       '<div class="cost"><b>About ' + usd(plan.est) + ", at most " + usd(plan.max) + '</b><span>' + nUnits + " × " + usd(a.unit) + " + " + usd(a.start) + " start fee" + (plan.jobs.length > 1 ? " × " + plan.jobs.length + " runs" : "") + plat +
-      ". You pay only for rows delivered; Apify stops the run at the maximum. Apify's free plan includes $5 of usage every month, no card needed.</span></div>") + conf +
+      ". You pay only for rows delivered; Apify stops the run at the maximum." + (t.actor === "search" ? " " + BLOCKED_NOTE : "") + " Apify's free plan includes $5 of usage every month, no card needed.</span></div>") + conf +
       '<button type="button" class="runbtn" id="runbtn">' + (tok ? "Run my report →" : "Sign in with Apify &amp; run →") + "</button>" + who +
       (tok ? "" : '<p class="perm">Apify will ask you to approve <b>Etsy Pulse by publicrecords</b>. Apify only offers one permission level (full account access), so here is exactly what we do with it: start this report on your account and read its results, from this page. The key stays in this browser tab, is deleted when you close it, and never touches our servers. You can remove the approval any time in Apify Console → Settings → API &amp; Integrations.</p>') +
       '<p class="alt"><a href="#" id="demo">See an example report first</a> · <a href="#" id="showfb">Rather run it inside Apify?</a></p>' +
@@ -594,6 +595,8 @@
     else if (shopList.length) tk.push("Every listing here comes from a different shop (" + shopList.length + " shops): nobody dominates this search.");
     var revs = rows.map(function (r) { return r.review_count; }).filter(isFinite);
     if (revs.length) tk.push("A typical listing shows <b>" + num(median(revs)) + "</b> reviews on its card" + (median(revs) < 300 ? ", a low bar: newer shops can compete here." : median(revs) > 2000 ? ", a high bar: established shops own this search." : "."));
+    var cached = rows.filter(function (r) { return r.data_source === "cache"; });
+    if (cached.length) { var asof = cached.map(function (r) { return r.as_of; }).filter(Boolean).sort()[0]; tk.push("Heads-up: Etsy blocked the live search, so <b>" + num(cached.length) + "</b> of these listings come from our most recent cached results" + (asof ? ", read on <b>" + esc(String(asof).slice(0, 10)) + "</b>" : "") + "."); }
     if (fs != null) tk.push("<b>" + pct(fs) + "</b> offer free shipping" + (fs >= .5 ? ", so buyers here expect it." : "."));
     if (qs.length > 1) {
       var stats = qs.map(function (q) { var a = byQ[q]; return { q: q, med: median(a.map(function (r) { return r.price; })), bs: share(a, "bestseller"), tr: (a[0] || {}).total_results }; });
@@ -720,7 +723,7 @@
     $("#rtitle").textContent = t.title + ": " + subj;
     var when2 = R.live ? new Date(R.at).toLocaleString([], { dateStyle: "medium", timeStyle: "short" }) : R.at;
     $("#rsub").innerHTML = esc(when2) + " · " + (rows.length !== all.length ? "<b>" + num(rows.length) + " of " + num(all.length) + " rows</b>" : num(all.length) + " rows") + " · " + esc(ACTORS[R.actor].name) + " by publicrecords on Apify" + (rw ? '<br><span class="rw">Showing: ' + esc(rw) + "</span>" : "");
-    $("#rbody").innerHTML = (rows.length ? parts.join("") : '<div class="insights"><h3>No rows to show</h3><ul><li>' + (all.length ? "Your filters remove every row. Loosen them under “Rank, filter and choose what's shown”." : R.actor === "search" ? "Etsy returned no listings for this search with these filters, or blocked our reads this time (blocked pages are never charged). Try fewer filters or run again." : "No shops matched these settings. Shops you named that aren't in our panel yet are added now and appear from the next daily read.") + "</li></ul></div>") +
+    $("#rbody").innerHTML = (rows.length ? parts.join("") : '<div class="insights"><h3>No rows to show</h3><ul><li>' + (all.length ? "Your filters remove every row. Loosen them under “Rank, filter and choose what's shown”." : R.actor === "search" ? "Etsy returned no listings for this search with these filters, or blocked our reads this time (if a search is blocked and we have no cached results for it, you pay nothing). Try fewer filters or run again." : "No shops matched these settings. Shops you named that aren't in our panel yet are added now and appear from the next daily read.") + "</li></ul></div>") +
       (B.table && rows.length ? card("All rows", tableHtml(rows), "Tap a column name to sort. Pick columns under “Rank, filter and choose what's shown”.") : "") +
       '<p class="note">Data: public Etsy pages read by our ' + esc(ACTORS[R.actor].name) + " (publicrecords). Not affiliated with Etsy, Inc." + (R.actor === "search" ? " Prices are what Etsy shows a shopper in the chosen country." : " Sales come from each shop's public sales counter; pace is measured between our reads.") + "</p>";
     $$("th[data-c]", rep).forEach(function (th) { th.onclick = function () { var c = th.dataset.c; state.sort = state.sort && state.sort.c === c ? { c: c, d: -state.sort.d } : { c: c, d: /^(position|rank|title|shop|shop_name|query)$/.test(c) ? 1 : -1 }; renderReport(true); var tb = $(".sortable", rep); if (tb) tb.scrollIntoView({ block: "nearest" }); }; });

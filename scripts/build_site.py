@@ -451,7 +451,7 @@ def cta(ctx):
 <p>Every number here comes from public Etsy data our tools collect. Build the same report for your own keyword or your
 competitors' shops, right here: charts, plain-English takeaways and a spreadsheet in a few minutes. No code, no API keys.</p>
 <a class="btn" href="{BUILDER}?type=niche&amp;from=cta">Build a niche report</a><a class="btn ghost" href="{BUILDER}?type=rivals&amp;from=cta">Compare competitor shops</a>
-<div class="disc">Runs our tools (publicrecords on Apify) on your own Apify account after a free sign-in. Pay per result. From 13¢ for 1 keyword (top 20 listings). $6 per 1,000 listings + 0.5¢ per run. Blocked pages charge nothing. Apify's free plan includes $5 of usage a month.</div>
+<div class="disc">Runs our tools (publicrecords on Apify) on your own Apify account after a free sign-in. Pay per result. From 13¢ for 1 keyword (top 20 listings). $6 per 1,000 listings + 0.5¢ per run. If Etsy blocks a search, you get the most recent cached results, clearly dated, at the same rate; if there's nothing cached, you pay nothing. Apify's free plan includes $5 of usage a month.</div>
 </section>"""
 
 
@@ -823,7 +823,7 @@ def ai_page(ctx, files):
 <p class="lede">Connect our Etsy tools to {tested_names()}. Ask in plain words about any keyword or niche: your AI pulls fresh public Etsy search and shop data,
 answers right in the chat, and turns it into a report when you ask.</p>
 <ol class="steps3"><li>Click Connect</li><li>Sign in with Apify (free)</li><li>Ask your AI</li></ol>
-<div class="hcta"><a class="hbtn" href="#connect">Connect your AI →</a><small>Runs on your own Apify account. From 13¢ for 1 keyword (top 20 listings). $6 per 1,000 listings + 0.5¢ per run. Blocked pages charge nothing.</small></div></div>
+<div class="hcta"><a class="hbtn" href="#connect">Connect your AI →</a><small>Runs on your own Apify account. From 13¢ for 1 keyword (top 20 listings). $6 per 1,000 listings + 0.5¢ per run. If Etsy blocks a search, you get the most recent cached results, clearly dated, at the same rate; if there's nothing cached, you pay nothing.</small></div></div>
 <div><video autoplay muted loop playsinline preload="metadata" poster="assets/ai/etsypulse-ai-wide-poster.png" width="1200" height="676"
 aria-label="Demo: connect Etsy Pulse, sign in with Apify, ask AI who the top sellers are in a few Etsy niches and how Bestsellers price, using public Etsy search data, then get a report">
 <source src="assets/ai/etsypulse-ai-wide.webm" type="video/webm"><source src="assets/ai/etsypulse-ai-wide.mp4" type="video/mp4">
@@ -934,7 +934,7 @@ Answers in your chat will be worded by your AI and use the data from your own ru
     costs = f"""<section><h2>How it works, and what it costs</h2>
 <div class="costs">
 <div><b>Runs through Apify</b><p>Apify is the platform our tools run on. The link is Apify's MCP server with our two Etsy tools picked. You sign in with your own Apify account: free to create, and the free plan includes $5 of usage a month.</p></div>
-<div><b>Pay per result</b><p>Etsy Search: From 13¢ for 1 keyword (top 20 listings). $6 per 1,000 listings + 0.5¢ per run. Blocked pages charge nothing. Apify usage included. On default settings one search returns the top 20 listings in total, even for several keywords; your AI can ask for more at the same rate. Shop Sales Tracker: $0.005 per run + $0.003 per shop, plus Apify usage.</p></div>
+<div><b>Pay per result</b><p>Etsy Search: From 13¢ for 1 keyword (top 20 listings). $6 per 1,000 listings + 0.5¢ per run. If Etsy blocks a search, you get the most recent cached results, clearly dated, at the same rate; if there's nothing cached, you pay nothing. Apify usage included. On default settings one search returns the top 20 listings in total, even for several keywords; your AI can ask for more at the same rate. Shop Sales Tracker: $0.005 per run + $0.003 per shop ($3 per 1,000 shops), plus Apify platform usage when your AI calls it (Apify bills usage for its always-on Standby mode, which AI apps use).</p></div>
 <div><b>Your account, your results</b><p>Every run and its results stay in your Apify account. Sign-in happens on Apify's own screen; we never see your password. Remove access any time in Apify Console → Settings → API &amp; Integrations.</p></div>
 </div></section>"""
 
@@ -949,7 +949,7 @@ Rather not use AI? <a href="{BUILDER}?from=ai">Build a report here</a> or <a hre
             f"Copy a prompt, swap in your own niche. Keep the first question small (one keyword, top 5 or 10) so it finishes in about 30 seconds; "
             f"bigger asks take longer.</p><div class=\"uses\">{uses_html}</div></section>{convo}{costs}{tryit}")
     return page("ai.html", f"Ask AI about any Etsy niche: connect Etsy Pulse to {tested_names()} | Etsy Pulse",
-                f"Connect our Etsy tools to {tested_names()} through Apify's MCP server. Ask about any Etsy keyword or niche and get answers and reports from fresh public Etsy market data. From 13¢ for 1 keyword (top 20 listings). $6 per 1,000 listings + 0.5¢ per run. Blocked pages charge nothing.",
+                f"Connect our Etsy tools to {tested_names()} through Apify's MCP server. Ask about any Etsy keyword or niche and get answers and reports from fresh public Etsy market data. From 13¢ for 1 keyword (top 20 listings). $6 per 1,000 listings + 0.5¢ per run. If Etsy blocks a search, you get the most recent cached results, clearly dated, at the same rate; if there's nothing cached, you pay nothing.",
                 body, ctx, hero, scripts=AI_JS)
 
 
@@ -961,6 +961,12 @@ BANNED = _re.compile(r"\bmedian\b|middle half|\bpage[ -]1\b|7-day pace|\biqr\b",
 # "13¢ for 1 keyword" with the top-20-listings scope (PRICE_OK is removed before BANNED_PRICE runs). maxItems caps the whole
 # run, not each keyword: "13¢ per keyword", "20 per keyword", any ¢/$ "per keyword" price, 63¢ and a bare 13¢ stay banned.
 PRICE_OK = _re.compile(r"(?:from\s+)?13\s?¢ for 1 keyword\s*(?:\(top 20 listings\)|,?\s*(?:and\s+)?(?:the\s+)?top 20 listings)", _re.I)
+# PRICE-2 (Master read-back 21:11 ET): Etsy Search 0.2.11 serves the most recent cached rows (data_source "cache", as_of)
+# when Etsy blocks a keyword on both tries, charged per row delivered, so "Blocked pages charge nothing" is false. Shop Sales
+# Tracker is exactly actor-start $0.005 + shop-row $0.003 (0.2.14); the two lookup events are gone. Never "real-time".
+STALE_PRICE = _re.compile(r"blocked (?:pages?|searche?s?|reads?) (?:charges?|costs?) nothing|blocked pages are never charged|\bnever charged\b|"
+                          r"\blookups?\b|shop[- ]history[- ]records?|velocity[- ]records?|\$0?\.05 per (?:shop|record|lookup)|\$0?\.10? per (?:shop|record|lookup)|"
+                          r"\$0\.003 per shop plus|usually under \$0\.02|real[- ]?time|\bautomated\b|🤖", _re.I)
 BANNED_PRICE = _re.compile(r"(?:[¢$]|cents?)\s*[\d.,]*\s*(?:per|/|a|for each|each)\s+keyword|\b20 (?:listings )?(?:per|/|for each|each) keyword|\b13\s?¢|\b13 cents\b|\b63\s?¢|\b63 cents\b|≈\s?\$0\.13\b|\$0\.13\b|\$0\.63\b|top 20 listings\)?\s*(?:for|=|≈|:)|\b20 listings\s*(?:for|=|≈|:)", _re.I)
 
 
@@ -990,6 +996,8 @@ def check_public(out_dir):
                     bad.append(f"{rel}: banned word '{mt.group(0)}'")
                 for mt in BANNED_PRICE.finditer(PRICE_OK.sub(" ", vt)):
                     bad.append(f"{rel}: stale price line '{mt.group(0)}' (PRICE-1)")
+                for mt in STALE_PRICE.finditer(vt):
+                    bad.append(f"{rel}: stale/false price or banned copy '{mt.group(0)}' (PRICE-2)")
                 # AI-PAGE-2: only clients with a committed real-test pass are named; no "your Etsy data" (t559u).
                 for k, rx in CLIENT_NAME_RX.items():
                     if k not in TESTED_CLIENTS:
@@ -1023,6 +1031,8 @@ def check_public(out_dir):
                     t = visible_text(lit[0] or lit[1])
                     if BANNED.search(t):
                         bad.append(f"{rel}: banned word in text '{t[:60]}'")
+                    if STALE_PRICE.search(t):
+                        bad.append(f"{rel}: stale/false price or banned copy in text '{t[:60]}' (PRICE-2)")
     if bad:
         raise SystemExit("public check failed:\n  " + "\n  ".join(bad))
     print("public check ok: no banned words, every report <= %d rows" % PUBLIC_N)
@@ -1273,7 +1283,7 @@ These are not all of Etsy: they are the shops in our panel that we could measure
 <section class="how-sec"><h2>How it works</h2><p class="sub">Three steps. Your results and your spend stay in your own Apify account.</p>
 <div class="how">
 <div><b>Sign in with Apify (free)</b><p>Apify is the platform our tools run on. New accounts are free, no credit card, and the free plan includes $5 of usage every month.</p></div>
-<div><b>Press Run</b><p>The report runs on your account. Keyword reports: $6 per 1,000 listings + 0.5¢ per run. Blocked pages charge nothing. Apify platform usage is included. Shop reports: $0.003 per shop plus $0.005, plus Apify platform usage (usually under $0.02 a run). The price updates as you change options, and you see “about $X, at most $Y” for the exact number of listings you ask for before you start.</p></div>
+<div><b>Press Run</b><p>The report runs on your account. Keyword reports: $6 per 1,000 listings + 0.5¢ per run, Apify platform usage included. If Etsy blocks a search, you get the most recent cached results, clearly dated, at the same rate; if there's nothing cached, you pay nothing. Shop reports: $0.005 per run + $0.003 per shop ($3 per 1,000 shops), Apify platform usage included. The price updates as you change options, and you see “about $X, at most $Y” for the exact number of listings you ask for before you start.</p></div>
 <div><b>Read it, download it</b><p>Takeaways, charts and a sortable table appear right here. Download the spreadsheet (CSV), or print / save as PDF. Your runs and data also stay in your Apify account.</p></div>
 </div>
 <p class="note">Sign-in uses Apify's own OAuth screen; we never see your password. Apify offers one permission level (full account access): this page uses it only to start the report you asked for and read its results. The key stays in this browser tab and is gone when you close it. Remove the approval any time in Apify Console → Settings → API &amp; Integrations.</p></section>"""
