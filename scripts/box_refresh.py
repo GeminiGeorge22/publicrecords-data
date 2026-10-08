@@ -228,7 +228,7 @@ def do_publish(force=False, latest=None):
     log("publish", "ok" if sha else "unchanged", cut=cut, snapshot=meta["snapshot_date"], rows=meta["snapshot_rows"],
         prev_rows=(prev or {}).get("snapshot_rows"), movers=meta["rows"]["movers"], categories=meta["rows"]["categories"],
         rising=meta["rows"]["rising"], commit=sha or "-")
-    save_state(last_publish=sig_of(meta))
+    save_state(published=sig_of(meta))
     return True
 
 
