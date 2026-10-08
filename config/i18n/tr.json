@@ -23,7 +23,8 @@
     "home": "Ana sayfa",
     "ai": "✦ Yapay zekâ (EN)",
     "run": "★ Özel rapor (EN)",
-    "movers": "Tüm raporlar (EN)"
+    "movers": "Tüm raporlar (EN)",
+    "aria": "Raporlar"
   },
   "eyebrow": "Etsy Pulse · Her gün güncellenir · Sayaçlar {date} itibarıyla",
   "h1": "Etsy'de satış nerede patlıyor?",
@@ -178,5 +179,6 @@
   "kpi_top10": "Bugünün ilk {k} mağazasının {span} eklediği satış",
   "kpi_rising": "1.000'den az satışı olanlarda 1 numara: {shop}",
   "ins_niche": "Nişlerde <b>{niche}</b> önde: {span} <b>{gain}</b>, {shops} mağazada. En çok ekleyen {top}, bunun {pct} kadarı.",
-  "ins_jump": "Büyüklüğüne göre en büyük sıçrama: <b>{shop}</b> {gain} ekledi, önceki tüm satışlarının <b>{pct}</b> kadarı."
+  "ins_jump": "Büyüklüğüne göre en büyük sıçrama: <b>{shop}</b> {gain} ekledi, önceki tüm satışlarının <b>{pct}</b> kadarı.",
+  "how_id": "nasil"
 }

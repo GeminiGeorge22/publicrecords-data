@@ -36,7 +36,8 @@
   "exclude_note": "Lowercase Etsy shop names never ranked (e.g. Mark's own shops). None known as of 2026-10-08.",
   "tagline": {
     "en": "Your niche next. Live reports in your browser or your AI chat.",
-    "tr": "Sıra senin nişinde. Canlı rapor tarayıcında ya da yapay zekâ sohbetinde."
+    "tr": "Sıra senin nişinde. Canlı rapor tarayıcında ya da yapay zekâ sohbetinde.",
+    "fr": "Votre niche, c'est la prochaine. Rapports en direct dans votre navigateur ou votre chat IA."
   },
   "cta_links": {
     "browser": "/run.html",

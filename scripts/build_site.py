@@ -40,7 +40,7 @@ R = "https://publicrecords-redirect.publicrecords.workers.dev/r/"
 VIEW_BEACON = "https://publicrecords-redirect.publicrecords.workers.dev/e/view"
 def view_js(name):
     pg = re.sub(r"\.html$", "", name).replace("index", "home")
-    return ("<script>(function(){try{var q=new URLSearchParams(location.search),r='';try{r=document.referrer?new URL(document.referrer).hostname:''}catch(e){}"
+    return ("<script>(function(){try{if(window.__epr)return;var q=new URLSearchParams(location.search),r='';try{r=document.referrer?new URL(document.referrer).hostname:''}catch(e){}"
             f"var u='{VIEW_BEACON}?p={pg}'+(r?'&r='+encodeURIComponent(r):'')+'&from='+encodeURIComponent((q.get('utm_content')||q.get('from')||'').slice(0,40))"
             "+(q.get('me')==='1'?'&me=1':'')+(q.get('test')==='1'?'&test=1':'');"
             "fetch(u,{method:'POST',mode:'no-cors',credentials:'omit',keepalive:true,referrerPolicy:'no-referrer'})}catch(e){}})();</script>")
@@ -294,7 +294,15 @@ a{color:var(--link);text-decoration:none}a:hover{text-decoration:underline}
 .brand img{width:30px;height:30px;border-radius:8px}
 .brand:hover{text-decoration:none}
 .top .x{margin-left:auto;font-size:14px;font-weight:600;white-space:nowrap}
-.top .lang{font-size:14px;font-weight:700;white-space:nowrap;color:var(--mut)}.top .lang b{color:var(--ink)}
+.lsel{position:relative;flex:0 0 auto}
+.lsel summary{list-style:none;display:flex;align-items:center;gap:6px;cursor:pointer;font-size:14px;font-weight:700;color:var(--ink);background:var(--chip);border:1px solid var(--line);border-radius:999px;padding:5px 11px;white-space:nowrap;user-select:none}
+.lsel summary::-webkit-details-marker{display:none}.lsel summary::marker{content:""}
+.lsel summary svg{width:16px;height:16px;flex:0 0 auto}.lsel summary .cv{font-size:10px;opacity:.7}
+.lsel[open] summary{border-color:var(--o)}
+.lsel ul{position:absolute;right:0;top:calc(100% + 6px);margin:0;padding:6px;list-style:none;min-width:160px;background:var(--card);border:1px solid var(--line);border-radius:12px;box-shadow:0 12px 32px rgba(0,0,0,.16);z-index:20}
+.lsel li a{display:flex;justify-content:space-between;gap:10px;padding:8px 10px;border-radius:8px;color:var(--ink);font-weight:600;font-size:15px}
+.lsel li a:hover{background:var(--chip);text-decoration:none}.lsel li a[aria-current]{color:var(--o)}.lsel li a[aria-current]::after{content:"✓"}
+.lsel .lc{display:none}@media(max-width:560px){.lsel .ln{display:none}.lsel .lc{display:inline}}
 @media(max-width:420px){.top .x .fw{display:none}}
 .howtr{background:var(--card);border:1px solid var(--line);border-radius:16px;padding:16px}
 .howtr ol{margin:8px 0 10px;padding-left:20px}.howtr li{margin:0 0 8px}.howtr li p{margin:2px 0 0;color:var(--mut);font-size:14.5px}
@@ -445,47 +453,132 @@ TR_PATH = "tr/"
 
 
 def load_tr():
-    return json.load(open(os.path.join(I18N_DIR, "tr.json"), encoding="utf-8"))
+    return load_loc("tr")
 
 
-def lang_switch(cur):
-    if cur == "en":
-        return '<span class="lang" aria-label="Language"><b>EN</b> · <a href="/tr/" hreflang="tr" lang="tr">TR</a></span>'
-    return '<span class="lang" aria-label="Dil"><a href="/" hreflang="en" lang="en">EN</a> · <b>TR</b></span>'
+# LANG-1 (Mark t624u, 2026-10-08): ONE language button (globe + current language) at the top right of every page, no
+# side-by-side "EN · TR" links. Locales are static pages: /, /fr/, /tr/ (home) and /movers/, /fr/movers/, /tr/movers/.
+# Picking a language opens the same page in that language (pages without a translation open that language's home),
+# remembers the choice in localStorage, and only a visitor who picked a language is ever redirected: on entry from
+# another site, never on internal clicks, never for bots/link previews (no stored choice, UA filter).
+LOCALES = [("en", "", "English"), ("fr", "fr/", "Français"), ("tr", "tr/", "Türkçe")]
+LOC_PATH = {k: p for k, p, _ in LOCALES}
+FR_PATH = "fr/"
+TRANSLATED = {"home": "", "movers": "movers/"}   # page key -> path under each locale root
+GLOBE = ('<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" aria-hidden="true"><circle cx="12" cy="12" r="10"/>'
+         '<path d="M2 12h20M12 2a15.3 15.3 0 0 1 4 10 15.3 15.3 0 0 1-4 10 15.3 15.3 0 0 1-4-10 15.3 15.3 0 0 1 4-10z"/></svg>')
 
 
-def hreflang_links():
-    return (f'<link rel="alternate" hreflang="en" href="{SITE_URL}">'
-            f'<link rel="alternate" hreflang="tr" href="{SITE_URL}{TR_PATH}">'
-            f'<link rel="alternate" hreflang="x-default" href="{SITE_URL}">')
+def load_loc(lang):
+    return json.load(open(os.path.join(I18N_DIR, f"{lang}.json"), encoding="utf-8"))
+
+
+def loc_url(lang, key):
+    """Root-relative URL of a translated page in a locale."""
+    return "/" + LOC_PATH[lang] + TRANSLATED[key]
+
+
+def lang_menu(cur, key=None, self_href="/"):
+    """The language button. key = TRANSLATED page key (same page in every language) or None (untranslated English page:
+    the other languages open their home)."""
+    names = {k: nm for k, _, nm in LOCALES}
+    lab = {"en": "Language", "fr": "Langue", "tr": "Dil"}[cur]
+    items = []
+    for lg, _, nm in LOCALES:
+        href = loc_url(lg, key) if key else (self_href if lg == cur else loc_url(lg, "home"))
+        cur_ = ' aria-current="true"' if lg == cur else ""
+        items.append(f'<li><a href="{href}" hreflang="{lg}" lang="{lg}" data-lang="{lg}"{" data-k=1" if key else ""}{cur_}>{nm}</a></li>')
+    return (f'<details class="lsel"><summary aria-label="{lab}: {names[cur]}">{GLOBE}<span class="ln">{names[cur]}</span>'
+            f'<span class="lc">{cur.upper()}</span><span class="cv">▼</span></summary><ul>{"".join(items)}</ul></details>')
+
+
+LANG_JS = ("<script>(function(){var d=document.querySelector('.lsel');if(!d)return;"
+           "d.addEventListener('click',function(e){var a=e.target.closest&&e.target.closest('a[data-lang]');if(!a)return;"
+           "try{localStorage.setItem('ep_lang',a.getAttribute('data-lang'))}catch(x){}"
+           "if(a.hasAttribute('data-k')&&location.hash){a.href=a.href.split('#')[0]+location.hash}});"
+           "document.addEventListener('click',function(e){if(d.open&&!d.contains(e.target))d.open=false});"
+           "document.addEventListener('keydown',function(e){if(e.key==='Escape')d.open=false})})();</script>")
+
+
+def lang_redirect_js(cur, key):
+    """Head script for translated pages: a visitor who picked another language (localStorage) and arrives from outside
+    the site goes to the same page in that language. No stored choice (bots, first visit) = no redirect."""
+    alts = json.dumps({lg: loc_url(lg, key) for lg, _, _ in LOCALES})
+    return ("<script>(function(){try{var p=localStorage.getItem('ep_lang'),c='" + cur + "',m=" + alts + ";"
+            "if(!p||p===c||!m[p]||navigator.webdriver||/bot|crawl|spider|slurp|preview|facebookexternalhit|embedly|whatsapp|telegram|discord|slack/i.test(navigator.userAgent))return;"
+            "var r=document.referrer;if(r&&new URL(r).host===location.host)return;"
+            "window.__epr=1;location.replace(m[p]+location.search+location.hash)}catch(e){}})();</script>")
+
+
+def hreflang_links(key="home"):
+    return "".join(f'<link rel="alternate" hreflang="{lg}" href="{SITE_URL}{p}{TRANSLATED[key]}">' for lg, p, _ in LOCALES) + \
+        f'<link rel="alternate" hreflang="x-default" href="{SITE_URL}{TRANSLATED[key]}">'
+
+
+def n_loc(x, lang="en"):
+    s_ = f"{int(x):,}"
+    return s_.replace(",", ".") if lang == "tr" else (s_.replace(",", "\u00a0") if lang == "fr" else s_)
+
+
+def plus_loc(x, lang="en"):
+    return "+" + n_loc(x, lang)
+
+
+def pct_loc(x, d=0, lang="en"):
+    v = f"{x * 100:.{d}f}"
+    return "%" + v.replace(".", ",") if lang == "tr" else (v.replace(".", ",") + "\u00a0%" if lang == "fr" else v + "%")
+
+
+def dec_loc(x, d=1, lang="en"):
+    return f"{x:.{d}f}".replace(".", ",") if lang in ("tr", "fr") else f"{x:.{d}f}"
+
+
+def date_loc(iso, T):
+    d_ = dt.date.fromisoformat(iso)
+    return f"{d_.day} {T['months'][d_.month - 1]} {d_.year}"
+
+
+def loc_niche(r, T):
+    return T["movers"].get("niche_names", {}).get(r["category"].split(" > ")[-1].strip().lower(), r["niche"])
+
+
+def cat_loc(cat, T):
+    """Category leaf in the page language (config/i18n/<lang>.json movers.niche_names); Etsy's English name otherwise."""
+    if cat == "unknown":
+        return T["unknown_cat"]
+    k = cat.split(" > ")[-1].strip()
+    return T.get("movers", {}).get("niche_names", {}).get(k.lower()) or leaf(cat)
 
 
 def n_tr(x):
-    return f"{int(x):,}".replace(",", ".")
+    return n_loc(x, "tr")
 
 
 def plus_tr(x):
-    return "+" + n_tr(x)
+    return plus_loc(x, "tr")
 
 
 def pct_tr(x, d=0):
-    return "%" + f"{x * 100:.{d}f}".replace(".", ",")
+    return pct_loc(x, d, "tr")
 
 
 def dec_tr(x, d=1):
-    return f"{x:.{d}f}".replace(".", ",")
+    return dec_loc(x, d, "tr")
 
 
 def date_tr(iso, T):
-    d_ = dt.date.fromisoformat(iso)
-    return f"{d_.day} {T['months'][d_.month - 1]} {d_.year}"
+    return date_loc(iso, T)
 
 
 MONEY_RX = re.compile(r"\$[\d][\d,]*(?:\.\d+)?|\d+(?:\.\d+)?\s?¢")
 
 
-def money_tokens(text):
-    return sorted(set(t.replace(" ", "") for t in MONEY_RX.findall(html.unescape(re.sub(r"<[^>]+>", " ", text)))))
+def money_tokens(text, lang="en"):
+    t = html.unescape(re.sub(r"<[^>]+>", " ", text))
+    if lang == "fr":
+        t = re.sub(r"(\d),(\d)", r"\1.\2", t.replace("\u00a0", " "))
+        t = re.sub(r"(\d+(?:\.\d+)?) ?\$", r"$\1", t)
+    return sorted(set(x.replace(" ", "") for x in MONEY_RX.findall(t)))
 
 
 def page(name, title, desc, body, ctx, hero=None, scripts=""):
@@ -498,7 +591,7 @@ def page(name, title, desc, body, ctx, hero=None, scripts=""):
 <title>{E(title)}</title>
 <meta name="description" content="{E(desc)}">
 <link rel="canonical" href="{url}">
-{hreflang_links() if name == "index.html" else ""}
+{(hreflang_links("home") + lang_redirect_js("en", "home")) if name == "index.html" else ""}
 <meta name="theme-color" content="{ORANGE}">
 <link rel="icon" href="assets/favicon.ico" sizes="any"><link rel="icon" type="image/png" sizes="32x32" href="assets/favicon-32.png">
 <link rel="apple-touch-icon" href="assets/apple-touch-icon.png">
@@ -514,7 +607,7 @@ def page(name, title, desc, body, ctx, hero=None, scripts=""):
 <link rel="stylesheet" href="assets/builder.css?v={ctx['cut']}-b1">
 </head><body>
 <header class="top"><div class="wrap"><a class="brand" href="index.html"><img src="assets/logo-96.png" alt="" width="30" height="30">Etsy Pulse</a>
-<a class="x" href="{X_URL}" rel="noopener"><span class="fw">Follow </span>@EtsyPulse</a>{lang_switch("en")}</div></header>
+<a class="x" href="{X_URL}" rel="noopener"><span class="fw">Follow </span>@EtsyPulse</a>{lang_menu("en", "home" if name == "index.html" else None, "/" + ("" if name == "index.html" else name))}</div></header>
 <nav class="tabs" aria-label="Reports"><div class="wrap">{nav}</div></nav>
 {hero or ""}
 <main class="wrap">
@@ -527,6 +620,7 @@ def page(name, title, desc, body, ctx, hero=None, scripts=""):
 <p>Movers cut {E(ctx['cut'])} (counters read through {E(ctx['snap'])}). Not affiliated with, endorsed by, or sponsored by Etsy, Inc.
 Etsy is a trademark of Etsy, Inc.</p>
 </div></footer>
+{LANG_JS}
 {view_js(name)}
 {scripts}
 </body></html>
@@ -1031,35 +1125,52 @@ def tr_niche(r, T):
     return T["movers"].get("niche_names", {}).get(r["category"].split(" > ")[-1].strip(), r["niche"])
 
 
+def follow_html(T):
+    """'Suivre @EtsyPulse' with the verb hidden on narrow phones (like the English 'Follow ')."""
+    f = T["follow"]
+    return (f'<span class="fw">{E(f[:-len("@EtsyPulse")])}</span>@EtsyPulse' if f.endswith("@EtsyPulse") else E(f))
+
+
 def tr_home(ctx, P, D):
-    """/tr/index.html: the Turkish home. Strings from config/i18n/tr.json. EXACT-1: numbers are the exact counter pairs of
-    the newest Daily Movers day (same as the EN home), window stated; nothing from the scaled 7-day panel."""
-    T = load_tr()
+    return loc_home(ctx, P, D, "tr")
+
+
+def loc_home(ctx, P, D, lang):
+    """/<lang>/index.html: a translated home (tr, fr). Strings from config/i18n/<lang>.json. EXACT-1: numbers are the exact
+    counter pairs of the newest Daily Movers day (same as the EN home), window stated; nothing from the scaled 7-day panel.
+    LANG-1: builder links from=<lang>-*, Store links ?t=<lang>, beacon p=<lang>-home."""
+    T = load_loc(lang)
+    L = lang
+    lp = LOC_PATH[lang]
+    n_tr = lambda x: n_loc(x, lang)
+    plus_tr = lambda x: plus_loc(x, lang)
+    pct_tr = lambda x, d=0: pct_loc(x, d, lang)
+    dec_tr = lambda x, d=1: dec_loc(x, d, lang)
     meta = P["meta"]
     cut, snap = ctx["cut"], ctx["snap"]
     a, b, nz, rz = D["movers"][0], D["movers"][1], D["niches"], D["rising"]
-    span = dm_span(D, "tr")
-    day = date_tr(D["day"], T)
-    url = SITE_URL + TR_PATH
+    span = dm_span(D, lang)
+    day = date_loc(D["day"], T)
+    url = SITE_URL + lp
     og = SITE_URL + "og.png?v=" + cut
     title = T["title"].format(date=day)
-    desc = T["desc"].format(date=short_date(D["day"], "tr", T), shop=a["shop_name"], span=span, gain=plus_tr(a["sales_added"]),
-                            niche=tr_niche(nz[0], T) if nz else "", niche_gain=plus_tr(nz[0]["sales_added"]) if nz else "")
+    desc = T["desc"].format(date=short_date(D["day"], lang, T), shop=a["shop_name"], span=span, gain=plus_tr(a["sales_added"]),
+                            niche=loc_niche(nz[0], T) if nz else "", niche_gain=plus_tr(nz[0]["sales_added"]) if nz else "")
     nv = T["nav"]
-    nav = (f'<a href="/tr/" class=on>{nv["home"]}</a><a href="/ai.html?from=tr">{nv["ai"]}</a>'
-           + (f'<a href="/tr/movers/">{T["movers"]["nav"]}</a>' if dm_days() else "")
-           + (f'<a href="/tr/movers/#niches">{T["movers"]["nav_niches"]}</a>' if dm_has_niches() else "")
-           + f'<a href="/{BUILDER}?from=tr-nav">{nv["run"]}</a><a href="/?from=tr#reports">{nv["movers"]}</a>')
+    nav = (f'<a href="/{lp}" class=on>{nv["home"]}</a><a href="/ai.html?from={L}">{nv["ai"]}</a>'
+           + (f'<a href="/{lp}movers/">{T["movers"]["nav"]}</a>' if dm_days() else "")
+           + (f'<a href="/{lp}movers/#niches">{T["movers"]["nav_niches"]}</a>' if dm_has_niches() else "")
+           + f'<a href="/{BUILDER}?from={L}-nav">{nv["run"]}</a><a href="/?from={L}#reports">{nv["movers"]}</a>')
     kpis = ('<div class="kpis">'
             f'<div class="kpi"><div class="v">{plus_tr(a["sales_added"])}</div><div class="l">{T["kpi_top"].format(span=span, shop=E(a["shop_name"]))}</div></div>'
-            + (f'<div class="kpi"><div class="v">{E(tr_niche(nz[0], T))}</div><div class="l">{T["kpi_niche"].format(span=span, gain=plus_tr(nz[0]["sales_added"]), shops=nz[0]["shops"])}</div></div>' if nz else "")
+            + (f'<div class="kpi"><div class="v">{E(loc_niche(nz[0], T))}</div><div class="l">{T["kpi_niche"].format(span=span, gain=plus_tr(nz[0]["sales_added"]), shops=nz[0]["shops"])}</div></div>' if nz else "")
             + f'<div class="kpi"><div class="v">{plus_tr(sum(x["sales_added"] for x in D["movers"]))}</div><div class="l">{T["kpi_top10"].format(span=span, k=len(D["movers"]))}</div></div>'
             + (f'<div class="kpi"><div class="v">{plus_tr(rz[0]["sales_added"])}</div><div class="l">{T["kpi_rising"].format(shop=E(rz[0]["shop_name"]))}</div></div>' if rz else "")
             + "</div>")
     ins = [T["ins_lead"].format(a=E(a["shop_name"]), span=span, a_gain=plus_tr(a["sales_added"]), b=E(b["shop_name"]),
                                 b_gain=plus_tr(b["sales_added"]), x=dec_tr(a["sales_added"] / b["sales_added"]))]
     if nz:
-        ins.append(T["ins_niche"].format(niche=E(tr_niche(nz[0], T)), span=span, gain=plus_tr(nz[0]["sales_added"]), shops=nz[0]["shops"],
+        ins.append(T["ins_niche"].format(niche=E(loc_niche(nz[0], T)), span=span, gain=plus_tr(nz[0]["sales_added"]), shops=nz[0]["shops"],
                                          top=E(nz[0]["top_shop"]), pct=pct_tr(nz[0]["top_shop_added"] / nz[0]["sales_added"])))
     if D["pct"]:
         j = D["pct"][0]
@@ -1068,43 +1179,43 @@ def tr_home(ctx, P, D):
         ins.append(T["ins_small"].format(shop=E(rz[0]["shop_name"]), total=n_tr(rz[0]["sales_total"]), span=span, gain=plus_tr(rz[0]["sales_added"])))
     form = (f'<form class="qform" action="/{BUILDER}" method="get" role="search">'
             f'<input name="q" type="search" placeholder="{E(T["form_placeholder"])}" aria-label="{E(T["form_aria"])}" enterkeyhint="go" autocomplete="off">'
-            f'<input type="hidden" name="from" value="tr-hero"><button type="submit">{E(T["form_button"])}</button></form>'
-            f'<div class="qsub">{E(T["form_sub"])} <a href="{RUN_FALLBACK}?t=tr" rel="noopener">{E(T["form_fallback"])}</a></div>')
+            f'<input type="hidden" name="from" value="{L}-hero"><button type="submit">{E(T["form_button"])}</button></form>'
+            f'<div class="qsub">{E(T["form_sub"])} <a href="{RUN_FALLBACK}?t={L}" rel="noopener">{E(T["form_fallback"])}</a></div>')
     hero = f"""<div class="hero">{PULSE_SVG}<div class="wrap">
 <div class="eyebrow">{E(T['eyebrow'].format(date=day))}</div>
 <h1>{E(T['h1'])}</h1>
 <p class="lede">{E(T['lede'])}</p>
 {form}
-<div class="chips"><span>{E(dm_win(D, "tr", T))}</span><span>{E(T['growth'])}</span></div>
+<div class="chips"><span>{E(dm_win(D, lang, T))}</span><span>{E(T['growth'])}</span></div>
 </div></div>"""
-    how = f"""<section id="nasil"><h2>{T['how_h2']}</h2><p class="sub">{T['how_sub']}</p><div class="howtr">
+    how = f"""<section id="{T.get('how_id', 'how')}"><h2>{T['how_h2']}</h2><p class="sub">{T['how_sub']}</p><div class="howtr">
 <ol><li><b>{T['how_1_t']}</b><p>{T['how_1_p']}</p></li><li><b>{T['how_2_t']}</b><p>{T['how_2_p']}</p></li><li><b>{T['how_3_t']}</b><p>{T['how_3_p']}</p></li></ol>
 <p class="note">{T['how_note']}</p>
-<p><a class="btn" href="/{BUILDER}?from=tr-how">{T['how_btn']}</a></p>
-<p class="note">{T['how_store']} <a href="{R}site-store-search?t=tr">Etsy Search Scraper</a> · <a href="{R}site-store-tracker?t=tr">Etsy Shop Sales Tracker</a></p>
-<p class="note">{T['how_ai']} <a href="/ai.html?from=tr">{T['how_ai_link']}</a></p>
+<p><a class="btn" href="/{BUILDER}?from={L}-how">{T['how_btn']}</a></p>
+<p class="note">{T['how_store']} <a href="{R}site-store-search?t={L}">Etsy Search Scraper</a> · <a href="{R}site-store-tracker?t={L}">Etsy Shop Sales Tracker</a></p>
+<p class="note">{T['how_ai']} <a href="/ai.html?from={L}">{T['how_ai_link']}</a></p>
 </div></section>"""
-    rl = "".join(f'<a href="/{h}?from=tr">{E(t)}</a>' for h, t in T["reports"].items() if h in ctx["pages"])
+    rl = "".join(f'<a href="/{h}?from={L}">{E(t)}</a>' for h, t in T["reports"].items() if h in ctx["pages"])
     cta_ = f"""<section class="cta">
 <h2>{T['cta_h2']}</h2>
 <p>{T['cta_p']}</p>
-<a class="btn" href="/{BUILDER}?type=niche&amp;from=tr-cta">{T['cta_niche']}</a><a class="btn ghost" href="/{BUILDER}?type=rivals&amp;from=tr-cta">{T['cta_rivals']}</a>
+<a class="btn" href="/{BUILDER}?type=niche&amp;from={L}-cta">{T['cta_niche']}</a><a class="btn ghost" href="/{BUILDER}?type=rivals&amp;from={L}-cta">{T['cta_rivals']}</a>
 <div class="disc">{T['price_line']}</div>
 </section>"""
     body = f"""{kpis}
 <section>{insights_block(ins, T['takeaways'])}</section>
-<section><div class="dmwin">{E(dm_win(D, "tr", T))}</div><h2>{T['top10_h2']}</h2><p class="sub">{T['top10_sub']}</p>
-{dm_rows(D["movers"], "sales_added", "tr", T)}</section>
+<section><div class="dmwin">{E(dm_win(D, lang, T))}</div><h2>{T['top10_h2']}</h2><p class="sub">{T['top10_sub']}</p>
+{dm_rows(D["movers"], "sales_added", lang, T)}</section>
 {how}
 <section><h2>{T['reports_h2']}</h2><div class="rlinks">{rl}</div></section>
 {cta_}"""
     return f"""<!doctype html>
-<html lang="tr"><head>
+<html lang="{lang}"><head>
 <meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover">
 <title>{E(title)}</title>
 <meta name="description" content="{E(desc)}">
 <link rel="canonical" href="{url}">
-{hreflang_links()}
+{hreflang_links("home")}{lang_redirect_js(lang, "home")}
 <meta name="theme-color" content="{ORANGE}">
 <link rel="icon" href="/assets/favicon.ico" sizes="any"><link rel="icon" type="image/png" sizes="32x32" href="/assets/favicon-32.png">
 <link rel="apple-touch-icon" href="/assets/apple-touch-icon.png">
@@ -1118,18 +1229,19 @@ def tr_home(ctx, P, D):
 <style>{CSS}{DM_CSS}</style>
 <link rel="stylesheet" href="/assets/builder.css?v={cut}-b1">
 </head><body>
-<header class="top"><div class="wrap"><a class="brand" href="/tr/"><img src="/assets/logo-96.png" alt="" width="30" height="30">Etsy Pulse</a>
-<a class="x" href="{X_URL}" rel="noopener">{E(T['follow'])}</a>{lang_switch("tr")}</div></header>
-<nav class="tabs" aria-label="Raporlar"><div class="wrap">{nav}</div></nav>
+<header class="top"><div class="wrap"><a class="brand" href="/{lp}"><img src="/assets/logo-96.png" alt="" width="30" height="30">Etsy Pulse</a>
+<a class="x" href="{X_URL}" rel="noopener">{follow_html(T)}</a>{lang_menu(lang, "home")}</div></header>
+<nav class="tabs" aria-label="{E(nv.get('aria', 'Reports'))}"><div class="wrap">{nav}</div></nav>
 {hero}
 <main class="wrap">
 {body}
 </main>
 <footer><div class="wrap">
 <p>{T['footer_1']}</p>
-<p>{E(T['footer_2'].format(cut=date_tr(cut, T), snap=day))}</p>
+<p>{E(T['footer_2'].format(cut=date_loc(cut, T), snap=day))}</p>
 </div></footer>
-{view_js("tr-home")}
+{LANG_JS}
+{view_js(lang + "-home")}
 </body></html>
 """
 
@@ -1146,52 +1258,115 @@ TR_COVERAGE = re.compile(r"\d[\d.,]*\s*\+?\s*(?:etsy\s+)?mağaza(?:yı|dan|nın)
 TR_PRICE_OK = re.compile(r"1 anahtar kelime \(ilk 20 ilan\) 13¢'den başlar")
 
 
-def check_tr(out_dir, en_cta_html, D):
-    """TR-1 guards for /tr/index.html (on top of check_public, which already scans tr/ with the English rules)."""
+# French copy rules (LANG-1, Mark t624u). Same bans as the English site, in French: no médiane / moitié du milieu, no
+# "page 1"/"première page", no automatisé/automatique, no temps réel, no per-keyword prices, no "vos données Etsy", no
+# "blocked pages charge nothing", no AI client named (generic "chat IA"), no shop-coverage counts anywhere on the page.
+FR_BANNED = re.compile(r"m[ée]diane?s?\b|moiti[ée]\s+(?:du\s+)?(?:milieu|centrale)|50\s?%\s+(?:du\s+)?(?:milieu|central)|"
+                       r"\bpage\s+1\b|premi[èe]re\s+page|1re\s+page|automatis[ée]e?s?|automatiques?|automatisation|"
+                       r"temps\s+r[ée]el|en\s+direct\s+de\s+vos\s+donn|par\s+mot[- ]cl[ée]\s*(?:[:=]|à)?\s*\d|\d\s*(?:¢|\$)\s*(?:par|/)\s*mot[- ]cl[ée]|"
+                       r"20\s+(?:annonces\s+)?par\s+mot[- ]cl[ée]|vos\s+donn[ée]es\s+etsy|"
+                       r"(?:pages?|recherches?)\s+bloqu[ée]e?s?\s+(?:ne\s+)?(?:co[uû]tent|sont\s+factur)\w*\s+rien|🤖|"
+                       r"\bclaude\b|chatgpt|\bgemini\b|copilot|\bcursor\b|perplexity", re.I)
+FR_COVERAGE = re.compile(r"\d[\d\s\u00a0.,]*\s*\+?\s*boutiques?\s+(?:etsy\s+)?(?:mesur|suivi|lue|lu\b|analys|dans\s+notre)|"
+                         r"notre\s+panel\s+(?:compte|de)\s+[\d\s\u00a0.,]+|[\d\u00a0.,]+\s+boutiques?\s+(?:au|dans\s+le)\s+panel|"
+                         r"mesur[ée]\s+[\d\s\u00a0.,]+\s+(?:sur|boutiques)", re.I)
+FR_PRICE_OK = re.compile(r"À partir de 13 ¢ pour 1 mot-clé \(les 20 premières annonces\)")
+LOC_RULES = {"tr": (TR_BANNED, TR_COVERAGE, TR_PRICE_OK, "1 anahtar kelime (ilk 20 ilan) 13¢'den başlar"),
+             "fr": (FR_BANNED, FR_COVERAGE, FR_PRICE_OK, "À partir de 13 ¢ pour 1 mot-clé (les 20 premières annonces)")}
+LANG_SWITCH_OLD = re.compile(r'class="lang"|>EN</a>\s*·|<b>EN</b>\s*·|·\s*<b>TR</b>|·\s*<a[^>]*>TR</a>')
+
+
+def loc_copy_bad(rel, vt, metas, lang):
+    """Locale copy rules on one page's visible text + metas."""
+    BAN, COV, _, _ = LOC_RULES[lang]
+    return ([f"{rel}: banned {lang} copy '{mt.group(0)}'" for mt in BAN.finditer(vt + " " + metas)] +
+            [f"{rel}: shop-coverage count '{mt.group(0)}' (no coverage counts)" for mt in COV.finditer(vt + " " + metas)])
+
+
+def check_loc(out_dir, en_cta_html, D, lang):
+    """TR-1 / LANG-1 guards for /<lang>/index.html (on top of check_public, which scans every page with the English rules)."""
+    BAN, COV, OK, ok_txt = LOC_RULES[lang]
+    T = load_loc(lang)
     bad = []
-    p = os.path.join(out_dir, "tr", "index.html")
+    rel = os.path.join(LOC_PATH[lang], "index.html")
+    p = os.path.join(out_dir, rel)
     if not os.path.exists(p):
-        raise SystemExit("tr check failed: tr/index.html missing")
+        raise SystemExit(f"{lang} check failed: {rel} missing")
     raw = open(p, encoding="utf-8").read()
     vt = visible_text(raw)
     metas = " ".join(html.unescape(x) for x in DESC_RX.findall(raw))
-    if '<html lang="tr">' not in raw:
-        bad.append('tr/index.html: missing <html lang="tr">')
-    if f'<link rel="canonical" href="{SITE_URL}{TR_PATH}">' not in raw:
-        bad.append("tr/index.html: canonical must be " + SITE_URL + TR_PATH)
-    for f_ in (p, os.path.join(out_dir, "index.html")):
-        h_ = open(f_, encoding="utf-8").read()
-        if hreflang_links() not in h_:
-            bad.append(f"{os.path.relpath(f_, out_dir)}: hreflang en/tr/x-default links missing")
-    en_home = open(os.path.join(out_dir, "index.html"), encoding="utf-8").read()
-    if 'href="/tr/" hreflang="tr"' not in en_home:
-        bad.append("index.html: EN · TR switch missing")
-    nb = raw.count(VIEW_BEACON + "?p=tr-home")
+    if f'<html lang="{lang}">' not in raw:
+        bad.append(f'{rel}: missing <html lang="{lang}">')
+    if f'<link rel="canonical" href="{SITE_URL}{LOC_PATH[lang]}">' not in raw:
+        bad.append(f"{rel}: canonical must be " + SITE_URL + LOC_PATH[lang])
+    nb = raw.count(VIEW_BEACON + f"?p={lang}-home")
     if nb != 1 or raw.count(VIEW_BEACON + "?p=") != 1 or "credentials:'omit'" not in raw:
-        bad.append("tr/index.html: needs exactly one cookieless page-view beacon p=tr-home")
-    for mt in TR_BANNED.finditer(vt + " " + metas):
-        bad.append(f"tr/index.html: banned Turkish copy '{mt.group(0)}'")
-    for mt in TR_COVERAGE.finditer(vt + " " + metas):
-        bad.append(f"tr/index.html: shop-coverage count '{mt.group(0)}' (no coverage counts on /tr/)")
+        bad.append(f"{rel}: needs exactly one cookieless page-view beacon p={lang}-home")
+    for frm in ("hero", "how", "cta", "nav"):
+        if f"{lang}-{frm}" not in raw:
+            bad.append(f"{rel}: builder link tag from={lang}-{frm} missing")
+    if f"site-store-search?t={lang}" not in raw:
+        bad.append(f"{rel}: Store links must carry ?t={lang}")
+    bad += loc_copy_bad(rel, vt, metas, lang)
     if COVERAGE_DESC.search(metas):
-        bad.append("tr/index.html: shop-coverage count in a meta description/title (DAILY-1)")
-    for mt in BANNED_PRICE.finditer(TR_PRICE_OK.sub(" ", PRICE_OK.sub(" ", vt))):
-        bad.append(f"tr/index.html: stale price line '{mt.group(0)}' (PRICE-1)")
+        bad.append(f"{rel}: shop-coverage count in a meta description/title (DAILY-1)")
+    for mt in BANNED_PRICE.finditer(OK.sub(" ", PRICE_OK.sub(" ", vt))):
+        bad.append(f"{rel}: stale price line '{mt.group(0)}' (PRICE-1)")
     # price line: identical $/¢ amounts to the English home CTA price line (the default buyer path)
     dm = re.search(r'<div class="disc">(.*?)</div>', raw, re.S)
     em = re.search(r'<div class="disc">(.*?)</div>', en_cta_html, re.S)
-    if not dm or not em or money_tokens(dm.group(1)) != money_tokens(em.group(1)):
-        bad.append(f"tr/index.html: price line amounts {money_tokens(dm.group(1)) if dm else None} != EN home CTA "
-                   f"{money_tokens(em.group(1)) if em else None} (update config/i18n/tr.json price_line)")
-    if not TR_PRICE_OK.search(vt) and "13¢" in (em.group(1) if em else ""):
-        bad.append("tr/index.html: the 13¢ line must keep its scope: '1 anahtar kelime (ilk 20 ilan) 13¢'den başlar'")
-    # today's numbers: #1 shop and its exact sales added (EXACT-1)
+    if not dm or not em or money_tokens(dm.group(1), lang) != money_tokens(em.group(1)):
+        bad.append(f"{rel}: price line amounts {money_tokens(dm.group(1), lang) if dm else None} != EN home CTA "
+                   f"{money_tokens(em.group(1)) if em else None} (update config/i18n/{lang}.json price_line)")
+    if not OK.search(vt) and "13¢" in (em.group(1) if em else ""):
+        bad.append(f"{rel}: the 13¢ line must keep its scope: '{ok_txt}'")
     top = D["movers"][0]
-    if E(top["shop_name"]) not in raw or plus_tr(top["sales_added"]) not in vt:
-        bad.append("tr/index.html: today's #1 shop / gain missing")
+    if E(top["shop_name"]) not in raw or plus_loc(top["sales_added"], lang) not in vt:
+        bad.append(f"{rel}: today's #1 shop / gain missing")
     if bad:
-        raise SystemExit("tr check failed:\n  " + "\n  ".join(bad))
-    print("tr check ok: lang=tr, hreflang, beacon tr-home, Turkish bans, price amounts = EN", money_tokens(dm.group(1)))
+        raise SystemExit(f"{lang} check failed:\n  " + "\n  ".join(bad))
+    print(f"{lang} check ok: lang={lang}, beacon {lang}-home, {lang} bans, price amounts = EN", money_tokens(dm.group(1), lang))
+
+
+def check_tr(out_dir, en_cta_html, D):
+    check_loc(out_dir, en_cta_html, D, "tr")
+
+
+def check_lang(out_dir):
+    """LANG-1 (Mark t624u): every public page has ONE language button (no inline 'EN · TR' links); translated pages carry
+    hreflang en/fr/tr + x-default and the remember-choice redirect; untranslated pages none of the alternates."""
+    bad, n_ = [], 0
+    for root, _, fs in os.walk(out_dir):
+        for f in fs:
+            if not f.endswith(".html"):
+                continue
+            p = os.path.join(root, f)
+            rel = os.path.relpath(p, out_dir).replace(os.sep, "/")
+            raw = open(p, encoding="utf-8").read()
+            if 'http-equiv="refresh"' in raw:
+                continue
+            n_ += 1
+            if raw.count('<details class="lsel">') != 1:
+                bad.append(f"{rel}: needs exactly one language button")
+            if LANG_SWITCH_OLD.search(raw):
+                bad.append(f"{rel}: old inline EN · TR language links are back")
+            for lg, _, nm in LOCALES:
+                if f'data-lang="{lg}"' not in raw:
+                    bad.append(f"{rel}: language button misses {nm}")
+            key = next((k for k, sub in TRANSLATED.items() for lg, lp, _ in LOCALES if rel == lp + sub + "index.html"), None)
+            if key:
+                if hreflang_links(key) not in raw:
+                    bad.append(f"{rel}: hreflang en/fr/tr/x-default missing")
+                if "localStorage.getItem('ep_lang')" not in raw:
+                    bad.append(f"{rel}: remember-choice script missing")
+                for lg, _, _ in LOCALES:
+                    if f'href="{loc_url(lg, key)}" hreflang="{lg}"' not in raw:
+                        bad.append(f"{rel}: language button must open {loc_url(lg, key)}")
+            elif 'hreflang="x-default"' in raw:
+                bad.append(f"{rel}: hreflang alternates on a page without translations")
+    if bad:
+        raise SystemExit("lang check failed:\n  " + "\n  ".join(bad))
+    print(f"lang check ok: {n_} pages with one language button, hreflang en/fr/tr/x-default on translated pages")
 
 
 # ---------------------------------------------------------------- EXACT-1 guard
@@ -1199,9 +1374,11 @@ def check_tr(out_dir, en_cta_html, D):
 # 7-day panel rollup (data/panel/<cut>/) is ~99% scaled up from shorter reads, so none of its sales figures, its 7-day/
 # "this week" wording, or its CSVs may appear on the site. Exact figures come from data/daily-movers/ (counter pairs).
 SCALED_WORDS = re.compile(r"\b7[- ]day\b|\b7 days\b|\bseven days\b|\bthis week\b|\bin a week\b|\bweek vs lifetime\b|\bweek to\b|"
-                          r"\bweek-on-week\b|\bscaled (?:to|up)\b|\b7 günde\b|\b7 günlük\b|\bbu hafta|\bhaftanın\b|\btek haftada\b|\bson 7 gün", re.I)
+                          r"\bweek-on-week\b|\bscaled (?:to|up)\b|\b7 günde\b|\b7 günlük\b|\bbu hafta|\bhaftanın\b|\btek haftada\b|\bson 7 gün|"
+                          r"\b7 jours\b|\bsept jours\b|\bcette semaine\b|\bde la semaine\b|\ben une (?:seule )?semaine\b|\bsur une semaine\b|"
+                          r"\bhebdomadaire|\bextrapol[ée]e?s? (?:à|sur)", re.I)
 SCALED_COLS = ("sales_7d_delta", "total_7d_delta", "median_7d_delta", "top_shop_7d_delta")
-SALES_NUM = re.compile(r"\+\s?(\d{1,3}(?:[.,]\d{3})+|\d+)(?![.,]?\d|\s?%)|\b(\d{1,3}(?:[.,]\d{3})+|\d+)\s+(?:sales|satış)", re.I)
+SALES_NUM = re.compile(r"\+\s?(\d{1,3}(?:[.,\u00a0\u202f]\d{3})+|\d+)(?![.,\u00a0\u202f]?\d|\s?%)|\b(\d{1,3}(?:[.,\u00a0\u202f]\d{3})+|\d+)\s+(?:sales|satış|ventes)", re.I)
 
 
 def scaled_figures():
@@ -1251,7 +1428,7 @@ def check_exact(out_dir, D):
             for mt in SCALED_WORDS.finditer(txt):
                 bad.append(f"{rel}: scaled-data wording '{mt.group(0)}'")
             for mt in SALES_NUM.finditer(txt):
-                v = int(re.sub(r"[.,]", "", mt.group(1) or mt.group(2)))
+                v = int(re.sub(r"[.,\u00a0\u202f]", "", mt.group(1) or mt.group(2)))
                 if v in sc:
                     bad.append(f"{rel}: sales figure {mt.group(0).strip()} comes from the scaled 7-day panel")
     if bad:
@@ -1329,7 +1506,7 @@ def check_public(out_dir, meta=None):
                 vt = visible_text(open(p, encoding="utf-8").read())
                 for mt in BANNED.finditer(vt):
                     bad.append(f"{rel}: banned word '{mt.group(0)}'")
-                for mt in BANNED_PRICE.finditer(TR_PRICE_OK.sub(" ", PRICE_OK.sub(" ", vt))):
+                for mt in BANNED_PRICE.finditer(FR_PRICE_OK.sub(" ", TR_PRICE_OK.sub(" ", PRICE_OK.sub(" ", vt)))):
                     bad.append(f"{rel}: stale price line '{mt.group(0)}' (PRICE-1)")
                 for mt in STALE_PRICE.finditer(vt):
                     bad.append(f"{rel}: stale/false price or banned copy '{mt.group(0)}' (PRICE-2)")
@@ -1477,14 +1654,16 @@ def dm_load(day):
 def dm_win(D, lang="en", T=None):
     """EXACT-1: the real window of the shop lists, e.g. 'Sales added in 2 days, Oct 5 → Oct 7'."""
     w, frm, day = int(D["meta"]["window_days"]), D["meta"]["from_date"], D["day"]
-    if lang == "tr":
+    if lang != "en":
         M = T["movers"]
-        return (M["win_1"] if w == 1 else M["win_n"]).format(n=w, frm=short_date(frm, "tr", T), to=short_date(day, "tr", T))
+        return (M["win_1"] if w == 1 else M["win_n"]).format(n=w, frm=short_date(frm, lang, T), to=short_date(day, lang, T))
     return f"Sales added in {'24 hours' if w == 1 else f'{w} days'}, {short_date(frm)} → {short_date(day)}"
 
 
 def dm_span(D, lang="en"):
     w = int(D["meta"]["window_days"])
+    if lang == "fr":
+        return "en 24 heures" if w == 1 else f"en {w} jours"
     return ("24 saatte" if w == 1 else f"{w} günde") if lang == "tr" else ("in 24 hours" if w == 1 else f"in {w} days")
 
 
@@ -1495,37 +1674,39 @@ def dm_has_niches():
 
 def short_date(iso, lang="en", T=None):
     d_ = dt.date.fromisoformat(iso)
-    return f"{d_.day} {T['months'][d_.month - 1]}" if lang == "tr" else d_.strftime("%b %-d")
+    if lang == "en":
+        return d_.strftime("%b %-d")
+    return f"{d_.day} {(T.get('months_short') or T['months'])[d_.month - 1]}"
 
 
 def dm_rows(rows, key, lang="en", T=None):
     L = (T or {}).get("movers", {})
-    num = n_tr if lang == "tr" else n
-    pl = plus_tr if lang == "tr" else plus
+    num = lambda x: n_loc(x, lang)
+    pl = lambda x: plus_loc(x, lang)
     if key == "sales_added":
-        hd_last = L.get("col_added", "Sales added") if lang == "tr" else "Sales added"
+        hd_last = L.get("col_added", "Sales added") if lang != "en" else "Sales added"
     else:
-        hd_last = L.get("col_pct", "Growth") if lang == "tr" else "Growth"
-    cols_ = (L.get("cols") if lang == "tr" else None) or ["#", "Shop", "Category", "Total sales", "Before", "Size vs #1"]
+        hd_last = L.get("col_pct", "Growth") if lang != "en" else "Growth"
+    cols_ = (L.get("cols") if lang != "en" else None) or ["#", "Shop", "Category", "Total sales", "Before", "Size vs #1"]
     if key != "sales_added":
-        cols_ = cols_[:4] + [L.get("col_added", "Sales added") if lang == "tr" else "Sales added"] + cols_[5:]
+        cols_ = cols_[:4] + [L.get("col_added", "Sales added") if lang != "en" else "Sales added"] + cols_[5:]
     hd = (f'<div class="hd" role="row"><span>{cols_[0]}</span><span>{cols_[1]}</span><span>{cols_[2]}</span>'
           f'<span class="r">{cols_[3]}</span><span class="r">{cols_[4]}</span><span>{cols_[5]}</span><span class="r">{hd_last}</span></div>')
     maxv = rows[0][key] if rows else 1
     out = [hd]
     for r in rows:
         w = max(2, round(100 * r[key] / maxv)) if maxv else 0
-        cat = leaf(r["category"]) if r["category"] else ""
+        cat = ((cat_loc(r["category"], T) if lang != "en" else leaf(r["category"])) if r["category"] else "")
         chip = f'<span class="c" title="{E(r["category"])}">{E(cat)}</span>' if cat else "<span></span>"
         big = pl(r["sales_added"]) if key == "sales_added" else (
-            ("%" + dec_tr(r["pct_added"], 1)) if lang == "tr" else f"+{r['pct_added']:.1f}%")
+            ("%" + dec_tr(r["pct_added"], 1)) if lang == "tr" else ("+" + dec_loc(r["pct_added"], 1, lang) + "\u00a0%" if lang == "fr" else f"+{r['pct_added']:.1f}%"))
         out.append(
             f'<div class="{"row top3" if r["rank"] <= 3 else "row"}" role="row"><span class="rk">{r["rank"]}</span>'
             f'<a class="nm" href="{E(r["shop_url"])}" rel="nofollow noopener">{E(r["shop_name"])}</a>'
             f'<span class="meta">{chip}'
-            f'<span><b>{num(r["sales_total"])}</b><em> {L.get("row_total", "total sales") if lang == "tr" else "total sales"}</em></span>'
-            + (f'<span><em>{L.get("row_before", "was ") if lang == "tr" else "was "}</em><b>{num(r["sales_before"])}</b></span></span>' if key == "sales_added"
-               else f'<span><b>{pl(r["sales_added"])}</b><em> {L.get("row_sales", "sales") if lang == "tr" else "sales added"}</em></span></span>')
+            f'<span><b>{num(r["sales_total"])}</b><em> {L.get("row_total", "total sales") if lang != "en" else "total sales"}</em></span>'
+            + (f'<span><em>{L.get("row_before", "was ") if lang != "en" else "was "}</em><b>{num(r["sales_before"])}</b></span></span>' if key == "sales_added"
+               else f'<span><b>{pl(r["sales_added"])}</b><em> {L.get("row_sales", "sales") if lang != "en" else "sales added"}</em></span></span>')
             + f'<span class="bar"><i style="width:{w}%"></i></span><span class="big">{big}</span></div>')
     cols = "34px minmax(150px,1.3fr) minmax(120px,1fr) 110px 150px minmax(80px,.8fr) 100px"
     return f'<div class="tc" role="table" style="--cols:{cols}">{"".join(out)}</div>'
@@ -1534,9 +1715,9 @@ def dm_rows(rows, key, lang="en", T=None):
 def dm_niche_rows(rows, lang="en", T=None):
     """NICHES (Mark t620u): top niches by sales added. Columns: #, niche, department, shops behind it, top shop, bar, sales added."""
     L = (T or {}).get("movers", {})
-    tr = lang == "tr"
-    num = n_tr if tr else n
-    pl = plus_tr if tr else plus
+    tr = lang != "en"
+    num = lambda x: n_loc(x, lang)
+    pl = lambda x: plus_loc(x, lang)
     cols_ = L.get("niche_cols") if tr else ["#", "Niche", "Department", "Shops", "Top shop", "Size vs #1", "Sales added"]
     nm_tr, dp_tr = L.get("niche_names", {}), L.get("dept_names", {})
     hd = (f'<div class="hd" role="row"><span>{cols_[0]}</span><span>{cols_[1]}</span><span>{cols_[2]}</span>'
@@ -1576,7 +1757,7 @@ DM_CSS = """.tagline{background:linear-gradient(135deg,#FD5E02,#ff8a3d);color:#f
 def dm_tagline(lang, T, price_disc, src):
     C = movers_cfg()
     L = cta_l = C["cta_links"]
-    if lang == "tr":
+    if lang != "en":
         M = T["movers"]
         p, b1, b2 = M["tag_p"], M["tag_btn_browser"], M["tag_btn_ai"]
     else:
@@ -1591,26 +1772,27 @@ def dm_tagline(lang, T, price_disc, src):
 
 
 def dm_page(out_dir, D, days, ctx, lang="en", archive=False):
-    """One movers page. lang en: /movers/ (latest) or /movers/<day>/ (archive); lang tr: /tr/movers/ (latest)."""
-    T = load_tr()
+    """One movers page. lang en: /movers/ (latest) or /movers/<day>/ (archive); lang tr/fr: /<lang>/movers/ (latest)."""
+    T = load_loc(lang if lang != "en" else "tr")
     M = T["movers"]
     day, meta = D["day"], D["meta"]
     w, frm = int(meta["window_days"]), meta["from_date"]
     top = D["movers"][0]
-    tr = lang == "tr"
-    path = (f"{TR_PATH}movers/" if tr else (f"movers/{day}/" if archive else "movers/"))
+    tr = lang != "en"   # any translated locale (tr, fr)
+    pl = lambda x: plus_loc(x, lang)
+    path = (f"{LOC_PATH[lang]}movers/" if tr else (f"movers/{day}/" if archive else "movers/"))
     url = SITE_URL + path
     sd = short_date(day, lang, T)
     if tr:
         title = M["title"].format(date=sd)
         h1 = M["h1"].format(date=sd)
-        win = (M["win_1"] if w == 1 else M["win_n"]).format(n=w, frm=short_date(frm, "tr", T), to=sd)
+        win = (M["win_1"] if w == 1 else M["win_n"]).format(n=w, frm=short_date(frm, lang, T), to=sd)
         lede = M["lede"]
-        desc = M["desc"].format(shop=top["shop_name"], gain=plus_tr(top["sales_added"]), win=win)
-        h2a, suba, h2b, subb = M["h2_added"], M["sub_added"], M["h2_pct"], M["sub_pct"].format(min=n_tr(meta.get("pct_min_base_sales") or 1000))
+        desc = M["desc"].format(shop=top["shop_name"], gain=pl(top["sales_added"]), win=(win[:1].lower() + win[1:]) if lang == "fr" else win)
+        h2a, suba, h2b, subb = M["h2_added"], M["sub_added"], M["h2_pct"], M["sub_pct"].format(min=n_loc(meta.get("pct_min_base_sales") or 1000, lang))
         price = T["price_line"]
         eyebrow = M["eyebrow"]
-        method = M["method"].format(n=w)
+        method = (M.get("method_1") if w == 1 and M.get("method_1") else M["method"]).format(n=w)
     else:
         title = f"Etsy's biggest movers, {sd}" + (f" {day[:4]}" if archive else "") + " | Etsy Pulse"
         h1 = f"Etsy's biggest movers, {sd}"
@@ -1626,19 +1808,18 @@ def dm_page(out_dir, D, days, ctx, lang="en", archive=False):
                   f"{'one day' if w == 1 else f'{w} days'} earlier, both read on those exact dates. Nothing is scaled or estimated. "
                   "Shops we didn't read on both dates, rounded counters, counters that went down and implausible jumps are left out. "
                   "These are the biggest movers among the shops we read, not all of Etsy.")
-    beacon = "tr-movers" if tr else ("movers-day" if archive else "movers-daily")
+    beacon = f"{lang}-movers" if tr else ("movers-day" if archive else "movers-daily")
     if tr:
-        nav = (f'<a href="/tr/">{T["nav"]["home"]}</a><a href="/ai.html?from=tr-movers">{T["nav"]["ai"]}</a>'
-               f'<a href="/tr/movers/" class=on>{M["nav"]}</a>'
-               + (f'<a href="/tr/movers/#niches">{M["nav_niches"]}</a>' if D.get("niches") else "")
-               + f'<a href="/{BUILDER}?from=tr-movers-nav">{T["nav"]["run"]}</a>')
-        lsw = lang_switch_to("tr", "/movers/", "/tr/movers/")
+        lp = LOC_PATH[lang]
+        nav = (f'<a href="/{lp}">{T["nav"]["home"]}</a><a href="/ai.html?from={lang}-movers">{T["nav"]["ai"]}</a>'
+               f'<a href="/{lp}movers/" class=on>{M["nav"]}</a>'
+               + (f'<a href="/{lp}movers/#niches">{M["nav_niches"]}</a>' if D.get("niches") else "")
+               + f'<a href="/{BUILDER}?from={lang}-movers-nav">{T["nav"]["run"]}</a>')
     else:
         nav = "".join(f'<a href="/{"" if h == "index.html" else h}"{" class=on" if h == "movers/" else ""}>{t}</a>' for h, t in nav_items(ctx))
-        lsw = lang_switch_to("en", "/movers/", "/tr/movers/")
-    alt = (f'<link rel="alternate" hreflang="en" href="{SITE_URL}movers/">'
-           f'<link rel="alternate" hreflang="tr" href="{SITE_URL}{TR_PATH}movers/">'
-           f'<link rel="alternate" hreflang="x-default" href="{SITE_URL}movers/">') if not archive else ""
+    # LANG-1: archive days are English only; their language button opens today's list in each language
+    lsw = lang_menu(lang, "movers")
+    alt = (hreflang_links("movers") + lang_redirect_js(lang, "movers")) if not archive else ""
     arch = ""
     past = [x for x in reversed(days) if x != day][:30]
     if not tr and past:
@@ -1652,8 +1833,8 @@ def dm_page(out_dir, D, days, ctx, lang="en", archive=False):
         nw, nfrm = int(meta["niche_window_days"]), meta["niche_from_date"]
         mins, share = meta.get("niche_min_shops") or NC.get("min_shops", 10), round(100 * (meta.get("niche_max_top_shop_share") or NC.get("max_top_shop_share", 0.5)))
         if tr:
-            nwin = (M["win_1"] if nw == 1 else M["win_n"]).format(n=nw, frm=short_date(nfrm, "tr", T), to=sd)
-            nh2, nsub, jl = M["h2_niches"], M["sub_niches"].format(n=nw, min=mins, share=share), M["niche_jump"]
+            nwin = (M["win_1"] if nw == 1 else M["win_n"]).format(n=nw, frm=short_date(nfrm, lang, T), to=sd)
+            nh2, nsub, jl = M["h2_niches"], (M.get("sub_niches_1") if nw == 1 and M.get("sub_niches_1") else M["sub_niches"]).format(n=nw, min=mins, share=share), M["niche_jump"]
         else:
             nwin = (f"Sales added in 24 hours, {short_date(nfrm)} → {sd}" if nw == 1 else f"Sales added in {nw} days, {short_date(nfrm)} → {sd}")
             nh2, jl = "Fastest-growing niches", "Fastest-growing niches ↓"
@@ -1676,7 +1857,7 @@ def dm_page(out_dir, D, days, ctx, lang="en", archive=False):
 {pct_sec}
 {arch}
 <section class="method"><h3>{M["method_h"] if tr else "How we count"}</h3><p>{E(method)}</p></section>"""
-    foot = (f'<p>{T["footer_1"]}</p><p>{E(T["footer_2"].format(cut=date_tr(ctx["cut"], T), snap=date_tr(day, T)))}</p>' if tr else
+    foot = (f'<p>{T["footer_1"]}</p><p>{E(T["footer_2"].format(cut=date_loc(ctx["cut"], T), snap=date_loc(day, T)))}</p>' if tr else
             '<p><b>Etsy Pulse</b> is published by publicrecords, and the data comes from our own tools: the publicrecords Etsy Shop Sales Tracker panel '
             '(public shop sales counters). We built them and we sell them, so weigh the links accordingly.</p>'
             f'<p>Counters read through {E(nice_date(day))}. Not affiliated with, endorsed by, or sponsored by Etsy, Inc. Etsy is a trademark of Etsy, Inc.</p>')
@@ -1704,15 +1885,16 @@ def dm_page(out_dir, D, days, ctx, lang="en", archive=False):
 <style>{CSS}{DM_CSS}</style>
 <link rel="stylesheet" href="/assets/builder.css?v={ctx['cut']}-b1">
 </head><body>
-<header class="top"><div class="wrap"><a class="brand" href="{'/tr/' if tr else '/'}"><img src="/assets/logo-96.png" alt="" width="30" height="30">Etsy Pulse</a>
-<a class="x" href="{X_URL}" rel="noopener">{E(T['follow']) if tr else '<span class="fw">Follow </span>@EtsyPulse'}</a>{lsw}</div></header>
-<nav class="tabs" aria-label="Reports"><div class="wrap">{nav}</div></nav>
+<header class="top"><div class="wrap"><a class="brand" href="/{LOC_PATH[lang]}"><img src="/assets/logo-96.png" alt="" width="30" height="30">Etsy Pulse</a>
+<a class="x" href="{X_URL}" rel="noopener">{follow_html(T) if tr else '<span class="fw">Follow </span>@EtsyPulse'}</a>{lsw}</div></header>
+<nav class="tabs" aria-label="{E(T["nav"].get("aria", "Reports")) if tr else "Reports"}"><div class="wrap">{nav}</div></nav>
 <div class="hero">{PULSE_SVG}<div class="wrap" style="padding-bottom:30px"><div class="eyebrow">{E(eyebrow)}</div>
 <h1>{E(h1)}</h1><p class="lede">{E(lede)}</p></div></div>
 <main class="wrap">
 {body}
 </main>
 <footer><div class="wrap">{foot}</div></footer>
+{LANG_JS}
 {view_js(beacon)}
 </body></html>
 """
@@ -1720,12 +1902,6 @@ def dm_page(out_dir, D, days, ctx, lang="en", archive=False):
     os.makedirs(p, exist_ok=True)
     open(os.path.join(p, "index.html"), "w", encoding="utf-8").write(html_)
     return path
-
-
-def lang_switch_to(cur, en_href, tr_href):
-    if cur == "en":
-        return f'<span class="lang" aria-label="Language"><b>EN</b> · <a href="{tr_href}" hreflang="tr" lang="tr">TR</a></span>'
-    return f'<span class="lang" aria-label="Dil"><a href="{en_href}" hreflang="en" lang="en">EN</a> · <b>TR</b></span>'
 
 
 def build_daily_movers(out_dir, ctx):
@@ -1738,6 +1914,7 @@ def build_daily_movers(out_dir, ctx):
     D = dm_load(days[-1])
     paths.insert(0, dm_page(out_dir, D, days, ctx, "en"))
     paths.insert(1, dm_page(out_dir, D, days, ctx, "tr"))
+    paths.insert(2, dm_page(out_dir, D, days, ctx, "fr"))
     # public CSVs (top 10 each, dated + latest)
     for k in ("movers", "pct", "niches", "rising"):
         rows_ = D[k]
@@ -1753,7 +1930,7 @@ def check_movers(out_dir, en_cta_html):
         return
     C = movers_cfg()
     bad = []
-    ok_desc = _re.compile(r"\d[\d,.]*\s+(?:etsy\s+)?shops\b|shops (?:tracked|measured|read)|in our panel|mağaza", _re.I)
+    ok_desc = _re.compile(r"\d[\d,.]*\s+(?:etsy\s+)?shops\b|shops (?:tracked|measured|read)|in our panel|mağaza|\d[\d\s\u00a0,.]*\s+boutiques", _re.I)
     for root, _, fs in os.walk(out_dir):
         for f in fs:
             p = os.path.join(root, f)
@@ -1761,10 +1938,11 @@ def check_movers(out_dir, en_cta_html):
             if f != "index.html" or "movers" not in rel:
                 continue
             raw = open(p, encoding="utf-8").read()
-            tr = rel.startswith("tr" + os.sep)
+            lg = next((k for k, lp, _ in LOCALES if lp and rel.startswith(lp.rstrip("/") + os.sep)), "en")
+            tr = lg != "en"
             if raw.count(VIEW_BEACON + "?p=") != 1 or "credentials:'omit'" not in raw:
                 bad.append(f"{rel}: needs exactly one cookieless page-view beacon")
-            tag = C["tagline"]["tr" if tr else "en"]
+            tag = C["tagline"][lg]
             if E(tag) not in raw:
                 bad.append(f"{rel}: CTA tagline from config/movers.json missing")
             for k in ("browser", "claude"):
@@ -1778,17 +1956,14 @@ def check_movers(out_dir, en_cta_html):
             if _re.search(r"\b\d[\d,.]*\s+(?:measured\s+|tracked\s+)?shops\b(?!\s+(?:that|with))", vt, _re.I) and not tr:
                 bad.append(f"{rel}: shop-coverage count in visible text")
             if tr:
-                for mt in TR_BANNED.finditer(vt):
-                    bad.append(f"{rel}: banned Turkish copy '{mt.group(0)}'")
-                for mt in TR_COVERAGE.finditer(vt):
-                    bad.append(f"{rel}: Turkish coverage count '{mt.group(0)}'")
+                bad += loc_copy_bad(rel, vt, " ".join(html.unescape(x) for x in DESC_RX.findall(raw)), lg)
             dm = _re.search(r'<div class="disc">(.*?)</div>', raw, _re.S)
             em = _re.search(r'<div class="disc">(.*?)</div>', en_cta_html, _re.S)
-            if not dm or money_tokens(dm.group(1)) != money_tokens(em.group(1)):
+            if not dm or money_tokens(dm.group(1), lg) != money_tokens(em.group(1)):
                 bad.append(f"{rel}: price line amounts differ from the EN home CTA")
             if not f'<link rel="canonical" href="{SITE_URL}' in raw:
                 bad.append(f"{rel}: canonical missing")
-    for need in ("movers/index.html", os.path.join("tr", "movers", "index.html")):
+    for need in ("movers/index.html", os.path.join("tr", "movers", "index.html"), os.path.join("fr", "movers", "index.html")):
         if not os.path.exists(os.path.join(out_dir, need)):
             bad.append(f"{need} missing")
         elif dm_load(dm_days()[-1])["niches"]:
@@ -2040,6 +2215,9 @@ These are not all of Etsy: they are the shops and niches we read.</p>
     # ---- TR-1: Turkish home
     os.makedirs(os.path.join(out_dir, "tr"), exist_ok=True)
     w(os.path.join("tr", "index.html"), tr_home(ctx, P, D))
+    # ---- LANG-1: French home
+    os.makedirs(os.path.join(out_dir, "fr"), exist_ok=True)
+    w(os.path.join("fr", "index.html"), loc_home(ctx, P, D, "fr"))
 
     # ---- DAILY MOVERS (t613u)
     dm_paths = build_daily_movers(out_dir, ctx)
@@ -2052,12 +2230,13 @@ These are not all of Etsy: they are the shops and niches we read.</p>
         for p in pages:
             fh.write(f"  <url><loc>{SITE_URL}{'' if p == 'index.html' else p}</loc><lastmod>{snap}</lastmod></url>\n")
         fh.write(f"  <url><loc>{SITE_URL}{TR_PATH}</loc><lastmod>{snap}</lastmod></url>\n")
+        fh.write(f"  <url><loc>{SITE_URL}{FR_PATH}</loc><lastmod>{snap}</lastmod></url>\n")
         for p in dm_paths:
             if p != "movers/":
                 fh.write(f"  <url><loc>{SITE_URL}{p}</loc><lastmod>{p.strip('/').split('/')[-1] if p[-11:-1].count('-') == 2 else dm_days()[-1]}</lastmod></url>\n")
         fh.write("</urlset>\n")
     open(os.path.join(out_dir, ".nojekyll"), "w").close()
-    report = {"cut": cut, "snapshot": snap, "pages": pages, "locales": {"tr": TR_PATH + "index.html"}, "og": og_ok,
+    report = {"cut": cut, "snapshot": snap, "pages": pages, "locales": {"tr": TR_PATH + "index.html", "fr": FR_PATH + "index.html"}, "og": og_ok,
               "rows": {"movers": len(D["movers"]), "niches": len(D["niches"]), "rising": len(D["rising"]),
                        "niche_keywords": len([x for x in (N["rows"] if N else []) if (x.get("listings") or 0) >= 20])},
               "public_max_rows": PUBLIC_N, "daily_movers": dm_paths,
@@ -2069,8 +2248,10 @@ These are not all of Etsy: they are the shops and niches we read.</p>
         json.dump(report, fh, indent=2)
     check_public(out_dir, meta)
     check_tr(out_dir, cta(ctx), D)
+    check_loc(out_dir, cta(ctx), D, "fr")
     check_exact(out_dir, D)
     check_movers(out_dir, cta(ctx))
+    check_lang(out_dir)
     print(json.dumps(report))
 
 
