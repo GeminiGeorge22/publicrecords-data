@@ -182,7 +182,7 @@ def movers_insights(P):
     tot = meta["total_7d_delta_ge_min"]
     share = t10 / tot
     out.append(f"The top 10 shops took <b>{pct(share)}</b> of all 7-day gains we measured "
-               f"({plus(t10)} of {plus(tot)} across {n(meta['shops_with_gain_ge_min'])} shops). "
+               f"({plus(t10)} of {plus(tot)}). "
                + ("Momentum is concentrated." if share >= 0.25 else "Gains are spread across many shops, not just the top 10."))
     d = {}
     for r in m:
@@ -423,7 +423,7 @@ BAND_COLORS = ["#ffb27a", "#ff8a3d", "#FD5E02", "#b83f00"]
 
 BUILDER = "run.html"
 RUN_FALLBACK = R + "site-run"
-NAV = [("index.html", "Overview"), ("movers/", "⚡ Daily Movers"), ("ai.html", "✦ AI"), ("run.html", "★ Custom report"), ("movers.html", "Top Movers"), ("categories.html", "Hot Categories"),
+NAV = [("index.html", "Overview"), ("movers/", "⚡ Daily Movers"), ("ai.html", "✦ AI"), ("run.html", "★ Custom report"), ("categories.html", "Hot Categories"),
        ("rising.html", "Rising Shops"), ("breakouts.html", "Breakouts"), ("niche.html", "Niche Prices")]
 
 
@@ -638,28 +638,13 @@ def growth_phrase(series, key):
 
 
 def coverage_line(meta):
-    c = cov_of(meta)
-    if c.get("shops_measured") is None:
-        return ""
-    s = c["series"]
-    gm, gr = growth_phrase(s, "measured"), growth_phrase(s, "read_once")
-    asof = nice_date(s[-1]["date"]) if s else nice_date(meta["snapshot_date"])
-    out = (f"<b>{n(c['shops_measured'])}</b> shops have a measured sales figure (sales counter read on 2+ days) as of {asof}"
-           + (f", {gm}" if gm else "") + ". "
-           f"<b>{n(c['shops_one_read_only'])}</b> more have been read once so far and need a second read before they get one"
-           + (f" (shops read at least once: {n(c['shops_read_once'])}, {gr})" if gr else "") + ". "
-           f"The panel lists {n(c['panel_shops'])} shops in total.")
-    return out
+    """t619u: no shop-coverage counts in public copy (panel size, measured, read-once). A plain line only."""
+    return "New shops get a sales figure after their second daily read."
 
 
 def coverage_short(meta):
-    c = cov_of(meta)
-    if c.get("shops_measured") is None:
-        return ""
-    gm = growth_phrase(c["series"], "measured")
-    asof = nice_date(c["series"][-1]["date"]) if c["series"] else nice_date(meta["snapshot_date"])
-    return (f"Shops with a measured sales figure: <b>{n(c['shops_measured'])}</b> as of {asof}" + (f", {gm}" if gm else "") + ". "
-            f"Another {n(c['shops_one_read_only'])} have one read so far and need a second before they get a figure.")
+    """t619u: removed from the home hero ('Another N have one read so far and need a second...'). Kept as a no-op."""
+    return ""
 
 
 def fresh_box(snapshot_label, rows_label, cut, kind="panel"):
@@ -1097,7 +1082,7 @@ def tr_home(ctx, P):
                             cat_gain=plus_tr(c[0]["total_7d_delta"]))
     nv = T["nav"]
     nav = (f'<a href="/tr/" class=on>{nv["home"]}</a>' + (f'<a href="/tr/movers/">{T["movers"]["nav"]}</a>' if dm_days() else "") + f'<a href="/ai.html?from=tr">{nv["ai"]}</a>'
-           f'<a href="/{BUILDER}?from=tr-nav">{nv["run"]}</a><a href="/movers.html?from=tr">{nv["movers"]}</a>')
+           f'<a href="/{BUILDER}?from=tr-nav">{nv["run"]}</a><a href="/?from=tr#reports">{nv["movers"]}</a>')
     kpis = f"""<div class="kpis">
 <div class="kpi"><div class="v">{plus_tr(top['sales_7d_delta'])}</div><div class="l">{T['kpi_top'].format(shop=E(top['shop_name']))}</div></div>
 <div class="kpi"><div class="v">{E(leaf(c[0]['category']))}</div><div class="l">{T['kpi_cat'].format(shops=c[0]['shops_moving'], gain=plus_tr(c[0]['total_7d_delta']))}</div></div>
@@ -1270,6 +1255,25 @@ DESC_RX = _re.compile(r'<meta[^>]+(?:name|property)="(?:description|og:descripti
 COVERAGE_DESC = _re.compile(r"measured shops|in our panel|shops (?:tracked|measured|read)|\b\d[\d,]*\+?\s+(?:measured\s+|tracked\s+)?(?:Etsy\s+)?shops\b(?!\.)", _re.I)
 
 
+def redirect_page(target):
+    """MOVERS-2: static redirect for a retired URL (GitHub Pages cannot send a 301)."""
+    u = SITE_URL + target
+    return (f'<!doctype html><html lang="en"><head><meta charset="utf-8"><title>Etsy Pulse: Daily Movers</title>'
+            f'<link rel="canonical" href="{u}"><meta name="robots" content="noindex,follow">'
+            f'<meta http-equiv="refresh" content="0; url=/{target}">'
+            f'{view_js("movers-old")}<script>location.replace("/{target}"+location.search+location.hash)</script></head>'
+            f'<body><p>Moved to <a href="/{target}">Daily Movers</a>.</p></body></html>')
+
+
+# t619u: shop-coverage counts and the 'one read so far / need a second' line must never come back in visible text,
+# meta, or builder strings (panel size, measured count, read-once count, 'measured N of M').
+COVERAGE_VISIBLE = _re.compile(
+    r"need a second|one read so far|read once so far|have one read|\b\d[\d,]*\s+(?:etsy\s+)?shops in our panel|panel lists|"
+    r"measured of [\d,]+|\b\d[\d,]*\s+(?:measured|tracked)\s+shops|\b\d[\d,]*\s+with a measured sales figure|"
+    r"\b\d[\d,]*\s+shops have a measured|shops with a measured sales figure:\s*\d|"
+    r"\b\d[\d,]*\s+(?:more\s+)?have (?:been read|a measured)", _re.I)
+
+
 def check_public(out_dir, meta=None):
     """Fail the build if a public file breaks the rules: banned robot words in visible text / CSV headers / builder strings,
     or a report CSV with more than PUBLIC_N rows (niche listings: PUBLIC_N per keyword)."""
@@ -1297,6 +1301,8 @@ def check_public(out_dir, meta=None):
                         bad.append(f"{rel}: untested client link '{rx}' (AI-PAGE-2)")
                 for mt in UNCLEAR_LINES.finditer(vt + " " + " ".join(html.unescape(x) for x in DESC_RX.findall(raw))):
                     bad.append(f"{rel}: removed line '{mt.group(0)}' is back (t591u)")
+                for mt in COVERAGE_VISIBLE.finditer(vt + " " + " ".join(html.unescape(x) for x in DESC_RX.findall(raw))):
+                    bad.append(f"{rel}: shop-coverage count / removed line '{mt.group(0)}' (t619u)")
                 if _re.search(r"your Etsy data", vt, _re.I):
                     bad.append(f"{rel}: 'your Etsy data' (t559u)")
                 for dsc in DESC_RX.findall(raw):
@@ -1334,6 +1340,8 @@ def check_public(out_dir, meta=None):
                         bad.append(f"{rel}: banned word in text '{t[:60]}'")
                     if STALE_PRICE.search(t):
                         bad.append(f"{rel}: stale/false price or banned copy in text '{t[:60]}' (PRICE-2)")
+                    if COVERAGE_VISIBLE.search(t) or _re.search(r"panel_shops|shops_measured\)", t):
+                        bad.append(f"{rel}: shop-coverage count in builder text '{t[:60]}' (t619u)")
     # DOMAIN-1: every canonical / og:url / sitemap / robots URL uses SITE_URL; once on the custom domain, no github.io URL
     # may remain in any public page (github.io now 301s to the custom domain).
     for root, _, fs in os.walk(out_dir):
@@ -1721,7 +1729,7 @@ def build(out_dir):
                    "panel_shops": _c.get("panel_shops"), "shops_read_once": _c.get("shops_read_once"),
                    "shops_measured": _c.get("shops_measured"), "shops_measured_7d_span": _c.get("shops_measured_7d_span"),
                    "series": _c.get("series") or []}, fh)
-    pages = ["index.html", "ai.html", BUILDER, "movers.html", "categories.html", "rising.html"]
+    pages = ["index.html", "ai.html", BUILDER, "categories.html", "rising.html"]   # MOVERS-2: movers.html folded into /movers/
     if prev:
         pages.append("breakouts.html")
     if N and any((r.get("listings") or 0) >= 20 for r in N["rows"]):
@@ -1739,11 +1747,9 @@ def build(out_dir):
 
     cv = cov_of(meta)
     meas = cv.get("shops_measured")
-    meas_txt = f"{n(meas)} measured shops" if meas is not None else "the shops we measure"
+    # t619u: no shop-coverage counts (panel size / measured / read once) anywhere in public copy.
     src_line = (f'<p class="note">Source: publicrecords Velocity panel, cut {E(cut)}, counters read through {E(snap)}. '
-                f'The panel lists {n(cv["panel_shops"])} shops; {n(meas) + " have a measured sales figure (sales counter read on 2+ days); " if meas is not None else ""}'
-                f'{n(meta["shops_with_gain_ge_min"])} of those with ≥{meta["min_lifetime_sales"]} lifetime sales showed a gain.</p>')
-    cov_html = f'<p class="cov">{coverage_short(meta)}</p>' if coverage_short(meta) else ""
+                f'Ranked: shops with ≥{meta["min_lifetime_sales"]} lifetime sales whose sales counter went up.</p>')
 
     mi, ci, ri = movers_insights(P), category_insights(P), rising_insights(P)
     ni = niche_insights(N) if "niche.html" in pages else []
@@ -1753,7 +1759,7 @@ def build(out_dir):
     kpis = f"""<div class="kpis">
 <div class="kpi"><div class="v">{plus(top['sales_7d_delta'])}</div><div class="l">#1 of the measured shops this week: {E(top['shop_name'])}</div></div>
 <div class="kpi"><div class="v">{E(leaf(c[0]['category']))}</div><div class="l">Top category among measured shops, {plus(c[0]['total_7d_delta'])} across {c[0]['shops_moving']} shops</div></div>
-<div class="kpi"><div class="v">{plus(meta['total_7d_delta_ge_min'])}</div><div class="l">7-day gain across the {n(meta['shops_with_gain_ge_min'])} gaining shops with {meta['min_lifetime_sales']}+ lifetime sales (scaled)</div></div>
+<div class="kpi"><div class="v">{plus(meta['total_7d_delta_ge_min'])}</div><div class="l">7-day gain across gaining shops with {meta['min_lifetime_sales']}+ lifetime sales</div></div>
 <div class="kpi"><div class="v">{len(c)}</div><div class="l">categories with measured shops gaining</div></div>
 </div>"""
     hero = f"""<div class="hero">{PULSE_SVG}<div class="wrap">
@@ -1761,8 +1767,7 @@ def build(out_dir):
 <h1>Etsy shops on the move this week</h1>
 <p class="lede">The biggest 7-day sales jumps among the Etsy shops we measure, read from public Etsy sales counters.</p>
 {hero_cta()}
-<div class="chips">{f'<span><b>{n(cv["panel_shops"])}</b> shops in our panel</span>' if cv.get("panel_shops") else ''}{f'<span><b>{n(meas)}</b> with a measured sales figure</span>' if meas is not None else ''}<span>{E(GROWTH_LINE)}</span></div>
-{cov_html}
+<div class="chips"><span>{E(GROWTH_LINE)}</span></div>
 </div></div>"""
 
     def mini(rows, f_name, f_val, k=3):
@@ -1771,8 +1776,6 @@ def build(out_dir):
 
     CL = custom_links(meta)
     cards = [
-        ("movers.html", "Top Movers", f"{len(m)}", "Measured shops with the biggest 7-day sales gain.",
-         mini(m, lambda x: x["shop_name"], lambda x: plus(x["sales_7d_delta"]))),
         ("categories.html", "Hot Categories", f"{len(c)}", "Where the gains are piling up, by category.",
          mini(c, lambda x: leaf(x["category"]), lambda x: plus(x["total_7d_delta"]))),
         ("rising.html", "Rising Shops", f"{len(r)}", "Fastest measured shops with under 1,000 lifetime sales.",
@@ -1796,10 +1799,10 @@ def build(out_dir):
     cards_html = "".join(f'<a class="rcard" href="{h}"><div class="t">{t}<span>{k}</span></div><div class="d">{d}</div>{mn}</a>'
                          for h, t, k, d, mn in cards)
     over_ins = mi[:3] + ci[1:2] + (ni[:1] if ni else [])
-    body = f"""{fresh_box(nice_date(snap), f"{meas_txt} · {len(m)} movers · {len(c)} categories · {len(r)} rising", cut)}
+    body = f"""{fresh_box(nice_date(snap), f"{len(m)} movers · {len(c)} categories · {len(r)} rising", cut)}
 {kpis}
 <section>{insights_block(over_ins, "This week's takeaways")}</section>
-<section><h2>Reports</h2><p class="sub">Each report has its own page, a plain-English read and a CSV.</p>
+<section id="reports"><h2>Reports</h2><p class="sub">Each report has its own page, a plain-English read and a CSV.</p>
 <div class="grid">{cards_html}</div></section>
 <section><h2>Top 10 movers</h2><p class="sub">Biggest 7-day gain in sales. Bar = size vs #1.</p>
 {shop_rows(m[:PUBLIC_N], m[0]['sales_7d_delta'], None)}
@@ -1807,10 +1810,9 @@ def build(out_dir):
 <section class="method" id="method"><h2>How we measure</h2>
 <h3>Sales gains</h3><p>{E(meta['method'])} Lifetime sales and the gain come from the public sales counter on each Etsy shop page.
 "Week vs lifetime" = the 7-day gain as a share of everything the shop has sold.</p>
-<h3>Coverage</h3><p>{coverage_line(meta)} A shop's sales gain can only be computed once its counter has been read on two different days, so the rankings
-use only measured shops. This cut ranks the {n(meta['shops_with_gain_ge_min'])} measured shops with at least
-{meta['min_lifetime_sales']} lifetime sales whose counter went up ({n(meta['shops_with_gain_any_size'])} measured shops of any size went up).
-These are not all of Etsy: they are the shops in our panel that we could measure this week. Categories come from each shop's listings; {n(meta['shops_with_gain_ge_min'] - meta['shops_with_gain_ge_min_known_category'])} shops with no category are left out of Hot Categories.</p>
+<h3>Coverage</h3><p>A shop's sales gain can only be computed once its counter has been read on two different days. {coverage_line(meta)}
+This cut ranks shops with at least {meta['min_lifetime_sales']} lifetime sales whose counter went up.
+These are not all of Etsy: they are the shops we could measure this week. Categories come from each shop's listings; shops with no category are left out of Hot Categories.</p>
 {"<h3>Niche prices</h3><p>The top results of an Etsy search (US shopper, Etsy's best-match order, first results page) for keywords taken from the categories of the leading movers on " + nice_date(N['cut']) + ", captured " + E((N['meta'].get('captured_at') or '')[:10]) + " with our Etsy Search Scraper (Apify run " + E(N['meta']['run_id']) + "). Typical price is the middle price of those results; most charge = the middle 50% of prices.</p>" if "niche.html" in pages else ""}
 <h3>Free top {PUBLIC_N}, your own top {CUSTOM_N}</h3><p>Free reports show the top {PUBLIC_N}. For the top {CUSTOM_N}, or any other niche or category, run your own report: the button under each report opens the builder already set up.</p>
 <p id="breakouts">Breakouts appear once there are two cuts to compare.</p></section>"""
@@ -1823,18 +1825,11 @@ These are not all of Etsy: they are the shops in our panel that we could measure
     def simple_hero(eyebrow, h1, lede):
         return (f'<div class="hero">{PULSE_SVG}<div class="wrap" style="padding-bottom:30px"><div class="eyebrow">{eyebrow}</div>'
                 f'<h1>{h1}</h1><p class="lede">{lede}</p>{hero_cta()}<div class="chips"><span>Week to {nice_date(snap)}</span>'
-                + (f'<span><b>{n(meas)}</b> measured of {n(cv["panel_shops"])} shops in our panel</span>' if meas is not None else '')
                 + '</div></div></div>')
 
-    # ---- movers
-    body = f"""{fresh_box(nice_date(snap), f"top {len(m)} of {n(meta['shops_with_gain_ge_min'])} gaining shops ({meta['min_lifetime_sales']}+ sales) · {meas_txt}", cut)}<section>{insights_block(mi)}{report_btn("site-movers", "Etsy Shop Sales Tracker", "Track 7-day sales for any shops you choose: yours, competitors, or the ones above.")}</section>
-<section><h2>Top {len(m)} shops by 7-day sales gain</h2><p class="sub">Measured shops with at least {meta['min_lifetime_sales']} lifetime sales. Tap a shop to open it on Etsy.</p>
-{shop_rows(m, m[0]['sales_7d_delta'], None)}
-{more50(CL["movers"]["url"], "", CL["movers"]["ready"], "site-movers")}
-{dl(files['movers'], f'Download CSV (top {len(m)}, cut {cut})')}{src_line}</section>"""
-    w("movers.html", page("movers.html", f"Top {len(m)} Etsy shops by 7-day sales gain ({nice_date(snap)}) | Etsy Pulse",
-                          f"{top['shop_name']} leads with {plus(top['sales_7d_delta'])} sales in 7 days. Free top {len(m)} with categories and CSV.",
-                          body, ctx, simple_hero("Report · Top Movers", "Top Movers", "The biggest 7-day sales gains among the Etsy shops we measure, from public sales counters.")))
+    # ---- MOVERS-2 (Mark t619u): the old 7-day Top Movers page is folded into Daily Movers. movers.html stays only as a
+    # redirect (GitHub Pages has no 301: canonical + meta refresh + location.replace, query string kept) and is not in nav/sitemap.
+    w("movers.html", redirect_page("movers/"))
 
     # ---- categories
     body = f"""{fresh_box(nice_date(snap), f"top {len(c)} of {n(meta['categories'])} categories", cut)}<section>{insights_block(ci)}{report_btn("site-categories", "Etsy Shop Sales Tracker", "Feed in the shops of any category and see who is gaining sales week to week.")}</section>
@@ -1895,7 +1890,7 @@ These are not all of Etsy: they are the shops in our panel that we could measure
         missing = [k for k in kws if k not in [x["keyword"] for x in nr]]
         miss_note = (f" Not shown (fewer than 20 listings captured this run): {', '.join(missing)}." if missing else "")
         body = f"""{fresh_box(nice_date((N['meta'].get('captured_at') or N['cut'])[:10]), f"{N['meta']['rows']['listings']} listings · {len(nr)} niches", cut, "niche")}<section>{insights_block(ni)}{report_btn("site-niche", "Etsy Search Scraper", "Get this price breakdown for your own keyword: the top results as a spreadsheet.")}</section>
-<section><h2>What top sellers charge in the niches of the top movers</h2><p class="sub">Keywords are the categories of the leading Top Movers shops on {nice_date(N['cut'])}. Prices are what Etsy shows US shoppers in the top search results (Etsy's best-match order).</p>
+<section><h2>What top sellers charge in the niches of the top movers</h2><p class="sub">Keywords are the categories of the leading 7-day movers on {nice_date(N['cut'])}. Prices are what Etsy shows US shoppers in the top search results (Etsy's best-match order).</p>
 <div class="niche">{''.join(cards)}</div>
 {more50(niche_link(src="site-niche-top50-any"), " results", True)}
 {dl(files['niche_summary'], f"Download summary CSV ({len(N['rows'])} keywords)")} {dl(files['niche_listings'], f"Download listings CSV (top {PUBLIC_N} per keyword, {files['niche_listings_rows']} rows)")}

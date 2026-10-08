@@ -8,7 +8,7 @@ Daily Etsy market reports (7-day sales gains, refreshed every day a new snapshot
 |---|---|---|---|
 | Overview | `index.html` | Headline numbers, this week's takeaways, links to every report | all below |
 | Daily Movers | `movers/` (+ `movers/<date>/` archive, `tr/movers/`) | "Etsy's biggest movers, <date>": top 10 shops by sales added in the shortest window the panel reads (2 days today, 24h automatically once daily reads exist), plus the biggest jumps for their size (1,000+ sales); CTA tagline from `config/movers.json` | `data/daily-movers/<snapshot>/` (`scripts/movers_rank.py`) |
-| Top Movers | `movers.html` | Top 10 shops (≥500 lifetime sales) by 7-day sales gain | `data/panel/<cut>/movers.csv` |
+| (retired) Top Movers | `movers.html` | Folded into Daily Movers (Mark t619u): now only a redirect to `/movers/` (canonical + meta refresh + `location.replace`, query kept, beacon `p=movers-old`), not in nav or sitemap. The 7-day top 10 still shows on the Overview; CSV stays at `data/panel/<cut>/movers.csv` | — |
 | Hot Categories | `categories.html` | Top 10 categories by combined 7-day gain, with shops gaining, typical shop and leader | `data/panel/<cut>/categories.csv` |
 | Rising Shops | `rising.html` | Top 10 shops with 500–999 lifetime sales by 7-day gain | `data/panel/<cut>/rising.csv` |
 | Breakouts | `breakouts.html` | Shops new to the top 10 vs the previous cut (appears automatically once two cuts exist) | two panel cuts |

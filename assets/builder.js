@@ -731,10 +731,11 @@
     if (!rep.dataset.shown) { rep.dataset.shown = 1; rep.scrollIntoView({ behavior: "smooth", block: "start" }); }
   }
 
-  /* Panel coverage, written by build_site.py from the latest panel export (never hardcoded here). */
+  /* Coverage note (data/coverage.json only decides whether to show it and the Breakouts hint). */
   function covNote() {
     var el = $("#covnote"); if (!el || !COV || COV.shops_measured == null) return;
-    var t = "Our panel lists " + num(COV.panel_shops) + " shops. " + num(COV.shops_measured) + " have a measured sales figure so far (sales counter read on 2+ days, as of " + COV.as_of + "); for the others, sales per day and 7-day change come back empty until their second read.";
+    /* t619u: no shop-coverage counts in public copy. */
+    var t = "New shops get a sales figure after their second daily read; until then, sales per day and 7-day change come back empty.";
     if (!COV.shops_measured_7d_span) t += " No shop has 7 days of reads yet, so Breakout shops returns nothing for now.";
     el.textContent = t; el.hidden = false;
   }
