@@ -4,6 +4,10 @@
 #   --restart   stop a running loop first (use after changing scripts/box_refresh.py)
 set -euo pipefail
 cd "$(dirname "$0")/.."
+# Also keep the box-only outside-run snapshot loop alive (idempotent; its own pid/flock stop duplicates). Runs before the
+# refresh-loop checks below so it is ensured even when the refresh loop is already running or HF_READ_TOKEN is missing.
+OUTSIDE_ENSURE=/workspace/x-etsypulse/outside-runs/ensure.sh
+if [ -x "$OUTSIDE_ENSURE" ]; then echo "outside-runs: $("$OUTSIDE_ENSURE" 2>&1 | tail -1)"; fi
 PIDF=/tmp/etsypulse-refresh-loop.pid
 if [ "${1:-}" = "--restart" ] && [ -f "$PIDF" ] && kill -0 "$(cat "$PIDF")" 2>/dev/null; then
   kill "$(cat "$PIDF")"; sleep 2

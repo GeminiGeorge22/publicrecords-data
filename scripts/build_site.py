@@ -1107,6 +1107,26 @@ def check_public(out_dir, meta=None):
     bj = os.path.join(out_dir, "assets", "builder.js")
     if os.path.exists(bj) and "https://apify.com/publicrecords/" in open(bj, encoding="utf-8").read():
         bad.append("assets/builder.js: direct Store link (use /r/site-store-*)")
+    # LINKS-1 (Mark t584u): public pages link only www.etsypulse.ca for our own pages: no URL shorteners, no github.io, and
+    # workers.dev only as the publicrecords-redirect worker's logged /r/<slug> hand-offs and /e/<event> beacons (BEACON-1).
+    short_rx = _re.compile(r"\b(?:tinyurl\.com|bit\.ly|t\.ly|is\.gd|rebrand\.ly|cutt\.ly)/[^\s\"'<)]*", _re.I)
+    wd_rx = _re.compile(r"(?:https?:)?//([a-z0-9.-]+\.workers\.dev)(/[^\s\"'<)]*)?", _re.I)
+    wd_ok = _re.compile(r"^(?:/r/[a-z0-9-]+(?:\?[^\s\"'<)]*)?|/e/(?:[a-z0-9-]+)?(?:\?[^\s\"'<)]*)?|/?)$")
+    for root, _, fs in os.walk(out_dir):
+        for f in fs:
+            if not f.endswith((".html", ".xml", ".txt", ".js")):
+                continue
+            p = os.path.join(root, f)
+            rel = os.path.relpath(p, out_dir)
+            raw = open(p, encoding="utf-8").read()
+            for mt in short_rx.finditer(raw):
+                bad.append(f"{rel}: URL shortener link '{mt.group(0)[:60]}' (link https://www.etsypulse.ca pages instead)")
+            for mt in wd_rx.finditer(raw):
+                host, path = mt.group(1).lower(), mt.group(2) or ""
+                if host != "publicrecords-redirect.publicrecords.workers.dev" or not wd_ok.match(path):
+                    bad.append(f"{rel}: workers.dev URL '{mt.group(0)[:80]}' is not a logged /r/ hand-off or /e/ beacon")
+            if f.endswith(".js") and SITE_URL != GITHUB_IO_URL and "geminigeorge22.github.io" in raw:
+                bad.append(f"{rel}: legacy github.io URL left after the custom-domain switch (DOMAIN-1)")
     if bad:
         raise SystemExit("public check failed:\n  " + "\n  ".join(bad))
     print("public check ok: no banned words, every report <= %d rows" % PUBLIC_N)
