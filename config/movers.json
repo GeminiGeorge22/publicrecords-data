@@ -11,6 +11,12 @@
     "min_base_sales": 1000,
     "min_added": 25
   },
+  "rising_list": {
+    "enabled": true,
+    "max_total_sales": 999,
+    "min_added": 1,
+    "_note": "EXACT-1 (Mark 2026-10-08): Rising Shops = shops with <= max_total_sales lifetime sales at the end of the window, ranked by exact sales added over the shop-list window (replaces the scaled 7-day panel list)."
+  },
   "niche_list": {
     "enabled": true,
     "top_n": 10,

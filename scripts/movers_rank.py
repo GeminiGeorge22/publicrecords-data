@@ -18,7 +18,7 @@ Ranking is defined ONLY here, with its knobs in config/movers.json:
     a niche needs >= min_shops clean shops and its biggest shop <= max_top_shop_share of the total. Its own window: the
     shortest preferred window with >= top_n rankable niches.
 
-Public output (repo data/daily-movers/<snapshot_date>/): movers.csv, pct.csv, niches.csv (top_n rows each) and meta.json (window,
+Public output (repo data/daily-movers/<snapshot_date>/): movers.csv, pct.csv, rising.csv, niches.csv (top_n rows each) and meta.json (window,
 dates, method; no coverage counts). Box-only counts go to /workspace/x-etsypulse/internal/movers/<snapshot_date>.json.
 """
 from __future__ import annotations
@@ -158,7 +158,7 @@ def compute(snap: dict, state: dict, snapshot_date: str, C: dict | None = None) 
         if len(rows) >= C.get("min_valid_shops", 500):
             chosen = (w, rows)
             break
-    out = {"snapshot_date": snapshot_date, "tried": tried, "window_days": None, "movers": [], "pct": [],
+    out = {"snapshot_date": snapshot_date, "tried": tried, "window_days": None, "movers": [], "pct": [], "rising": [],
            "niches": [], "niche_window_days": None, "niche_tried": {}}
     # niches: their own shortest window with >= top_n rankable niches (same preferred windows, same clean pairs)
     N = C.get("niche_list", {})
@@ -182,9 +182,15 @@ def compute(snap: dict, state: dict, snapshot_date: str, C: dict | None = None) 
     if pc.get("enabled"):
         pool = [r for r in rows if r["sales_before"] >= pc.get("min_base_sales", 1000) and r["sales_added"] >= pc.get("min_added", 25)]
         pct = sorted(pool, key=lambda r: (-r["pct_added"], -r["sales_added"], r["shop"].lower()))[:n]
+    rc = C.get("rising_list", {})
+    rising = []
+    if rc.get("enabled"):   # EXACT-1: small shops (lifetime sales at the end <= max_total_sales) by exact sales added
+        rpool = [r for r in rows if r["sales_total"] <= rc.get("max_total_sales", 999) and r["sales_added"] >= rc.get("min_added", 1)]
+        rising = sorted(rpool, key=lambda r: (-r["sales_added"], -r["sales_total"], r["shop"].lower()))[:n]
     out.update(window_days=w, from_date=(dt.date.fromisoformat(snapshot_date) - dt.timedelta(days=w)).isoformat(),
                movers=[{**r, "rank": i} for i, r in enumerate(top, 1)],
                pct=[{**r, "rank": i} for i, r in enumerate(pct, 1)],
+               rising=[{**r, "rank": i} for i, r in enumerate(rising, 1)],
                pct_pool=len(pct and pool or []), valid=len(rows))
     return out
 
@@ -238,6 +244,7 @@ def main():
     os.makedirs(d, exist_ok=True)
     write_csv(os.path.join(d, "movers.csv"), R["movers"])
     write_csv(os.path.join(d, "pct.csv"), R["pct"])
+    write_csv(os.path.join(d, "rising.csv"), R["rising"])
     nC = cfg().get("niche_list", {})
     npath = os.path.join(d, "niches.csv")
     if R["niches"]:
@@ -246,7 +253,8 @@ def main():
         os.remove(npath)   # never leave a stale niche list next to a fresh shop list
     meta = {"snapshot_date": R["snapshot_date"], "window_days": R["window_days"], "from_date": R["from_date"],
             "to_date": R["snapshot_date"], "snapshot_sha256": latest.get("sha256"),
-            "rows": {"movers": len(R["movers"]), "pct": len(R["pct"]), "niches": len(R["niches"])},
+            "rows": {"movers": len(R["movers"]), "pct": len(R["pct"]), "niches": len(R["niches"]), "rising": len(R["rising"])},
+            "rising_max_total_sales": cfg().get("rising_list", {}).get("max_total_sales"),
             "pct_min_base_sales": cfg().get("pct_list", {}).get("min_base_sales"),
             "method": (f"Sales added = a shop's public Etsy sales counter on {R['snapshot_date']} minus the same counter "
                        f"{R['window_days']} day(s) earlier, both read exactly on those dates. No scaling. Shops without both "

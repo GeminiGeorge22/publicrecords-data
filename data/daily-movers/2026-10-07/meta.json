@@ -7,8 +7,10 @@
   "rows": {
     "movers": 10,
     "pct": 10,
-    "niches": 10
+    "niches": 10,
+    "rising": 10
   },
+  "rising_max_total_sales": 999,
   "pct_min_base_sales": 1000,
   "method": "Sales added = a shop's public Etsy sales counter on 2026-10-07 minus the same counter 2 day(s) earlier, both read exactly on those dates. No scaling. Shops without both reads, with rounded counters, a counter that went down, or an implausible jump are left out.",
   "niche_window_days": 2,
@@ -16,5 +18,5 @@
   "niche_min_shops": 10,
   "niche_max_top_shop_share": 0.5,
   "niche_method": "Niche = the shop's Etsy category. Sales added in a niche = the sum of sales added by its shops over the same 2-day exact counter pairs (no scaling). A niche is ranked only with at least 10 shops with clean reads and when no single shop makes up more than 50% of its sales added.",
-  "generated_at": "2026-10-08T20:36:55+00:00"
+  "generated_at": "2026-10-08T20:46:38+00:00"
 }
