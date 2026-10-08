@@ -294,6 +294,12 @@ a{color:var(--link);text-decoration:none}a:hover{text-decoration:underline}
 .brand img{width:30px;height:30px;border-radius:8px}
 .brand:hover{text-decoration:none}
 .top .x{margin-left:auto;font-size:14px;font-weight:600;white-space:nowrap}
+.top .lang{font-size:14px;font-weight:700;white-space:nowrap;color:var(--mut)}.top .lang b{color:var(--ink)}
+@media(max-width:420px){.top .x .fw{display:none}}
+.howtr{background:var(--card);border:1px solid var(--line);border-radius:16px;padding:16px}
+.howtr ol{margin:8px 0 10px;padding-left:20px}.howtr li{margin:0 0 8px}.howtr li p{margin:2px 0 0;color:var(--mut);font-size:14.5px}
+.howtr .note{font-size:14px;color:var(--mut)}
+.rlinks{display:flex;flex-wrap:wrap;gap:8px}.rlinks a{background:var(--chip);color:var(--ink);border-radius:999px;padding:6px 12px;font-weight:600;font-size:14px}
 nav.tabs{border-bottom:1px solid var(--line);background:var(--bg)}
 nav.tabs .wrap{display:flex;gap:6px;overflow-x:auto;scrollbar-width:none;padding-top:8px;padding-bottom:8px}
 nav.tabs .wrap::-webkit-scrollbar{display:none}
@@ -421,6 +427,59 @@ NAV = [("index.html", "Overview"), ("ai.html", "✦ AI"), ("run.html", "★ Cust
        ("rising.html", "Rising Shops"), ("breakouts.html", "Breakouts"), ("niche.html", "Niche Prices")]
 
 
+# ---------------------------------------------------------------- TR-1: Turkish home (/tr/)
+# Mark t607u (2026-10-08): a Turkish home at /tr/ built from config/i18n/tr.json (strings only). Every number comes from the
+# same snapshot as the English home, so the daily publish keeps /tr/ current. Only the home is translated; other reports link
+# to the English pages. check_tr() runs the Turkish copy rules (see TR_BANNED / TR_COVERAGE) and pins the TR price line to the
+# exact $/¢ amounts of the English home CTA, so a price change on the English side fails the build until tr.json follows.
+I18N_DIR = os.path.join(ROOT, "config", "i18n")
+TR_PATH = "tr/"
+
+
+def load_tr():
+    return json.load(open(os.path.join(I18N_DIR, "tr.json"), encoding="utf-8"))
+
+
+def lang_switch(cur):
+    if cur == "en":
+        return '<span class="lang" aria-label="Language"><b>EN</b> · <a href="/tr/" hreflang="tr" lang="tr">TR</a></span>'
+    return '<span class="lang" aria-label="Dil"><a href="/" hreflang="en" lang="en">EN</a> · <b>TR</b></span>'
+
+
+def hreflang_links():
+    return (f'<link rel="alternate" hreflang="en" href="{SITE_URL}">'
+            f'<link rel="alternate" hreflang="tr" href="{SITE_URL}{TR_PATH}">'
+            f'<link rel="alternate" hreflang="x-default" href="{SITE_URL}">')
+
+
+def n_tr(x):
+    return f"{int(x):,}".replace(",", ".")
+
+
+def plus_tr(x):
+    return "+" + n_tr(x)
+
+
+def pct_tr(x, d=0):
+    return "%" + f"{x * 100:.{d}f}".replace(".", ",")
+
+
+def dec_tr(x, d=1):
+    return f"{x:.{d}f}".replace(".", ",")
+
+
+def date_tr(iso, T):
+    d_ = dt.date.fromisoformat(iso)
+    return f"{d_.day} {T['months'][d_.month - 1]} {d_.year}"
+
+
+MONEY_RX = re.compile(r"\$[\d][\d,]*(?:\.\d+)?|\d+(?:\.\d+)?\s?¢")
+
+
+def money_tokens(text):
+    return sorted(set(t.replace(" ", "") for t in MONEY_RX.findall(html.unescape(re.sub(r"<[^>]+>", " ", text)))))
+
+
 def page(name, title, desc, body, ctx, hero=None, scripts=""):
     nav = "".join(f'<a href="{h}"{" class=on" if h == name else ""}>{t}</a>' for h, t in NAV if h in ctx["pages"])
     url = SITE_URL + ("" if name == "index.html" else name)
@@ -431,6 +490,7 @@ def page(name, title, desc, body, ctx, hero=None, scripts=""):
 <title>{E(title)}</title>
 <meta name="description" content="{E(desc)}">
 <link rel="canonical" href="{url}">
+{hreflang_links() if name == "index.html" else ""}
 <meta name="theme-color" content="{ORANGE}">
 <link rel="icon" href="assets/favicon.ico" sizes="any"><link rel="icon" type="image/png" sizes="32x32" href="assets/favicon-32.png">
 <link rel="apple-touch-icon" href="assets/apple-touch-icon.png">
@@ -446,7 +506,7 @@ def page(name, title, desc, body, ctx, hero=None, scripts=""):
 <link rel="stylesheet" href="assets/builder.css?v={ctx['cut']}-b1">
 </head><body>
 <header class="top"><div class="wrap"><a class="brand" href="index.html"><img src="assets/logo-96.png" alt="" width="30" height="30">Etsy Pulse</a>
-<a class="x" href="{X_URL}" rel="noopener">Follow @EtsyPulse</a></div></header>
+<a class="x" href="{X_URL}" rel="noopener"><span class="fw">Follow </span>@EtsyPulse</a>{lang_switch("en")}</div></header>
 <nav class="tabs" aria-label="Reports"><div class="wrap">{nav}</div></nav>
 {hero or ""}
 <main class="wrap">
@@ -973,6 +1033,205 @@ Rather not use AI? <a href="{BUILDER}?from=ai">Build a report here</a> or <a hre
                 body, ctx, hero, scripts=AI_JS)
 
 
+
+def tr_shop_rows(rows, maxv, T):
+    c_ = T["cols"]
+    hd = (f'<div class="hd" role="row"><span>{c_["rank"]}</span><span>{c_["shop"]}</span><span>{c_["cat"]}</span>'
+          f'<span class="r">{c_["life"]}</span><span class="r">{c_["pct"]}</span><span>{c_["bar"]}</span>'
+          f'<span class="r">{c_["big"]}</span></div>')
+    out = [hd]
+    for r in rows:
+        w = max(2, round(100 * r["sales_7d_delta"] / maxv)) if maxv else 0
+        cat = T["unknown_cat"] if r["category"] == "unknown" else leaf(r["category"])
+        cls = "row top3" if r["rank"] <= 3 else "row"
+        out.append(
+            f'<div class="{cls}" role="row"><span class="rk">{r["rank"]}</span>'
+            f'<a class="nm" href="{E(r["shop_url"])}" rel="nofollow noopener">{E(r["shop_name"])}</a>'
+            f'<span class="meta"><span class="c" title="{E(r["category"])}">{E(cat)}</span>'
+            f'<span><b>{n_tr(r["sales_total"])}</b><em>{T["row_life"]}</em></span>'
+            f'<span><em>{T["row_week"]}</em><b>{pct_tr(r["gain_pct_of_lifetime"] / 100, 1)}</b><em>{T["row_of_life"]}</em></span></span>'
+            f'<span class="bar"><i style="width:{w}%"></i></span>'
+            f'<span class="big">{plus_tr(r["sales_7d_delta"])}</span></div>')
+    cols = "34px minmax(150px,1.3fr) minmax(140px,1.2fr) 100px 120px minmax(80px,.8fr) 100px"
+    return f'<div class="tc" role="table" style="--cols:{cols}">{"".join(out)}</div>'
+
+
+def tr_insights(P, T):
+    m, c, meta = P["movers"], P["categories"], P["meta"]
+    out = []
+    by = {}
+    for r in m[:10]:
+        if r["category"] != "unknown":
+            by.setdefault(r["category"], []).append(r)
+    if by:
+        cat, rows = max(by.items(), key=lambda kv: (len(kv[1]), sum(x["sales_7d_delta"] for x in kv[1])))
+        if len(rows) >= 2:
+            out.append(T["ins_cat_top10"].format(cat=E(leaf(cat)), k=len(rows), gain=plus_tr(sum(x["sales_7d_delta"] for x in rows))))
+    a, b = m[0], m[1]
+    out.append(T["ins_lead"].format(a=E(a["shop_name"]), a_gain=plus_tr(a["sales_7d_delta"]), b=E(b["shop_name"]),
+                                    b_gain=plus_tr(b["sales_7d_delta"]), x=dec_tr(a["sales_7d_delta"] / b["sales_7d_delta"])))
+    sm = max(m[:PUBLIC_N], key=lambda r: r["gain_pct_of_lifetime"])
+    out.append(T["ins_small"].format(shop=E(sm["shop_name"]), total=n_tr(sm["sales_total"]), gain=plus_tr(sm["sales_7d_delta"]),
+                                     pct=pct_tr(sm["gain_pct_of_lifetime"] / 100, 1)))
+    t10 = sum(r["sales_7d_delta"] for r in m[:10])
+    tot = meta["total_7d_delta_ge_min"]
+    out.append(T["ins_share"].format(pct=pct_tr(t10 / tot), t10=plus_tr(t10), tot=plus_tr(tot)) + " "
+               + (T["ins_share_hi"] if t10 / tot >= 0.25 else T["ins_share_lo"]))
+    ca = c[0]
+    out.append(T["ins_cat_lead"].format(cat=E(leaf(ca["category"])), shops=ca["shops_moving"], gain=plus_tr(ca["total_7d_delta"]),
+                                        top=E(ca["top_shop"]), pct=pct_tr(ca["top_shop_7d_delta"] / ca["total_7d_delta"])))
+    return out
+
+
+def tr_home(ctx, P):
+    """/tr/index.html: the Turkish home. Strings from config/i18n/tr.json, numbers from the same panel cut as the EN home."""
+    T = load_tr()
+    m, c, meta = P["movers"], P["categories"], P["meta"]
+    cut, snap = ctx["cut"], ctx["snap"]
+    top = m[0]
+    day = date_tr(snap, T)
+    url = SITE_URL + TR_PATH
+    og = SITE_URL + "og.png?v=" + cut
+    title = T["title"].format(date=day)
+    desc = T["desc"].format(shop=top["shop_name"], gain=plus_tr(top["sales_7d_delta"]), cat=leaf(c[0]["category"]),
+                            cat_gain=plus_tr(c[0]["total_7d_delta"]))
+    nv = T["nav"]
+    nav = (f'<a href="/tr/" class=on>{nv["home"]}</a><a href="/ai.html?from=tr">{nv["ai"]}</a>'
+           f'<a href="/{BUILDER}?from=tr-nav">{nv["run"]}</a><a href="/movers.html?from=tr">{nv["movers"]}</a>')
+    kpis = f"""<div class="kpis">
+<div class="kpi"><div class="v">{plus_tr(top['sales_7d_delta'])}</div><div class="l">{T['kpi_top'].format(shop=E(top['shop_name']))}</div></div>
+<div class="kpi"><div class="v">{E(leaf(c[0]['category']))}</div><div class="l">{T['kpi_cat'].format(shops=c[0]['shops_moving'], gain=plus_tr(c[0]['total_7d_delta']))}</div></div>
+<div class="kpi"><div class="v">{plus_tr(meta['total_7d_delta_ge_min'])}</div><div class="l">{T['kpi_total'].format(min=n_tr(meta['min_lifetime_sales']))}</div></div>
+<div class="kpi"><div class="v">{n_tr(meta['categories'])}</div><div class="l">{T['kpi_cats']}</div></div>
+</div>"""
+    form = (f'<form class="qform" action="/{BUILDER}" method="get" role="search">'
+            f'<input name="q" type="search" placeholder="{E(T["form_placeholder"])}" aria-label="{E(T["form_aria"])}" enterkeyhint="go" autocomplete="off">'
+            f'<input type="hidden" name="from" value="tr-hero"><button type="submit">{E(T["form_button"])}</button></form>'
+            f'<div class="qsub">{E(T["form_sub"])} <a href="{RUN_FALLBACK}?t=tr" rel="noopener">{E(T["form_fallback"])}</a></div>')
+    hero = f"""<div class="hero">{PULSE_SVG}<div class="wrap">
+<div class="eyebrow">{E(T['eyebrow'].format(date=day))}</div>
+<h1>{E(T['h1'])}</h1>
+<p class="lede">{E(T['lede'])}</p>
+{form}
+<div class="chips"><span>{E(T['growth'])}</span></div>
+</div></div>"""
+    how = f"""<section id="nasil"><h2>{T['how_h2']}</h2><p class="sub">{T['how_sub']}</p><div class="howtr">
+<ol><li><b>{T['how_1_t']}</b><p>{T['how_1_p']}</p></li><li><b>{T['how_2_t']}</b><p>{T['how_2_p']}</p></li><li><b>{T['how_3_t']}</b><p>{T['how_3_p']}</p></li></ol>
+<p class="note">{T['how_note']}</p>
+<p><a class="btn" href="/{BUILDER}?from=tr-how">{T['how_btn']}</a></p>
+<p class="note">{T['how_store']} <a href="{R}site-store-search?t=tr">Etsy Search Scraper</a> · <a href="{R}site-store-tracker?t=tr">Etsy Shop Sales Tracker</a></p>
+<p class="note">{T['how_ai']} <a href="/ai.html?from=tr">{T['how_ai_link']}</a></p>
+</div></section>"""
+    rl = "".join(f'<a href="/{h}?from=tr">{E(t)}</a>' for h, t in T["reports"].items() if h in ctx["pages"])
+    cta_ = f"""<section class="cta">
+<h2>{T['cta_h2']}</h2>
+<p>{T['cta_p']}</p>
+<a class="btn" href="/{BUILDER}?type=niche&amp;from=tr-cta">{T['cta_niche']}</a><a class="btn ghost" href="/{BUILDER}?type=rivals&amp;from=tr-cta">{T['cta_rivals']}</a>
+<div class="disc">{T['price_line']}</div>
+</section>"""
+    body = f"""{kpis}
+<section>{insights_block(tr_insights(P, T), T['takeaways'])}</section>
+<section><h2>{T['top10_h2']}</h2><p class="sub">{T['top10_sub']}</p>
+{tr_shop_rows(m[:PUBLIC_N], m[0]['sales_7d_delta'], T)}</section>
+{how}
+<section><h2>{T['reports_h2']}</h2><div class="rlinks">{rl}</div></section>
+{cta_}"""
+    return f"""<!doctype html>
+<html lang="tr"><head>
+<meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover">
+<title>{E(title)}</title>
+<meta name="description" content="{E(desc)}">
+<link rel="canonical" href="{url}">
+{hreflang_links()}
+<meta name="theme-color" content="{ORANGE}">
+<link rel="icon" href="/assets/favicon.ico" sizes="any"><link rel="icon" type="image/png" sizes="32x32" href="/assets/favicon-32.png">
+<link rel="apple-touch-icon" href="/assets/apple-touch-icon.png">
+<meta property="og:type" content="website"><meta property="og:site_name" content="Etsy Pulse"><meta property="og:locale" content="{T['og_locale']}">
+<meta property="og:title" content="{E(title)}"><meta property="og:description" content="{E(desc)}">
+<meta property="og:url" content="{url}"><meta property="og:image" content="{og}">
+<meta property="og:image:width" content="1200"><meta property="og:image:height" content="630">
+<meta name="twitter:card" content="summary_large_image"><meta name="twitter:site" content="@EtsyPulse">
+<meta name="twitter:title" content="{E(title)}"><meta name="twitter:description" content="{E(desc)}">
+<meta name="twitter:image" content="{og}">
+<style>{CSS}</style>
+<link rel="stylesheet" href="/assets/builder.css?v={cut}-b1">
+</head><body>
+<header class="top"><div class="wrap"><a class="brand" href="/tr/"><img src="/assets/logo-96.png" alt="" width="30" height="30">Etsy Pulse</a>
+<a class="x" href="{X_URL}" rel="noopener">{E(T['follow'])}</a>{lang_switch("tr")}</div></header>
+<nav class="tabs" aria-label="Raporlar"><div class="wrap">{nav}</div></nav>
+{hero}
+<main class="wrap">
+{body}
+</main>
+<footer><div class="wrap">
+<p>{T['footer_1']}</p>
+<p>{E(T['footer_2'].format(cut=date_tr(cut, T), snap=day))}</p>
+</div></footer>
+{view_js("tr-home")}
+</body></html>
+"""
+
+
+# Turkish copy rules (TR-1). Same bans as the English site, in Turkish: no median/medyan/ortanca, no middle half, no
+# "first results page", no "automated"/otomatik label claims, no real-time/gerçek zamanlı/anlık veri, no per-keyword prices,
+# no "your Etsy data", no "blocked pages charge nothing" (false since PRICE-2), no shop-coverage counts anywhere on the page.
+TR_BANNED = re.compile(r"medyan|ortanca|orta(?:daki)?\s+yar[ıi]|ortadaki\s+%\s?50|(?:\b1\.|birinci|ilk)\s+(?:arama\s+)?(?:sonuç\s+)?sayfa|sayfa\s+1\b|"
+                       r"otomati[kz]|otomasyon|gerçek\s+zamanl[ıi]|anl[ıi]k\s+veri|anahtar\s+kelime\s+başına|kelime\s+başına\s+20|"
+                       r"etsy\s+veriler(?:in|iniz)\b|etsy\s+verin\b|senin\s+etsy\s+veri|"
+                       r"engellenen\s+(?:sayfa|arama)\w*\s+(?:için\s+)?(?:ücretsiz|ücret\s+alınmaz|hiçbir\s+şey|bedava)", re.I)
+TR_COVERAGE = re.compile(r"\d[\d.,]*\s*\+?\s*(?:etsy\s+)?mağaza(?:yı|dan|nın)?\s+(?:ölç|takip|izl|oku|tara|panel)|"
+                         r"panel(?:imiz)?(?:de|deki)\s+[\d.,]+|[\d.,]+\s+mağazalık|ölçülen\s+[\d.,]+\s+mağaza|[\d.,]+\s+ölçülen\s+mağaza", re.I)
+TR_PRICE_OK = re.compile(r"1 anahtar kelime \(ilk 20 ilan\) 13¢'den başlar")
+
+
+def check_tr(out_dir, en_cta_html, P):
+    """TR-1 guards for /tr/index.html (on top of check_public, which already scans tr/ with the English rules)."""
+    bad = []
+    p = os.path.join(out_dir, "tr", "index.html")
+    if not os.path.exists(p):
+        raise SystemExit("tr check failed: tr/index.html missing")
+    raw = open(p, encoding="utf-8").read()
+    vt = visible_text(raw)
+    metas = " ".join(html.unescape(x) for x in DESC_RX.findall(raw))
+    if '<html lang="tr">' not in raw:
+        bad.append('tr/index.html: missing <html lang="tr">')
+    if f'<link rel="canonical" href="{SITE_URL}{TR_PATH}">' not in raw:
+        bad.append("tr/index.html: canonical must be " + SITE_URL + TR_PATH)
+    for f_ in (p, os.path.join(out_dir, "index.html")):
+        h_ = open(f_, encoding="utf-8").read()
+        if hreflang_links() not in h_:
+            bad.append(f"{os.path.relpath(f_, out_dir)}: hreflang en/tr/x-default links missing")
+    en_home = open(os.path.join(out_dir, "index.html"), encoding="utf-8").read()
+    if 'href="/tr/" hreflang="tr"' not in en_home:
+        bad.append("index.html: EN · TR switch missing")
+    nb = raw.count(VIEW_BEACON + "?p=tr-home")
+    if nb != 1 or raw.count(VIEW_BEACON + "?p=") != 1 or "credentials:'omit'" not in raw:
+        bad.append("tr/index.html: needs exactly one cookieless page-view beacon p=tr-home")
+    for mt in TR_BANNED.finditer(vt + " " + metas):
+        bad.append(f"tr/index.html: banned Turkish copy '{mt.group(0)}'")
+    for mt in TR_COVERAGE.finditer(vt + " " + metas):
+        bad.append(f"tr/index.html: shop-coverage count '{mt.group(0)}' (no coverage counts on /tr/)")
+    if COVERAGE_DESC.search(metas):
+        bad.append("tr/index.html: shop-coverage count in a meta description/title (DAILY-1)")
+    for mt in BANNED_PRICE.finditer(TR_PRICE_OK.sub(" ", PRICE_OK.sub(" ", vt))):
+        bad.append(f"tr/index.html: stale price line '{mt.group(0)}' (PRICE-1)")
+    # price line: identical $/¢ amounts to the English home CTA price line (the default buyer path)
+    dm = re.search(r'<div class="disc">(.*?)</div>', raw, re.S)
+    em = re.search(r'<div class="disc">(.*?)</div>', en_cta_html, re.S)
+    if not dm or not em or money_tokens(dm.group(1)) != money_tokens(em.group(1)):
+        bad.append(f"tr/index.html: price line amounts {money_tokens(dm.group(1)) if dm else None} != EN home CTA "
+                   f"{money_tokens(em.group(1)) if em else None} (update config/i18n/tr.json price_line)")
+    if not TR_PRICE_OK.search(vt) and "13¢" in (em.group(1) if em else ""):
+        bad.append("tr/index.html: the 13¢ line must keep its scope: '1 anahtar kelime (ilk 20 ilan) 13¢'den başlar'")
+    # today's numbers: #1 shop and its gain from this cut
+    top = P["movers"][0]
+    if E(top["shop_name"]) not in raw or plus_tr(top["sales_7d_delta"]) not in vt:
+        bad.append("tr/index.html: today's #1 shop / gain missing")
+    if bad:
+        raise SystemExit("tr check failed:\n  " + "\n  ".join(bad))
+    print("tr check ok: lang=tr, hreflang, beacon tr-home, Turkish bans, price amounts = EN", money_tokens(dm.group(1)))
+
+
 # ---------------------------------------------------------------- public checks
 import re as _re
 # t591u (Mark 2026-10-08): the hero says the dataset grows every day instead of the "N gaining, 500+ sales, ranked here"
@@ -1023,7 +1282,7 @@ def check_public(out_dir, meta=None):
                 vt = visible_text(open(p, encoding="utf-8").read())
                 for mt in BANNED.finditer(vt):
                     bad.append(f"{rel}: banned word '{mt.group(0)}'")
-                for mt in BANNED_PRICE.finditer(PRICE_OK.sub(" ", vt)):
+                for mt in BANNED_PRICE.finditer(TR_PRICE_OK.sub(" ", PRICE_OK.sub(" ", vt))):
                     bad.append(f"{rel}: stale price line '{mt.group(0)}' (PRICE-1)")
                 for mt in STALE_PRICE.finditer(vt):
                     bad.append(f"{rel}: stale/false price or banned copy '{mt.group(0)}' (PRICE-2)")
@@ -1387,6 +1646,10 @@ These are not all of Etsy: they are the shops in our panel that we could measure
     # ---- AI page
     w("ai.html", ai_page(ctx, files))
 
+    # ---- TR-1: Turkish home
+    os.makedirs(os.path.join(out_dir, "tr"), exist_ok=True)
+    w(os.path.join("tr", "index.html"), tr_home(ctx, P))
+
     # ---- seo files
     with open(os.path.join(out_dir, "robots.txt"), "w") as fh:
         fh.write(f"User-agent: *\nAllow: /\nSitemap: {SITE_URL}sitemap.xml\n")
@@ -1394,9 +1657,10 @@ These are not all of Etsy: they are the shops in our panel that we could measure
         fh.write('<?xml version="1.0" encoding="UTF-8"?>\n<urlset xmlns="http://www.sitemaps.org/schemas/sitemap/0.9">\n')
         for p in pages:
             fh.write(f"  <url><loc>{SITE_URL}{'' if p == 'index.html' else p}</loc><lastmod>{snap}</lastmod></url>\n")
+        fh.write(f"  <url><loc>{SITE_URL}{TR_PATH}</loc><lastmod>{snap}</lastmod></url>\n")
         fh.write("</urlset>\n")
     open(os.path.join(out_dir, ".nojekyll"), "w").close()
-    report = {"cut": cut, "snapshot": snap, "pages": pages, "og": og_ok,
+    report = {"cut": cut, "snapshot": snap, "pages": pages, "locales": {"tr": TR_PATH + "index.html"}, "og": og_ok,
               "rows": {"movers": len(m), "categories": len(c), "rising": len(r),
                        "niche_keywords": len([x for x in (N["rows"] if N else []) if (x.get("listings") or 0) >= 20])},
               "breakouts": bool(prev), "public_max_rows": PUBLIC_N,
@@ -1407,6 +1671,7 @@ These are not all of Etsy: they are the shops in our panel that we could measure
     with open(os.path.join(out_dir, "build.json"), "w") as fh:
         json.dump(report, fh, indent=2)
     check_public(out_dir, meta)
+    check_tr(out_dir, cta(ctx), P)
     print(json.dumps(report))
 
 
