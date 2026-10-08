@@ -21,7 +21,9 @@ import html
 import json
 import os
 import shutil
+import re
 import statistics
+from zoneinfo import ZoneInfo
 
 ROOT = os.path.normpath(os.path.join(os.path.dirname(os.path.abspath(__file__)), ".."))
 SITE_URL = "https://geminigeorge22.github.io/publicrecords-data/"
@@ -103,6 +105,34 @@ def money(x):
 
 def pct(x, d=0):
     return f"{x * 100:.{d}f}%"
+
+
+# SITE-1 (t566u): the AI page's sample conversation + free CSV come from ONE existing Etsy Search run on build >= 0.2.8,
+# fetched read-only by scripts/ai_sample.py into data/ai-sample/. Numbers on the page are computed from these rows.
+AI_SAMPLE_DIR = os.path.join(ROOT, "data", "ai-sample")
+AI_SAMPLE_MAX = 20   # default maxItems of the buyer path (whole run); the sample CSV is that one run, all of its rows
+
+
+def load_ai_sample():
+    mp = os.path.join(AI_SAMPLE_DIR, "meta.json")
+    if not os.path.exists(mp):
+        return None
+    meta = json.load(open(mp, encoding="utf-8"))
+    rows = read_csv(os.path.join(AI_SAMPLE_DIR, "listings.csv"))
+    b = tuple(int(x) for x in str(meta.get("build_number") or "0.0.0").split("."))
+    if meta.get("status") != "SUCCEEDED" or b < (0, 2, 8) or len(rows) != meta.get("dataset_item_count"):
+        raise SystemExit(f"ai-sample: run {meta.get('run_id')} not usable (status/build/row count)")
+    for r in rows:
+        r["price"] = float(r["price"])
+        r["position"] = int(r["position"])
+        for k in ("bestseller", "star_seller", "is_ad", "free_shipping"):
+            r[k] = r.get(k) == "True"
+    rows.sort(key=lambda r: r["position"])
+    return {"meta": meta, "rows": rows}
+
+
+def money(v):
+    return f"${v:,.2f}"
 
 
 def nice_date(iso):
@@ -851,22 +881,55 @@ We list an app here only after we've run a real question through it.</p></sectio
     ]
     uses_html = "".join(f'<div class="use"><h3>{E(t)}</h3><p>{E(d)}</p><q>{E(p)}</q><div class="f">{E(f)}</div></div>' for t, d, p, f in uses)
 
-    convo = """<section><h2>What it looks like</h2><p class="sub">The conversation from the video, with real numbers from an Etsy search run
-on Oct 7, 2026 (US shopper). Every dollar figure is what Etsy sellers charge.</p>
+    S = files.get("ai_sample")
+    convo, tryit_file, tryit_kw = "", "", "a ceramic mug"
+    if S:
+        M, R = S["meta"], S["rows"]
+        kw = M["queries"][0]
+        kws = kw if kw.endswith("s") else kw + "s"
+        n = len(R)
+        top = R[:10]
+        when = dt.datetime.fromisoformat(M["finished_at"].replace("Z", "+00:00")).astimezone(ZoneInfo("America/Toronto"))
+        day = when.strftime("%b %-d, %Y")
+
+        def tags(r):
+            t = [x for x, on in (("Bestseller", r["bestseller"]), ("ad", r["is_ad"])) if on]
+            return f" ({', '.join(t)})" if t else ""
+        lis = "".join(f"<li>{r['position']}. {E(r['shop_name'])} <b>{money(r['price'])}</b>{tags(r)}</li>" for r in top)
+        tp = [r["price"] for r in top]
+        nb = sum(r["bestseller"] for r in top)
+        na = sum(r["is_ad"] for r in top)
+        B = [r["price"] for r in R if r["bestseller"]]
+        O = [r["price"] for r in R if not r["bestseller"]]
+        if B and O:
+            from decimal import Decimal, ROUND_HALF_UP   # exact cents from the CSV strings (35.495 -> $35.50)
+            avg = lambda xs: float((sum(Decimal(repr(x)) for x in xs) / len(xs)).quantize(Decimal("0.01"), ROUND_HALF_UP))
+            ab, ao = avg(B), avg(O)
+            lead = "Yes, on average." if ab > ao else "No, not on average."
+            a2 = (f"{lead} {len(B)} of the {n} listings in the run have a Bestseller badge. Average price sellers charge:"
+                  f"<ul><li>Bestseller: <b>{money(ab)}</b> ({money(min(B))} to {money(max(B))})</li>"
+                  f"<li>The rest: <b>{money(ao)}</b> ({money(min(O))} to {money(max(O))})</li></ul>"
+                  f'<div class="t">Small groups: {len(B)} badge listings vs {len(O)} others, from one search.</div>')
+        else:
+            a2 = f"All {n} listings in the run {'have' if B else 'lack'} a Bestseller badge, so there's nothing to compare."
+        convo = f"""<section><h2>What it looks like</h2><p class="sub">A sample conversation with real numbers from one Etsy search run
+on {day} (US shopper). Every dollar figure is what Etsy sellers charge.</p>
 <div class="convo">
-<div class="u">Who are the top sellers in my 5 niches?</div>
-<div class="b"><div class="t">Ran Etsy Search Scraper on your niches</div>#1 on Etsy search right now, with that seller's price: <b>backpacks</b> HKwoodwork ($18, Bestseller badge),
-<b>aprons</b> VivifyCreationsUS ($12), <b>pet storage</b> PeachBlossomAU ($12), <b>patches</b> CustomPatchesTX ($7), <b>faux plants</b> WaterFreeGreenery ($36).</div>
-<div class="u">How do Bestseller shops price vs the rest?</div>
-<div class="b">Listings with a Bestseller badge charge more in 3 of 4 niches (patches had none in the top 10). Typical prices sellers charge, badge vs the rest of the top 10:
-<ul><li>backpacks: <b>$62 vs $16</b></li><li>aprons: $22 vs $20</li><li>pet storage: $14 vs $12</li><li>faux plants: $23 vs $36 (the one where badge holders charge less)</li></ul>
-<div class="t">Small groups: 2 to 5 badge holders per niche.</div></div>
-<div class="u">Put it all in a report with the other analytics</div>
-<div class="b">Here's your report: typical price, the range most top sellers charge, Bestseller badges, free shipping and the #1 shop for each niche, with charts.
+<div class="u">Top 10 {E(kws)} on Etsy: who sells them, what they charge, and which have a Bestseller badge?</div>
+<div class="b"><div class="t">Ran Etsy Search Scraper on “{E(kw)}” (US shopper, {n} listings back)</div>The top 10 on Etsy search right now, with what each seller charges:
+<ul>{lis}</ul>Sellers charge {money(min(tp))} to {money(max(tp))} across the top 10. {nb} of 10 have a Bestseller badge and {na} are paid ads.</div>
+<div class="u">Do Bestseller listings charge more than the rest?</div>
+<div class="b">{a2}</div>
+<div class="u">Put it in a report with a price chart</div>
+<div class="b">Here's your report: a price chart of all {n} listings, the top shops, Bestseller badges and paid ads, from the rows above.
 <div class="t">Ask for a document or PDF if your AI app can make files.</div></div>
 </div>
-<p class="note">Source: publicrecords Etsy Search Scraper, Apify run mZPhcYgZOJ8SKb9fW, Oct 7, 2026.
+<p class="note">Source: publicrecords Etsy Search Scraper, Apify run {E(M['run_id'])} (build {E(M['build_number'])}), “{E(kw)}”, {n} listings, {day}.
 Answers in your chat will be worded by your AI and use the data from your own run.</p></section>"""
+        tryit_file = (f'Download the {n} “{E(kw)}” listings from that run (<a href="{files["ai_sample_csv"]}">CSV</a>) and drop it into any AI chat. Then ask:'
+                      f'<ul><li>“What should I charge for {"an" if kw[:1] in "aeiou" else "a"} {E(kw)}?”</li><li>“Which listings have a Bestseller badge, and what do they have in common?”</li>'
+                      f'<li>“Write me a one-page report on this niche.”</li></ul>'
+                      f'<p class="note" style="margin-bottom:0">The free file is one search from {day}. Connect above for fresh data on any keyword.')
 
     costs = f"""<section><h2>How it works, and what it costs</h2>
 <div class="costs">
@@ -875,11 +938,11 @@ Answers in your chat will be worded by your AI and use the data from your own ru
 <div><b>Your account, your results</b><p>Every run and its results stay in your Apify account. Sign-in happens on Apify's own screen; we never see your password. Remove access any time in Apify Console → Settings → API &amp; Integrations.</p></div>
 </div></section>"""
 
-    tryit = f"""<section><div class="try"><b>No account yet? Try it with our free files.</b> Download our free top-10 listings file
-(<a href="{files.get('niche_listings', 'data/niche-listings-latest.csv')}">CSV</a>) and drop it into any AI chat. Then ask:
-<ul><li>“What should I charge for pet storage?”</li><li>“Which listings have a Bestseller badge, and what do they have in common?”</li>
-<li>“Write me a one-page report on these niches.”</li></ul>
-<p class="note" style="margin-bottom:0">The free file is a weekly snapshot. Connect above for fresh data on any keyword.
+    if not tryit_file:
+        tryit_file = (f'Download our free top-10 listings file (<a href="{files.get("niche_listings", "data/niche-listings-latest.csv")}">CSV</a>) and drop it into any AI chat. Then ask:'
+                      '<ul><li>“Which listings have a Bestseller badge, and what do they have in common?”</li><li>“Write me a one-page report on these niches.”</li></ul>'
+                      '<p class="note" style="margin-bottom:0">The free file is a weekly snapshot. Connect above for fresh data on any keyword.')
+    tryit = f"""<section><div class="try"><b>No account yet? Try it with our free file.</b> {tryit_file}
 Rather not use AI? <a href="{BUILDER}?from=ai">Build a report here</a> or <a href="{RUN_FALLBACK}" rel="noopener">run it inside Apify</a>.</p></div></section>"""
 
     body = (f"<style>{AI_CSS}</style>{apps}<section><h2>What you can do</h2><p class=\"sub\">Six things to ask once you're connected. "
@@ -949,6 +1012,10 @@ def check_public(out_dir):
                         per[r_[0]] = per.get(r_[0], 0) + 1
                     if per and max(per.values()) > PUBLIC_N:
                         bad.append(f"{rel}: {max(per.values())} rows for one keyword (max {PUBLIC_N})")
+                elif f.startswith("ai-sample-"):   # SITE-1: one run, all rows, must equal the dataset item count
+                    S_ = load_ai_sample()
+                    if not S_ or S_["meta"]["run_id"] not in f or len(body) != S_["meta"]["dataset_item_count"] or len(body) > AI_SAMPLE_MAX:
+                        bad.append(f"{rel}: {len(body)} rows; must equal its run's dataset item count and be <= {AI_SAMPLE_MAX}")
                 elif "niche-summary" not in f and len(body) > PUBLIC_N:
                     bad.append(f"{rel}: {len(body)} rows (max {PUBLIC_N})")
             elif f == "builder.js":
@@ -998,6 +1065,13 @@ def build(out_dir):
                 write_public_csv(os.path.join(out_dir, "data", nm), rows_)
             files["niche_" + k] = f"data/niche-{k}-{N['cut']}.csv"
         files["niche_listings_rows"] = len(rows_)
+
+    S = load_ai_sample()
+    if S:
+        kwslug = re.sub(r"[^a-z0-9]+", "-", S["meta"]["queries"][0].lower()).strip("-")
+        nm = f"ai-sample-{kwslug}-{S['meta']['run_id']}.csv"
+        shutil.copyfile(os.path.join(AI_SAMPLE_DIR, "listings.csv"), os.path.join(out_dir, "data", nm))
+        files["ai_sample"], files["ai_sample_csv"] = S, f"data/{nm}"
 
     # panel coverage for the report builder (numbers come from meta.json written at publish time)
     _c = cov_of(meta)

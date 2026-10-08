@@ -1,0 +1,23 @@
+{
+  "actor": "publicrecords/etsy-search-scraper",
+  "run_id": "5jf38ytVjcPMi7nm3",
+  "build_number": "0.2.10",
+  "build_id": "LRdhNvPXU8Yei84J8",
+  "status": "SUCCEEDED",
+  "started_at": "2026-10-07T23:44:28.150Z",
+  "finished_at": "2026-10-07T23:45:01.313Z",
+  "dataset_id": "1ggt4RgRgT8NhVByE",
+  "dataset_item_count": 20,
+  "rows": 20,
+  "queries": [
+    "ceramic mug"
+  ],
+  "max_items": 20,
+  "sort": "relevance",
+  "proxy_country": "US",
+  "charged_events": {
+    "actor-start": 1,
+    "listing-row": 20
+  },
+  "usage_usd": 0.0482
+}
