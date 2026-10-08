@@ -2,7 +2,7 @@
 
 Weekly Etsy market reports, published as a static site:
 
-**https://geminigeorge22.github.io/publicrecords-data/** (moving to **https://www.etsypulse.ca/** once its DNS resolves; the base URL is the one value in `config/site.json`)
+**https://www.etsypulse.ca/** (the old https://geminigeorge22.github.io/publicrecords-data/ redirects here; the base URL is the one value in `config/site.json`)
 
 | Report | Page | What it shows | Source |
 |---|---|---|---|

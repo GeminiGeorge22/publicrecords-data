@@ -1,4 +1,4 @@
 {
-  "base_url": "https://geminigeorge22.github.io/publicrecords-data/",
-  "note": "DOMAIN-1: the one site base URL. Becomes https://www.etsypulse.ca/ when www.etsypulse.ca resolves to GitHub Pages and the Pages custom domain is set (apply.sh)."
+  "base_url": "https://www.etsypulse.ca/",
+  "note": "DOMAIN-1: the one site base URL. Switched from https://geminigeorge22.github.io/publicrecords-data/ (now 301s here) after DNS + Pages custom domain + HTTPS cert."
 }
