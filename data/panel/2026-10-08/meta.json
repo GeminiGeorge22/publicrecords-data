@@ -1,0 +1,162 @@
+{
+  "cut_date": "2026-10-08",
+  "snapshot_date": "2026-10-07",
+  "source": "Hugging Face Publicrecords/etsy-shop-velocity (latest.json + snapshot + STATE/shops.json)",
+  "snapshot_sha256": "d0101a3e2d86788b8cb675a38bca8f9e316c3d91ff4ca2362a0d37b599241467",
+  "panel_shops": 88906,
+  "snapshot_rows": 88247,
+  "snapshot_rows_in_file": 88247,
+  "snapshot_built_at": "2026-10-08T03:19:12.305942+00:00",
+  "history_days_max": 8,
+  "min_lifetime_sales": 500,
+  "shops_with_gain_any_size": 20043,
+  "shops_with_gain_ge_min": 15209,
+  "shops_with_gain_ge_min_known_category": 758,
+  "total_7d_delta_ge_min": 936040,
+  "total_7d_delta_ge_min_known_category": 76782,
+  "categories": 46,
+  "scaled_share": 0.987,
+  "coverage": {
+    "panel_shops": 88906,
+    "shops_read_once": 88247,
+    "shops_measured": 26739,
+    "shops_measured_7d_span": 312,
+    "shops_one_read_only": 61508,
+    "measured_span_days_max": 7,
+    "series": [
+      {
+        "date": "2026-09-30",
+        "read_once": 313,
+        "measured": 0
+      },
+      {
+        "date": "2026-10-01",
+        "read_once": 869,
+        "measured": 0
+      },
+      {
+        "date": "2026-10-02",
+        "read_once": 869,
+        "measured": 855
+      },
+      {
+        "date": "2026-10-03",
+        "read_once": 893,
+        "measured": 855
+      },
+      {
+        "date": "2026-10-04",
+        "read_once": 893,
+        "measured": 855
+      },
+      {
+        "date": "2026-10-05",
+        "read_once": 53816,
+        "measured": 893
+      },
+      {
+        "date": "2026-10-06",
+        "read_once": 88247,
+        "measured": 893
+      },
+      {
+        "date": "2026-10-07",
+        "read_once": 88247,
+        "measured": 26739
+      }
+    ],
+    "definition": "measured = public sales counter read on at least two different days, so a sales gain can be computed; read_once = at least one readable sales counter; panel_shops = shops listed in the panel (read or not)."
+  },
+  "rows": {
+    "movers": 10,
+    "rising": 10,
+    "categories": 10
+  },
+  "rows_full": {
+    "movers": 50,
+    "rising": 25,
+    "categories": 46
+  },
+  "public_max_rows": 10,
+  "custom_report": {
+    "rank_field": "sales_per_day",
+    "n": 50,
+    "min_sales": 500,
+    "snapshot_rows_with_field": 17245,
+    "movers": {
+      "ready": true,
+      "rows_with_field": 50,
+      "max_shops": 60
+    },
+    "rising": {
+      "ready": true,
+      "rows_with_field": 50,
+      "max_shops": 2662,
+      "max_sales": 999
+    },
+    "categories": {
+      "bags & purses > backpacks": {
+        "ready": false,
+        "rows_with_field": 31,
+        "max_shops": 50,
+        "tracker_value": "bags &amp; purses > backpacks"
+      },
+      "accessories > aprons": {
+        "ready": true,
+        "rows_with_field": 42,
+        "max_shops": 51,
+        "tracker_value": "accessories > aprons"
+      },
+      "kids & baby > baby blankets": {
+        "ready": false,
+        "rows_with_field": 17,
+        "max_shops": 50,
+        "tracker_value": "kids &amp; baby > baby blankets"
+      },
+      "accessories > patches & appliques": {
+        "ready": false,
+        "rows_with_field": 22,
+        "max_shops": 50,
+        "tracker_value": "accessories > patches &amp; appliques"
+      },
+      "pet supplies > horse riding & farm animals": {
+        "ready": false,
+        "rows_with_field": 16,
+        "max_shops": 50,
+        "tracker_value": "pet supplies > horse riding &amp; farm animals"
+      },
+      "kids & baby > games & puzzles": {
+        "ready": false,
+        "rows_with_field": 12,
+        "max_shops": 50,
+        "tracker_value": "kids &amp; baby > games &amp; puzzles"
+      },
+      "kids & baby > toys": {
+        "ready": false,
+        "rows_with_field": 17,
+        "max_shops": 50,
+        "tracker_value": "kids &amp; baby > toys"
+      },
+      "home & living > home decor > faux plants & greenery": {
+        "ready": false,
+        "rows_with_field": 5,
+        "max_shops": 50,
+        "tracker_value": "home &amp; living > home decor > faux plants &amp; greenery"
+      },
+      "bags & purses > totes": {
+        "ready": false,
+        "rows_with_field": 10,
+        "max_shops": 50,
+        "tracker_value": "bags &amp; purses > totes"
+      },
+      "kids & baby > baby gift sets": {
+        "ready": false,
+        "rows_with_field": 10,
+        "max_shops": 50,
+        "tracker_value": "kids &amp; baby > baby gift sets"
+      }
+    }
+  },
+  "method": "7-day gain = latest public sales counter minus the read 7+ days earlier; when a shop has fewer than 7 days of reads, the gain over the observed days is scaled to 7. Shops with lifetime sales >= 500 only.",
+  "generated_at": "2026-10-08T15:35:05+00:00"
+}
