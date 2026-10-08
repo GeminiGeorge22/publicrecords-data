@@ -246,6 +246,7 @@ def do_publish(force=False, latest=None):
     sha = commit_push(["data/panel", "data/daily-movers"], f"daily publish {cut} (snapshot {meta['snapshot_date']}, {meta['snapshot_rows']} rows; daily movers {movers_status})")
     if sha and movers_status == "ok":
         movers_card()
+        fb_pack()   # FB-PACK (Mark t628u): ready-to-paste Facebook group pack from the same exact export (box-only, never posted)
         posts()   # X drafts read the exact daily-movers export (2026-10-08), so run them after it lands
     log("publish", "ok" if sha else "unchanged", cut=cut, snapshot=meta["snapshot_date"], rows=meta["snapshot_rows"],
         prev_rows=(prev or {}).get("snapshot_rows"), movers=meta["rows"]["movers"], categories=meta["rows"]["categories"],
@@ -278,6 +279,18 @@ def movers_card():
         return
     r = subprocess.run([sys.executable, MOVERS_CARD, "--repo", ROOT], capture_output=True, text=True)
     log("movers_card", "ok" if r.returncode == 0 else "error", out=(r.stdout or r.stderr).strip()[-200:].replace(" ", ""))
+
+
+FB_PACK = "/workspace/x-etsypulse/facebook/make_fb_pack.py"
+
+
+def fb_pack():
+    """FB-PACK (Mark t628u): /workspace/x-etsypulse/facebook/packs/<day>/ (pack.md, posts.txt, EN+TR cards) from the newest complete
+    daily-movers day. Own guard (exact numbers, banned words, fb-* links only); a failure keeps the previous pack. Never posts."""
+    if not os.path.exists(FB_PACK):
+        return
+    r = subprocess.run([sys.executable, FB_PACK, "--repo", ROOT], capture_output=True, text=True)
+    log("fb_pack", "ok" if r.returncode == 0 else "error", out=(r.stdout or r.stderr).strip()[-200:].replace(" ", ""))
 
 
 def sig_of(meta):
