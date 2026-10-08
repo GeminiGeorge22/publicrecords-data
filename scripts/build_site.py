@@ -423,8 +423,16 @@ BAND_COLORS = ["#ffb27a", "#ff8a3d", "#FD5E02", "#b83f00"]
 
 BUILDER = "run.html"
 RUN_FALLBACK = R + "site-run"
-NAV = [("index.html", "Overview"), ("movers/", "⚡ Daily Movers"), ("ai.html", "✦ AI"), ("run.html", "★ Custom report"), ("categories.html", "Hot Categories"),
+# NAV-1 (Mark t623u): Home, AI, Daily Movers, Fastest-growing niches first (TR nav and home cards follow the same order).
+NAV = [("index.html", "Home"), ("ai.html", "✦ AI"), ("movers/", "⚡ Daily Movers"), ("movers/#niches", "📈 Fastest-growing niches"),
+       ("run.html", "★ Custom report"), ("categories.html", "Hot Categories"),
        ("rising.html", "Rising Shops"), ("breakouts.html", "Breakouts"), ("niche.html", "Niche Prices")]
+
+
+def nav_items(ctx):
+    """NAV entries whose page exists; the niches tab needs /movers/ plus a niche list on the newest day."""
+    pg = ctx["pages"]
+    return [(h, t) for h, t in NAV if h in pg or (h == "movers/#niches" and "movers/" in pg and dm_has_niches())]
 
 
 # ---------------------------------------------------------------- TR-1: Turkish home (/tr/)
@@ -481,7 +489,7 @@ def money_tokens(text):
 
 
 def page(name, title, desc, body, ctx, hero=None, scripts=""):
-    nav = "".join(f'<a href="{h}"{" class=on" if h == name else ""}>{t}</a>' for h, t in NAV if h in ctx["pages"])
+    nav = "".join(f'<a href="{h}"{" class=on" if h == name else ""}>{t}</a>' for h, t in nav_items(ctx))
     url = SITE_URL + ("" if name == "index.html" else name)
     og = SITE_URL + "og.png?v=" + ctx["cut"]
     return f"""<!doctype html>
@@ -1081,8 +1089,10 @@ def tr_home(ctx, P):
     desc = T["desc"].format(shop=top["shop_name"], gain=plus_tr(top["sales_7d_delta"]), cat=leaf(c[0]["category"]),
                             cat_gain=plus_tr(c[0]["total_7d_delta"]))
     nv = T["nav"]
-    nav = (f'<a href="/tr/" class=on>{nv["home"]}</a>' + (f'<a href="/tr/movers/">{T["movers"]["nav"]}</a>' if dm_days() else "") + f'<a href="/ai.html?from=tr">{nv["ai"]}</a>'
-           f'<a href="/{BUILDER}?from=tr-nav">{nv["run"]}</a><a href="/?from=tr#reports">{nv["movers"]}</a>')
+    nav = (f'<a href="/tr/" class=on>{nv["home"]}</a><a href="/ai.html?from=tr">{nv["ai"]}</a>'
+           + (f'<a href="/tr/movers/">{T["movers"]["nav"]}</a>' if dm_days() else "")
+           + (f'<a href="/tr/movers/#niches">{T["movers"]["nav_niches"]}</a>' if dm_has_niches() else "")
+           + f'<a href="/{BUILDER}?from=tr-nav">{nv["run"]}</a><a href="/?from=tr#reports">{nv["movers"]}</a>')
     kpis = f"""<div class="kpis">
 <div class="kpi"><div class="v">{plus_tr(top['sales_7d_delta'])}</div><div class="l">{T['kpi_top'].format(shop=E(top['shop_name']))}</div></div>
 <div class="kpi"><div class="v">{E(leaf(c[0]['category']))}</div><div class="l">{T['kpi_cat'].format(shops=c[0]['shops_moving'], gain=plus_tr(c[0]['total_7d_delta']))}</div></div>
@@ -1429,6 +1439,11 @@ def dm_load(day):
             "pct": cast(read_csv(pct_p))[:PUBLIC_N] if os.path.exists(pct_p) else [], "niches": nich}
 
 
+def dm_has_niches():
+    ds = dm_days()
+    return bool(ds) and bool(dm_load(ds[-1])["niches"])
+
+
 def short_date(iso, lang="en", T=None):
     d_ = dt.date.fromisoformat(iso)
     return f"{d_.day} {T['months'][d_.month - 1]}" if lang == "tr" else d_.strftime("%b %-d")
@@ -1564,11 +1579,13 @@ def dm_page(out_dir, D, days, ctx, lang="en", archive=False):
                   "These are the biggest movers among the shops we read, not all of Etsy.")
     beacon = "tr-movers" if tr else ("movers-day" if archive else "movers-daily")
     if tr:
-        nav = (f'<a href="/tr/">{T["nav"]["home"]}</a><a href="/tr/movers/" class=on>{M["nav"]}</a>'
-               f'<a href="/ai.html?from=tr-movers">{T["nav"]["ai"]}</a><a href="/{BUILDER}?from=tr-movers-nav">{T["nav"]["run"]}</a>')
+        nav = (f'<a href="/tr/">{T["nav"]["home"]}</a><a href="/ai.html?from=tr-movers">{T["nav"]["ai"]}</a>'
+               f'<a href="/tr/movers/" class=on>{M["nav"]}</a>'
+               + (f'<a href="/tr/movers/#niches">{M["nav_niches"]}</a>' if D.get("niches") else "")
+               + f'<a href="/{BUILDER}?from=tr-movers-nav">{T["nav"]["run"]}</a>')
         lsw = lang_switch_to("tr", "/movers/", "/tr/movers/")
     else:
-        nav = "".join(f'<a href="/{"" if h == "index.html" else h}"{" class=on" if h == "movers/" else ""}>{t}</a>' for h, t in NAV if h in ctx["pages"])
+        nav = "".join(f'<a href="/{"" if h == "index.html" else h}"{" class=on" if h == "movers/" else ""}>{t}</a>' for h, t in nav_items(ctx))
         lsw = lang_switch_to("en", "/movers/", "/tr/movers/")
     alt = (f'<link rel="alternate" hreflang="en" href="{SITE_URL}movers/">'
            f'<link rel="alternate" hreflang="tr" href="{SITE_URL}{TR_PATH}movers/">'
@@ -1842,10 +1859,19 @@ def build(out_dir):
         ("rising.html", "Rising Shops", f"{len(r)}", "Fastest measured shops with under 1,000 lifetime sales.",
          mini(r, lambda x: x["shop_name"], lambda x: plus(x["sales_7d_delta"]))),
     ]
+    # NAV-1 (Mark t623u): home cards in nav order: AI, Daily Movers, Fastest-growing niches, then the rest
+    lead = [("ai.html", "✦ AI", "ask", "Connect our tools to your AI chat and just ask about any niche or list of shops.",
+             '<ul class=mini><li><span class="nm">“Top shops in backpacks right now?”</span></li>'
+             '<li><span class="nm">“What do top sellers charge for aprons?”</span></li>'
+             '<li><span class="nm">“How fast is this Etsy shop selling?”</span></li></ul>')]
     if "movers/" in pages:
         _D = dm_load(dm_days()[-1])
-        cards.insert(0, ("movers/", "⚡ Daily Movers", short_date(_D["day"]), "Today's top 10 Etsy shops by sales added. New list every day.",
-                         mini(_D["movers"], lambda x: x["shop_name"], lambda x: plus(x["sales_added"]))))
+        lead.append(("movers/", "⚡ Daily Movers", short_date(_D["day"]), "Today's top 10 Etsy shops by sales added. New list every day.",
+                     mini(_D["movers"], lambda x: x["shop_name"], lambda x: plus(x["sales_added"]))))
+        if _D["niches"]:
+            lead.append(("movers/#niches", "📈 Fastest-growing niches", short_date(_D["day"]), "Today's top 10 Etsy niches by sales added. New list every day.",
+                         mini(_D["niches"], lambda x: x["niche"], lambda x: plus(x["sales_added"]))))
+    cards = lead + cards
     if "niche.html" in pages:
         nr = [x for x in N["rows"] if (x.get("listings") or 0) >= 20]
         cards.append(("niche.html", "Niche Prices", f"{len(nr)}", f"What top sellers charge, and their badges, in the niches of the top movers on {nice_date(N['cut'])}.",

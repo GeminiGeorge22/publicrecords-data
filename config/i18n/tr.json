@@ -20,7 +20,7 @@
   "desc": "Bu haftanın Etsy yükselenleri: {shop} 7 günde {gain} satış; kategorilerde {cat} önde ({cat_gain}). Herkese açık Etsy satış sayaçlarından.",
   "follow": "Takip et: @EtsyPulse",
   "nav": {
-    "home": "Genel bakış",
+    "home": "Ana sayfa",
     "ai": "✦ Yapay zekâ (EN)",
     "run": "★ Özel rapor (EN)",
     "movers": "Tüm raporlar (EN)"
@@ -194,6 +194,7 @@
       "bath & beauty": "Banyo ve güzellik",
       "books, films & music": "Kitap, film ve müzik",
       "electronics & accessories": "Elektronik ve aksesuarlar"
-    }
+    },
+    "nav_niches": "📈 En hızlı büyüyen nişler"
   }
 }
