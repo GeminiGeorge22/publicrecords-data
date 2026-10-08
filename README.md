@@ -2,7 +2,7 @@
 
 Weekly Etsy market reports, published as a static site:
 
-**https://geminigeorge22.github.io/publicrecords-data/**
+**https://geminigeorge22.github.io/publicrecords-data/** (moving to **https://www.etsypulse.ca/** once its DNS resolves; the base URL is the one value in `config/site.json`)
 
 | Report | Page | What it shows | Source |
 |---|---|---|---|
@@ -58,8 +58,8 @@ Etsy Search Scraper on Apify). Not affiliated with, endorsed by, or sponsored by
 ## Report builder (`run.html`)
 
 Visitors build a custom report on-site and run it on **their own Apify account** after "Sign in with Apify":
-OAuth 2 authorization code + PKCE against `console-backend.apify.com` (public client `41bogEetbPU2ZVmGm`, registered via
-Apify's open dynamic client registration, redirect `https://geminigeorge22.github.io/publicrecords-data/run.html`;
+OAuth 2 authorization code + PKCE against `console-backend.apify.com` (public client `zgo08rBVHw2gUc3ZI`, registered via
+Apify's open dynamic client registration, redirects `https://www.etsypulse.ca/run.html` and `https://geminigeorge22.github.io/publicrecords-data/run.html` (DOMAIN-1; the older client `41bogEetbPU2ZVmGm` allowed github.io only);
 there is no client secret). Token exchange and Actor runs go browser → Apify directly; the token sits in
 `sessionStorage` only. Apify offers a single scope (`full_api_access`), disclosed on the page.
 Code: `assets/builder.js` / `assets/builder.css`; example reports use `assets/sample-*.json` (real runs).

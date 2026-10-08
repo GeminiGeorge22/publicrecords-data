@@ -7,7 +7,7 @@
 (function () {
   "use strict";
   var CFG = {
-    clientId: "41bogEetbPU2ZVmGm",
+    clientId: "zgo08rBVHw2gUc3ZI",   // DOMAIN-1: DCR client 2026-10-07 23:2x ET, redirects www.etsypulse.ca + github.io + localhost (old 41bogEetbPU2ZVmGm = github.io only)
     authUrl: "https://console.apify.com/authorize/oauth",
     tokenUrl: "https://console-backend.apify.com/oauth/apps/token",
     api: "https://api.apify.com/v2",

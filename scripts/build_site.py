@@ -26,7 +26,12 @@ import statistics
 from zoneinfo import ZoneInfo
 
 ROOT = os.path.normpath(os.path.join(os.path.dirname(os.path.abspath(__file__)), ".."))
-SITE_URL = "https://geminigeorge22.github.io/publicrecords-data/"
+# DOMAIN-1: the site's base URL is ONE value, config/site.json "base_url" (canonical/og:url/sitemap/robots/JSON-LD all derive
+# from SITE_URL). Flip it to "https://www.etsypulse.ca/" only after DNS for www.etsypulse.ca resolves to GitHub Pages and the
+# Pages custom domain is set (scripts: /workspace/domain-1/apply.sh). GITHUB_IO_URL stays as the legacy address.
+GITHUB_IO_URL = "https://geminigeorge22.github.io/publicrecords-data/"
+SITE_URL = json.load(open(os.path.join(ROOT, "config", "site.json"), encoding="utf-8"))["base_url"]
+assert SITE_URL.startswith("https://") and SITE_URL.endswith("/"), "config/site.json base_url must be https://... ending in /"
 CTA_URL = "https://publicrecords-redirect.publicrecords.workers.dev/r/site-cta"
 TRACKER_URL = "https://publicrecords-redirect.publicrecords.workers.dev/r/site-tracker"
 R = "https://publicrecords-redirect.publicrecords.workers.dev/r/"
@@ -1033,6 +1038,21 @@ def check_public(out_dir):
                         bad.append(f"{rel}: banned word in text '{t[:60]}'")
                     if STALE_PRICE.search(t):
                         bad.append(f"{rel}: stale/false price or banned copy in text '{t[:60]}' (PRICE-2)")
+    # DOMAIN-1: every canonical / og:url / sitemap / robots URL uses SITE_URL; once on the custom domain, no github.io URL
+    # may remain in any public page (github.io now 301s to the custom domain).
+    for root, _, fs in os.walk(out_dir):
+        for f in fs:
+            if not f.endswith((".html", ".xml", ".txt")):
+                continue
+            p = os.path.join(root, f)
+            rel = os.path.relpath(p, out_dir)
+            raw = open(p, encoding="utf-8").read()
+            for mt in _re.finditer(r'<link rel="canonical" href="([^"]+)"|<meta property="og:url" content="([^"]+)"|<loc>([^<]+)</loc>|^Sitemap: (\S+)', raw, _re.M):
+                u = next(g for g in mt.groups() if g)
+                if not u.startswith(SITE_URL):
+                    bad.append(f"{rel}: URL '{u}' does not use the site base {SITE_URL} (DOMAIN-1)")
+            if SITE_URL != GITHUB_IO_URL and "geminigeorge22.github.io" in raw:
+                bad.append(f"{rel}: legacy github.io URL left after the custom-domain switch (DOMAIN-1)")
     if bad:
         raise SystemExit("public check failed:\n  " + "\n  ".join(bad))
     print("public check ok: no banned words, every report <= %d rows" % PUBLIC_N)
