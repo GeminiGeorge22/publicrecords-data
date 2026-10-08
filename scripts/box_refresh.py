@@ -97,10 +97,25 @@ def sh(*cmd, env=None, check=True):
     return r
 
 
+def pull_main(retries=1):
+    """Rebase local main onto origin/main. Explicit refspec + rebase onto the tracking ref (not FETCH_HEAD), so a
+    concurrent fetch from another worktree can't cause 'Cannot rebase onto multiple branches'. Retries once."""
+    for i in range(retries + 1):
+        try:
+            sh("git", "fetch", "-q", "origin", "+refs/heads/main:refs/remotes/origin/main")
+            sh("git", "rebase", "-q", "--autostash", "origin/main")
+            return
+        except RuntimeError:
+            if sh("git", "status", check=False).stdout.find("rebase in progress") >= 0:
+                sh("git", "rebase", "--abort", check=False)
+            if i == retries:
+                raise
+            time.sleep(10)
+
+
 def git_sync():
-    sh("git", "fetch", "-q", "origin", "main")
     sh("git", "checkout", "-q", "main")
-    sh("git", "pull", "-q", "--rebase", "--autostash", "origin", "main")
+    pull_main()
 
 
 def commit_push(paths, msg):
@@ -110,7 +125,7 @@ def commit_push(paths, msg):
     sh("git", "-c", "user.name=publicrecords", "-c", "user.email=publicrecords@users.noreply.github.com",
        "commit", "-q", "-m", msg)
     for i in range(3):
-        sh("git", "pull", "-q", "--rebase", "--autostash", "origin", "main")
+        pull_main()
         if sh("git", "push", "-q", "origin", "main", check=(i == 2)).returncode == 0:
             break
         time.sleep(5)
@@ -172,7 +187,6 @@ def do_internal(latest=None):
     meta = json.load(open(os.path.join(INTERNAL, cut, "meta.json")))
     log("internal", "ok", cut=cut, snapshot=meta["snapshot_date"], movers=meta["rows"]["movers"],
         shops=meta["shops_with_gain_ge_min"], path=os.path.join(INTERNAL, cut), pushed="no")
-    posts()
     return True
 
 
@@ -232,6 +246,7 @@ def do_publish(force=False, latest=None):
     sha = commit_push(["data/panel", "data/daily-movers"], f"daily publish {cut} (snapshot {meta['snapshot_date']}, {meta['snapshot_rows']} rows; daily movers {movers_status})")
     if sha and movers_status == "ok":
         movers_card()
+        posts()   # X drafts read the exact daily-movers export (2026-10-08), so run them after it lands
     log("publish", "ok" if sha else "unchanged", cut=cut, snapshot=meta["snapshot_date"], rows=meta["snapshot_rows"],
         prev_rows=(prev or {}).get("snapshot_rows"), movers=meta["rows"]["movers"], categories=meta["rows"]["categories"],
         rising=meta["rows"]["rising"], commit=sha or "-")
