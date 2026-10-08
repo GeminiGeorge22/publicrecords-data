@@ -713,6 +713,20 @@ MCP_URL = "https://mcp.apify.com?tools=" + MCP_TOOLS
 MCP_SETUP = "https://mcp.apify.com/?tools=" + MCP_TOOLS          # Apify's own setup page, our tools preselected
 CLAUDE_ADD = "https://claude.ai/new?modal=add-custom-connector#settings/customize-connectors"
 CHATGPT_SETTINGS = "https://chatgpt.com/#settings/Connectors"
+# AI-PAGE-2 (t570u): a client is named on the page only after a committed real-test pass on that client and surface.
+# claude: PASS on claude.ai web (Mark's account, 2026-10-07 23:50Z; Search run NbmK5QVMvSggPpUIi, 26.9 s, 12 rows;
+# lookup_shops 3 calls). The Claude iPhone app fails at "add connector". chatgpt / cursor / vscode: no pass yet, so their
+# cards, hero and meta mentions stay off. Re-enable a client by adding its key here (check_public enforces the rest).
+TESTED_CLIENTS = ["claude"]
+CLIENT_NAMES = {"claude": "Claude", "chatgpt": "ChatGPT", "cursor": "Cursor", "vscode": "VS Code"}
+# Names that must not appear in ai.html's visible text unless their client is tested (other apps are not named at all).
+CLIENT_NAME_RX = {"chatgpt": r"ChatGPT|OpenAI", "cursor": r"\bCursor\b", "vscode": r"VS ?Code|Copilot",
+                  "other": r"\bCodex\b|Claude Code|\bWindsurf\b|\bGemini\b"}
+
+
+def tested_names():
+    n = [CLIENT_NAMES[k] for k in TESTED_CLIENTS]
+    return n[0] if len(n) == 1 else ", ".join(n[:-1]) + " or " + n[-1]
 
 
 def mcp_links():
@@ -776,7 +790,7 @@ def ai_page(ctx, files):
     hero = f"""<div class="hero aih">{PULSE_SVG}<div class="wrap" style="padding-bottom:40px">
 <div><div class="eyebrow">Etsy Pulse · AI</div>
 <h1>Ask AI about any Etsy niche</h1>
-<p class="lede">Connect our Etsy tools to Claude, ChatGPT or Cursor. Ask in plain words about any keyword or niche: your AI pulls fresh public Etsy search and shop data,
+<p class="lede">Connect our Etsy tools to {tested_names()}. Ask in plain words about any keyword or niche: your AI pulls fresh public Etsy search and shop data,
 answers right in the chat, and turns it into a report when you ask.</p>
 <ol class="steps3"><li>Click Connect</li><li>Sign in with Apify (free)</li><li>Ask your AI</li></ol>
 <div class="hcta"><a class="hbtn" href="#connect">Connect your AI →</a><small>Runs on your own Apify account. From 13¢ for 1 keyword (top 20 listings). $6 per 1,000 listings + 0.5¢ per run. Blocked pages charge nothing.</small></div></div>
@@ -786,47 +800,54 @@ aria-label="Demo: connect Etsy Pulse, sign in with Apify, ask AI who the top sel
 <img class="poster" src="assets/ai/etsypulse-ai-wide-poster.png" alt="Demo: ask AI about any Etsy niche with Etsy Pulse, using public Etsy search data"></video></div>
 </div></div>"""
 
-    apps = f"""<section id="connect"><h2>Connect in a minute</h2>
-<p class="sub">It's Apify's official MCP server (the standard way AI apps plug into tools) with our two Etsy tools already picked:
-the Etsy Search Scraper and the Etsy Shop Sales Tracker. One link works in every app below.</p>
-<div class="urlbox"><code>{E(MCP_URL)}</code>{copy()}</div>
-<div class="apps" style="margin-top:14px">
-<div class="app"><h3>Claude</h3><p>claude.ai or the Claude desktop app.</p>
+    cards = {
+        "claude": f"""<div class="app"><h3>Claude</h3><p>Connect on claude.ai in a browser first (the iPhone app can't add it yet).</p>
 <div class="acts">{copy("1. Copy link")}<a class="abtn ghost" href="{E(CLAUDE_ADD)}" target="_blank" rel="noopener">2. Open Claude connectors →</a></div>
-<ol><li>Name it <b>Etsy Pulse</b> and paste the link as the server URL.</li><li>Press <b>Add</b>, then <b>Connect</b>, and sign in with Apify.</li></ol></div>
-<div class="app"><h3>ChatGPT</h3><p>Needs Developer mode (Plus, Pro, Business, Enterprise and Edu plans).</p>
+<ol><li>Name it <b>Etsy Pulse</b> and paste the link as the server URL.</li><li>Press <b>Add</b>, then <b>Connect</b>, and sign in with Apify.</li>
+<li>In Claude: <b>Customize → Connectors → Etsy Pulse → set tools to Always allow.</b> One question uses 3 tools (run, check status, read results), so otherwise Claude stops to ask 3 times.</li></ol></div>""",
+        "chatgpt": f"""<div class="app"><h3>ChatGPT</h3><p>Needs Developer mode (Plus, Pro, Business, Enterprise and Edu plans).</p>
 <div class="acts">{copy("1. Copy link")}<a class="abtn ghost" href="{E(CHATGPT_SETTINGS)}" target="_blank" rel="noopener">2. Open ChatGPT settings →</a></div>
 <ol><li>Go to <b>Apps</b> → <b>Create</b>. No Create button? Turn on <b>Developer mode</b> under Advanced.</li>
-<li>Name it <b>Etsy Pulse</b>, paste the link, keep <b>OAuth</b>, press Create and sign in with Apify.</li></ol></div>
-<div class="app"><h3>Cursor</h3><p>One click adds it. Cursor opens and asks you to confirm.</p>
+<li>Name it <b>Etsy Pulse</b>, paste the link, keep <b>OAuth</b>, press Create and sign in with Apify.</li></ol></div>""",
+        "cursor": f"""<div class="app"><h3>Cursor</h3><p>One click adds it. Cursor opens and asks you to confirm.</p>
 <div class="acts"><a class="abtn" href="{E(L['cursor'])}">Add to Cursor</a></div>
-<ol><li>Then sign in with Apify when Cursor asks.</li></ol></div>
-<div class="app"><h3>VS Code</h3><p>One click adds it (Copilot agent mode).</p>
+<ol><li>Then sign in with Apify when Cursor asks.</li></ol></div>""",
+        "vscode": f"""<div class="app"><h3>VS Code</h3><p>One click adds it (Copilot agent mode).</p>
 <div class="acts"><a class="abtn" href="{E(L['vscode'])}">Add to VS Code</a></div>
-<ol><li>Then sign in with Apify when VS Code asks.</li></ol></div>
+<ol><li>Then sign in with Apify when VS Code asks.</li></ol></div>""",
+    }
+    cards_html = "\n".join(cards[k] for k in TESTED_CLIENTS if k in cards)
+    apps = f"""<section id="connect"><h2>Connect in a minute</h2>
+<p class="sub">It's Apify's official MCP server (the standard way AI apps plug into tools) with our two Etsy tools already picked:
+the Etsy Search Scraper and the Etsy Shop Sales Tracker. Copy the link below and follow the steps.</p>
+<div class="urlbox"><code>{E(MCP_URL)}</code>{copy()}</div>
+<div class="apps" style="margin-top:14px">
+{cards_html}
 </div>
-<p class="note">Another AI app? <a href="{E(MCP_SETUP)}" target="_blank" rel="noopener">Open Apify's setup page</a> with our tools already picked: it has steps for
-Claude Code, Codex, GitHub Copilot CLI and more.</p></section>"""
+<p class="note">Another AI app? <a href="{E(MCP_SETUP)}" target="_blank" rel="noopener">Open Apify's setup page</a> with our tools already picked.
+We list an app here only after we've run a real question through it.</p></section>"""
 
+    # AI-PAGE-2: copy-paste prompts stay small (one keyword, top 5-10, or one shop) so a first answer lands in about 30 s.
+    # A 60-row, full-page first try dropped Mark's mobile connection. No multi-niche or many-row runs here.
     uses = [
-        ("Compare niches", "Find the opening before you make anything.",
-         "Compare “aprons”, “faux plants” and “pet storage”: what top sellers charge, how many have a Bestseller badge, and which looks easiest to break into.",
-         "Uses: price, Bestseller badge, number of Etsy results"),
-        ("Price-check a listing", "See where your price sits against the top 20.",
-         "I sell a personalized pet toy basket for $18. Pull the top 20 for “pet toy basket” and tell me where my price sits.",
+        ("Top sellers", "Start here: one keyword, done in about 30 seconds.",
+         "Top 5 ceramic mugs on Etsy: who sells them, what they charge, and which have a Bestseller badge?",
+         "Uses: shop, price, Bestseller badge"),
+        ("Price-check a listing", "See where your price sits against the top 10.",
+         "I sell a personalized pet toy basket for $18. Pull the top 10 for “pet toy basket” and tell me where my price sits.",
          "Uses: price, position, free shipping"),
         ("Ads vs Bestsellers", "Who's paying to be there, and who earned it.",
-         "For “ceramic mug”, which of the top 20 are paid ads and which have a Bestseller badge or Star Seller? What do the badge winners have in common?",
+         "For “ceramic mug”, which of the top 10 are paid ads and which have a Bestseller badge or Star Seller? What do the badge winners have in common?",
          "Uses: ad flag, Bestseller, Star Seller, reviews, rating"),
         ("Titles and tags", "Write like the listings that rank.",
-         "Read the titles of the top 20 “scarf pin brooch” listings and write 3 title options and 13 tag ideas in the same style for mine.",
+         "Read the titles of the top 10 “scarf pin brooch” listings and write 3 title options and 13 tag ideas in the same style for mine.",
          "Uses: listing titles. Etsy tags aren't in the data, so tag ideas come from the titles."),
-        ("Weekly niche watch", "A short check-in on your niche and your rivals.",
-         "Run my 3 keywords and look up shops X and Y. Write a short niche watch: top shops, price range, Bestseller badges, lifetime sales and reviews. I'll ask again next week to compare.",
-         "Uses: Etsy Search + Shop Sales Tracker (lifetime sales, reviews, active listings)"),
+        ("Check one shop", "A quick look at one rival.",
+         "Look up the Etsy shop [shop name]: total sales on its shop page, reviews, and how fast it's selling.",
+         "Uses: Shop Sales Tracker (total sales, reviews, active listings; sales per day once a shop has been read twice)"),
         ("Charts and plans", "Turn answers into something you can use.",
-         "Put it all in a report: a price chart per niche, the top shops, and a one-page plan for my first 10 listings.",
-         "Your AI makes the chart or file from the rows our tools return."),
+         "Put that in a report: a price chart, the top shops, and a one-page plan for my first 10 listings.",
+         "Your AI makes the chart or file from the rows our tools already returned."),
     ]
     uses_html = "".join(f'<div class="use"><h3>{E(t)}</h3><p>{E(d)}</p><q>{E(p)}</q><div class="f">{E(f)}</div></div>' for t, d, p, f in uses)
 
@@ -862,9 +883,10 @@ Answers in your chat will be worded by your AI and use the data from your own ru
 Rather not use AI? <a href="{BUILDER}?from=ai">Build a report here</a> or <a href="{RUN_FALLBACK}" rel="noopener">run it inside Apify</a>.</p></div></section>"""
 
     body = (f"<style>{AI_CSS}</style>{apps}<section><h2>What you can do</h2><p class=\"sub\">Six things to ask once you're connected. "
-            f"Copy a prompt, swap in your own niche.</p><div class=\"uses\">{uses_html}</div></section>{convo}{costs}{tryit}")
-    return page("ai.html", "Ask AI about any Etsy niche: connect Etsy Pulse to Claude, ChatGPT or Cursor | Etsy Pulse",
-                "Connect our Etsy tools to your AI through Apify's MCP server. Ask about any Etsy keyword or niche and get answers and reports from fresh public Etsy market data. From 13¢ for 1 keyword (top 20 listings). $6 per 1,000 listings + 0.5¢ per run. Blocked pages charge nothing.",
+            f"Copy a prompt, swap in your own niche. Keep the first question small (one keyword, top 5 or 10) so it finishes in about 30 seconds; "
+            f"bigger asks take longer.</p><div class=\"uses\">{uses_html}</div></section>{convo}{costs}{tryit}")
+    return page("ai.html", f"Ask AI about any Etsy niche: connect Etsy Pulse to {tested_names()} | Etsy Pulse",
+                f"Connect our Etsy tools to {tested_names()} through Apify's MCP server. Ask about any Etsy keyword or niche and get answers and reports from fresh public Etsy market data. From 13¢ for 1 keyword (top 20 listings). $6 per 1,000 listings + 0.5¢ per run. Blocked pages charge nothing.",
                 body, ctx, hero, scripts=AI_JS)
 
 
@@ -905,6 +927,17 @@ def check_public(out_dir):
                     bad.append(f"{rel}: banned word '{mt.group(0)}'")
                 for mt in BANNED_PRICE.finditer(PRICE_OK.sub(" ", vt)):
                     bad.append(f"{rel}: stale price line '{mt.group(0)}' (PRICE-1)")
+                # AI-PAGE-2: only clients with a committed real-test pass are named; no "your Etsy data" (t559u).
+                for k, rx in CLIENT_NAME_RX.items():
+                    if k not in TESTED_CLIENTS:
+                        for mt in _re.finditer(rx, vt):
+                            bad.append(f"{rel}: untested client named '{mt.group(0)}' (AI-PAGE-2, TESTED_CLIENTS)")
+                raw = open(p, encoding="utf-8").read()
+                for k, rx in {"cursor": r"cursor://", "vscode": r"vscode:mcp", "chatgpt": r"chatgpt\.com"}.items():
+                    if k not in TESTED_CLIENTS and _re.search(rx, raw):
+                        bad.append(f"{rel}: untested client link '{rx}' (AI-PAGE-2)")
+                if _re.search(r"your Etsy data", vt, _re.I):
+                    bad.append(f"{rel}: 'your Etsy data' (t559u)")
             elif f.endswith(".csv"):
                 rows = list(csv.reader(open(p, encoding="utf-8")))
                 if rows and BANNED.search(",".join(rows[0])):

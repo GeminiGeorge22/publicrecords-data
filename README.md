@@ -11,7 +11,7 @@ Weekly Etsy market reports, published as a static site:
 | Hot Categories | `categories.html` | Top 10 categories by combined 7-day gain, with shops gaining, typical shop and leader | `data/panel/<cut>/categories.csv` |
 | Rising Shops | `rising.html` | Top 10 shops with 500–999 lifetime sales by 7-day gain | `data/panel/<cut>/rising.csv` |
 | Breakouts | `breakouts.html` | Shops new to the top 10 vs the previous cut (appears automatically once two cuts exist) | two panel cuts |
-| Use with AI | `ai.html` | Connect our two Actors to Claude / ChatGPT / Cursor / VS Code through Apify's MCP server (`https://mcp.apify.com?tools=publicrecords/etsy-search-scraper,publicrecords/etsy-shop-velocity`, OAuth sign-in with the visitor's Apify account); 6 use cases; demo video `assets/ai/` (real numbers from niche run mZPhcYgZOJ8SKb9fW) | Apify MCP docs |
+| Use with AI | `ai.html` | Connect our two Actors to Claude (claude.ai web; the only client with a real-test pass, see `TESTED_CLIENTS` in `scripts/build_site.py`) through Apify's MCP server (`https://mcp.apify.com?tools=publicrecords/etsy-search-scraper,publicrecords/etsy-shop-velocity`, OAuth sign-in with the visitor's Apify account); 6 use cases; demo video `assets/ai/` (real numbers from niche run mZPhcYgZOJ8SKb9fW) | Apify MCP docs |
 | Niche Prices | `niche.html` | What top sellers charge (typical price, most charge $a–$b), price ranges, Bestseller share, free shipping for keywords from this week's leading movers; top 10 results per keyword in the CSV | `data/niche/<cut>/` |
 
 **Free = top 10, custom = top 50 (t518u).** Every public file (repo `data/` and the site's CSVs) has at most 10 rows per
