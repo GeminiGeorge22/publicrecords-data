@@ -582,7 +582,29 @@
     "Prices are what Etsy shows a shopper in the chosen country.": "Les prix sont ceux qu'Etsy affiche à un acheteur dans le pays choisi.",
     "Sales come from each shop's public sales counter; pace is measured between our reads.": "Les ventes viennent du compteur de ventes public de chaque boutique; le rythme est mesuré entre nos lectures.",
     "New shops get a sales figure after their second daily read; until then, sales per day and 7-day change come back empty.": "Les nouvelles boutiques obtiennent un chiffre de ventes après leur deuxième lecture quotidienne; d'ici là, les ventes par jour et la variation sur 7 jours restent vides.",
-    "No shop has 7 days of reads yet, so Breakout shops returns nothing for now.": "Aucune boutique n'a encore 7 jours de lectures; Boutiques en percée ne renvoie donc rien pour l'instant."
+    "No shop has 7 days of reads yet, so Breakout shops returns nothing for now.": "Aucune boutique n'a encore 7 jours de lectures; Boutiques en percée ne renvoie donc rien pour l'instant.",
+    "Your shop or listing links <em>(optional)</em>": "Votre boutique ou vos liens d'annonces <em>(facultatif)</em>",
+    "Your listings get their own “vs the market” section in the report. This field isn't sent anywhere and costs nothing.": "Vos annonces ont leur propre section « face au marché » dans le rapport. Ce champ n'est envoyé nulle part et ne coûte rien.",
+    "Your product vs the market": "Votre produit face au marché",
+    "None of your listings showed up in these results. That's a finding too: the listings below are the ones buyers see first for this search. Try more listings per keyword, or the words a buyer would type.": "Aucune de vos annonces n'apparaît dans ces résultats. C'est déjà une information : les annonces ci-dessous sont celles que les acheteurs voient en premier pour cette recherche. Essayez plus d'annonces par mot-clé, ou les mots qu'un acheteur taperait.",
+    "Search position": "Position dans la recherche",
+    "ad": "pub",
+    "for “{q}”": "pour « {q} »",
+    "What it charges": "Son prix",
+    "{a} of these listings charge less, {b} charge more": "{a} de ces annonces demandent moins, {b} demandent plus",
+    "Yes": "Oui",
+    "No": "Non",
+    "vs {s} of results": "contre {s} des résultats",
+    "Badges": "Badges",
+    "None": "Aucun",
+    "top {n}: {b} Bestseller, {p} Popular now": "top {n} : {b} Best-seller, {p} Populaire en ce moment",
+    "Ads in the top results": "Pubs dans les premiers résultats",
+    "{a} of {n}": "{a} sur {n}",
+    "this listing is an ad": "cette annonce est une pub",
+    "this listing shows unpaid": "cette annonce apparaît sans pub",
+    "Reviews on its card": "Avis sur sa fiche",
+    "top {n}: {lo}–{hi}": "top {n} : {lo}–{hi}",
+    "Each of your listings found in this run, against the other listings in the same search.": "Chacune de vos annonces trouvées dans cette exécution, face aux autres annonces de la même recherche."
   },
   "pg": {
     "common": {
@@ -770,6 +792,59 @@
       "try_alt": "Vous préférez ne pas utiliser l'IA? {build} ou {apify}.",
       "try_build": "Créez un rapport ici",
       "try_apify": "lancez-le dans Apify"
+    },
+    "compare": {
+      "title": "Votre produit Etsy face au marché : prix, position, badges, avis, rythme de ventes | Etsy Pulse",
+      "desc": "Comparez une de vos annonces Etsy avec la recherche des acheteurs : son prix face à ce que demandent les autres vendeurs, sa position, la livraison gratuite, les badges, les avis et le rythme de ventes de votre boutique. En direct, sur votre propre compte Apify.",
+      "eyebrow": "Etsy Pulse · Produit face au marché",
+      "h1": "Votre produit face au marché",
+      "lede": "Choisissez une de vos annonces et voyez où elle se situe dans la recherche que les acheteurs utilisent vraiment. Puis lancez la même comparaison sur toute votre gamme de produits, ici, sur des données en direct.",
+      "show_h2": "Ce que montre la comparaison",
+      "show_sub": "Chaque ligne vient d'une exécution en direct. Une ligne qu'on ne peut pas remplir avec des données réelles est retirée, jamais devinée.",
+      "rows": [
+        [
+          "Son prix",
+          "Où se situe votre prix parmi ce que demandent les autres vendeurs dans la même recherche."
+        ],
+        [
+          "Position dans la recherche",
+          "Où votre annonce apparaît pour le mot-clé, et si cette place est une pub."
+        ],
+        [
+          "Livraison gratuite",
+          "La vôtre face à la part des résultats qui l'offrent."
+        ],
+        [
+          "Badges",
+          "Best-seller et Populaire en ce moment sur votre annonce face aux 10 premiers résultats."
+        ],
+        [
+          "Avis",
+          "La note et le nombre d'avis sur votre fiche face aux 10 premiers."
+        ],
+        [
+          "Rythme de ventes",
+          "Les ventes ajoutées par votre boutique face aux boutiques que vous nommez, d'après les compteurs de ventes publics."
+        ]
+      ],
+      "img_alt": "Exemple de carte : une annonce de tablier comparée à la recherche Etsy américaine pour aprons",
+      "img_cap": "Exemple : une vraie annonce de tablier face à la recherche Etsy américaine « aprons », 7 octobre.",
+      "form_h2": "Lancez-la sur vos produits",
+      "form_sub": "Deux courtes exécutions sur votre propre compte Apify. Rien à installer, sans code.",
+      "f_shop": "Nom ou lien de votre boutique",
+      "f_shop_ph": "NomDeVotreBoutique",
+      "f_kw": "Mots-clés que les acheteurs utilisent pour vos produits <em>(un par ligne)</em>",
+      "f_kw_ph": "aprons\npersonalized apron",
+      "f_links": "Liens d'annonces à mettre en avant <em>(facultatif, un par ligne)</em>",
+      "f_links_hint": "Laissez vide pour mettre en avant chaque annonce de votre boutique qui apparaît.",
+      "f_rivals": "Boutiques à comparer <em>(facultatif, une par ligne)</em>",
+      "f_rivals_ph": "MeilleureBoutiqueDeVotreNiche",
+      "go1": "1 · Lancer la comparaison au marché →",
+      "go1_note": "Notre outil Etsy Search lit la recherche pour chaque mot-clé. Vos annonces ont leur propre section « face au marché » dans le rapport.",
+      "go2": "2 · Lancer le rythme de ventes de votre boutique →",
+      "go2_note": "Notre Etsy Shop Sales Tracker. Une boutique qu'on ne lit pas encore ne renvoie rien cette fois et est ajoutée pour la prochaine lecture quotidienne; vous ne payez que les lignes renvoyées.",
+      "need": "Ajoutez d'abord le nom de votre boutique et au moins un mot-clé.",
+      "ai": "Vous préférez demander dans votre chat IA? <a href=\"{ai}\">Connectez Etsy Pulse à votre chat IA</a> et demandez « comment se compare mon annonce? »."
     }
   }
 }

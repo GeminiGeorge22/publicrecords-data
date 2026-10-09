@@ -1518,6 +1518,109 @@ def loc_run(ctx, lang):
                     scripts=builder_i18n(lang) + f'<script src="/assets/builder.js?v={ctx["cut"]}-b8" defer></script>')
 
 
+
+# ---------------------------------------------------------------- COMPARE-1: /compare.html (Mark t645u/t646u)
+# "Your product vs the market": explains the comparison card (assets/compare/product-sample.png, a real listing rendered
+# by x-etsypulse/facebook/shop-vs-market/make_product_vs_market_card.py) and opens the existing builder already set up:
+# step 1 = niche report on the visitor's keywords with f-mine (their shop/listing links, kept in the browser) so the report
+# shows a "Your product vs the market" section; step 2 = their shop's sales pace (Shop Sales Tracker, velocity/rivals).
+# The short URL on the cards is www.etsypulse.ca/compare (GitHub Pages serves compare.html for /compare).
+COMPARE = "compare.html"
+COMPARE_EN = {
+    "title": "Your Etsy product vs the market: price, search spot, badges, reviews, sales pace | Etsy Pulse",
+    "desc": "Compare one of your Etsy listings with the search buyers use: what it charges vs what other sellers charge, its search position, free shipping, badges, reviews and your shop's sales pace. Live, on your own Apify account.",
+    "eyebrow": "Etsy Pulse · Product vs the market",
+    "h1": "Your product vs the market",
+    "lede": "Pick one of your listings and see where it stands in the search buyers actually use. Then run the same comparison on your full product suite, here, on live data.",
+    "show_h2": "What the comparison shows",
+    "show_sub": "Every row comes from a live run. A row we can't fill from real data is left off, never guessed.",
+    "rows": [["What it charges", "Where your price sits among what other sellers charge in the same search."],
+             ["Search position", "Where your listing shows for the keyword, and whether that spot is an ad."],
+             ["Free shipping", "Yours vs the share of results that offer it."],
+             ["Badges", "Bestseller and Popular now on your listing vs the top 10 results."],
+             ["Reviews", "The rating and review count on your search card vs the top 10."],
+             ["Shop sales pace", "Sales your shop added vs the top shops you name, from public shop sales counters."]],
+    "img_alt": "Example card: one apron listing compared with the US Etsy search for aprons",
+    "img_cap": "Example: one real apron listing against the US Etsy search for “aprons”, Oct 7.",
+    "form_h2": "Run it on your products",
+    "form_sub": "Two short runs on your own Apify account. Nothing to install, no code.",
+    "f_shop": "Your shop name or link", "f_shop_ph": "YourShopName",
+    "f_kw": "Keywords buyers use for your products <em>(one per line)</em>", "f_kw_ph": "aprons\npersonalized apron",
+    "f_links": "Listing links to highlight <em>(optional, one per line)</em>",
+    "f_links_hint": "Leave empty to highlight every listing from your shop that shows up.",
+    "f_rivals": "Shops to compare with <em>(optional, one per line)</em>", "f_rivals_ph": "TopShopInYourNiche",
+    "go1": "1 · Run the market comparison →",
+    "go1_note": "Our Etsy Search tool reads the search for each keyword. Your listings get their own “vs the market” section in the report.",
+    "go2": "2 · Run your shop's sales pace →",
+    "go2_note": "Our Etsy Shop Sales Tracker. A shop we don't read yet returns nothing this time and is added for the next daily read; you pay only for rows returned.",
+    "need": "Add your shop name and at least one keyword first.",
+    "ai": "Prefer to ask in your AI chat? <a href=\"{ai}\">Connect Etsy Pulse to your AI chat</a> and ask “how does my listing compare?”.",
+}
+COMPARE_CSS = """<style>.cmp2{display:grid;grid-template-columns:minmax(0,1fr) minmax(0,1fr);gap:24px;align-items:start}
+.cmp2 img{width:100%;height:auto;border-radius:16px;border:1px solid #ececee;box-shadow:0 6px 24px rgba(0,0,0,.06)}
+.cmp2 figcaption{color:#71717a;font-size:14px;margin-top:6px}.cmprows{list-style:none;padding:0;margin:0}
+.cmprows li{background:#fff;border:1px solid #ececee;border-radius:12px;padding:12px 14px;margin-bottom:10px}
+.cmprows b{display:block;color:#FD5E02}.cmpf{background:#fff;border:1px solid #ececee;border-radius:16px;padding:18px}
+.cmpf label{display:block;font-weight:700;margin:12px 0 6px}.cmpf input,.cmpf textarea{width:100%;box-sizing:border-box;padding:10px 12px;border:1px solid #d4d4d8;border-radius:10px;font:inherit}
+.cmpf .hint{color:#71717a;font-size:14px;margin:4px 0 0}.cmpgo{display:grid;grid-template-columns:1fr 1fr;gap:14px;margin-top:16px}
+.cmpgo a{display:block;background:#FD5E02;color:#fff;font-weight:800;padding:13px 16px;border-radius:12px;text-align:center}
+.cmpgo a.alt{background:#17171a}.cmpgo a[aria-disabled=true]{opacity:.45;pointer-events:none}.cmpgo p{color:#71717a;font-size:14px;margin:6px 0 0}
+@media(max-width:760px){.cmp2,.cmpgo{grid-template-columns:1fr}}</style>"""
+# the link builder: same parameters the site's own "Run this report yourself" links use (niche_link / custom report)
+COMPARE_JS = """<script>(function(){var f=document.getElementById('cmpf');if(!f)return;var B=f.getAttribute('data-builder'),src=f.getAttribute('data-from');
+function L(id){return (document.getElementById(id).value||'').split(/[\\n,]+/).map(function(s){return s.trim()}).filter(Boolean)}
+function sn(s){s=s.trim().replace(/^@/,'');var m=s.match(/etsy\\.com\\/(?:[a-z-]+\\/)?shop\\/([A-Za-z0-9_-]+)/i);if(m)return m[1];m=s.match(/^https?:\\/\\/([A-Za-z0-9-]+)\\.etsy\\.com/i);if(m&&m[1].toLowerCase()!=='www')return m[1];return s.replace(/[^A-Za-z0-9_-]/g,'')}
+function upd(){var shop=sn(L('c-shop')[0]||''),kw=L('c-kw'),links=L('c-links'),riv=L('c-rivals').map(sn).filter(Boolean);
+var p=new URLSearchParams();p.set('type',kw.length>1?'compare':'niche');if(kw.length)p.set('q',kw.join('\\n'));
+var mine=links.length?links:(shop?[shop]:[]);if(mine.length)p.set('f-mine',mine.join('\\n'));
+p.set('f-perkw','50');p.set('f-sort','relevance');p.set('f-region','US');p.set('f-fill','1');p.set('from',src);
+var a1=document.getElementById('c-go1'),a2=document.getElementById('c-go2');a1.href=B+'?'+p.toString();
+var q=new URLSearchParams();var shops=(shop?[shop]:[]).concat(riv);q.set('type',shops.length>1?'rivals':'velocity');if(shops.length)q.set('shops',shops.join(','));q.set('from',src+'-pace');a2.href=B+'?'+q.toString();
+a1.setAttribute('aria-disabled',kw.length&&(shop||links.length)?'false':'true');a2.setAttribute('aria-disabled',shop?'false':'true');
+document.getElementById('c-need').hidden=!!(kw.length&&shop)}
+f.addEventListener('input',upd);upd()})();</script>"""
+
+
+def compare_body(S, builder, src, ai_href, img):
+    rows = "".join(f"<li><b>{E(t)}</b>{E(d)}</li>" for t, d in S["rows"])
+    return f"""{COMPARE_CSS}<section><h2>{S["show_h2"]}</h2><p class="sub">{S["show_sub"]}</p>
+<div class="cmp2"><figure style="margin:0"><img src="{img}" width="1200" height="1200" loading="lazy" alt="{E(S["img_alt"])}"><figcaption>{S["img_cap"]}</figcaption></figure>
+<ul class="cmprows">{rows}</ul></div></section>
+<section id="run"><h2>{S["form_h2"]}</h2><p class="sub">{S["form_sub"]}</p>
+<form class="cmpf" id="cmpf" data-builder="{builder}" data-from="{src}" onsubmit="return false">
+<label for="c-shop">{S["f_shop"]}</label><input id="c-shop" type="text" autocomplete="off" placeholder="{E(S["f_shop_ph"])}">
+<label for="c-kw">{S["f_kw"]}</label><textarea id="c-kw" rows="2" placeholder="{E(S["f_kw_ph"])}"></textarea>
+<label for="c-links">{S["f_links"]}</label><textarea id="c-links" rows="2" placeholder="https://www.etsy.com/listing/1234567890"></textarea><p class="hint">{S["f_links_hint"]}</p>
+<label for="c-rivals">{S["f_rivals"]}</label><textarea id="c-rivals" rows="2" placeholder="{E(S["f_rivals_ph"])}"></textarea>
+<p class="hint" id="c-need">{S["need"]}</p>
+<div class="cmpgo"><div><a id="c-go1" href="{builder}?type=niche&amp;from={src}" aria-disabled="true">{S["go1"]}</a><p>{S["go1_note"]}</p></div>
+<div><a class="alt" id="c-go2" href="{builder}?type=velocity&amp;from={src}-pace" aria-disabled="true">{S["go2"]}</a><p>{S["go2_note"]}</p></div></div>
+</form><p class="note">{S["ai"].format(ai=ai_href)}</p></section>"""
+
+
+def compare_hero(S):
+    return (f'<div class="hero">{PULSE_SVG}<div class="wrap" style="padding-bottom:40px"><div class="eyebrow">{S["eyebrow"]}</div>'
+            f'<h1>{S["h1"]}</h1><p class="lede">{S["lede"]}</p></div></div>')
+
+
+def compare_page(ctx):
+    S = COMPARE_EN
+    return page(COMPARE, S["title"], S["desc"], compare_body(S, BUILDER, "compare", "ai.html#connect", "assets/compare/product-sample.png"),
+                ctx, compare_hero(S), scripts=COMPARE_JS)
+
+
+def loc_compare(ctx, lang):
+    T = load_loc(lang)
+    S = T["pg"]["compare"]
+    miss = [k for k in COMPARE_EN if k not in S]
+    if miss:
+        raise SystemExit(f"compare page ({lang}): missing keys {miss} in config/i18n/{lang}.json pg.compare")
+    lp = LOC_PATH[lang]
+    return loc_page(lang, COMPARE, S["title"], S["desc"],
+                    compare_body(S, "/" + lp + BUILDER, f"{lang}-compare", "/" + lp + "ai.html#connect", "/assets/compare/product-sample.png"),
+                    ctx, T, compare_hero(S), scripts=COMPARE_JS, pg="compare")
+
+
 def loc_ai(ctx, files, lang):
     """/<lang>/ai.html. Taglines, title, meta and hero stay generic ('votre chat IA' / 'yapay zekâ sohbeti'); a client is
     named only inside its tested connect card (AI-PAGE-2: TESTED_CLIENTS), because those steps are factual instructions."""
@@ -2518,6 +2621,7 @@ def build(out_dir):
         pages.append("niche.html")
     if dm_days():
         pages.insert(1, "movers/")
+    pages.append(COMPARE)   # COMPARE-1: not a nav tab; linked from cards and replies (www.etsypulse.ca/compare)
     ld = {"@context": "https://schema.org", "@type": "Dataset", "name": "Etsy Pulse: Etsy shops and niches by sales added",
           "description": "Etsy shops and niches that added the most sales, from exact public shop sales counter reads on two dates. Updated daily.",
           "url": SITE_URL, "dateModified": D["day"], "temporalCoverage": f"{D['meta']['from_date']}/{D['day']}",
@@ -2691,6 +2795,8 @@ These are not all of Etsy: they are the shops and niches we read.</p>
 
     # ---- AI page
     w("ai.html", ai_page(ctx, files))
+    # ---- COMPARE-1: product vs the market
+    w(COMPARE, compare_page(ctx))
 
     # ---- TR-1: Turkish home
     os.makedirs(os.path.join(out_dir, "tr"), exist_ok=True)
@@ -2703,6 +2809,7 @@ These are not all of Etsy: they are the shops and niches we read.</p>
         lp_ = LOC_PATH[lg]
         w(lp_ + "ai.html", loc_ai(ctx, files, lg))
         w(lp_ + BUILDER, loc_run(ctx, lg))
+        w(lp_ + COMPARE, loc_compare(ctx, lg))
         if "rising.html" in pages:
             w(lp_ + "rising.html", loc_rising(ctx, D, files, CL, lg))
         if "niche.html" in pages:

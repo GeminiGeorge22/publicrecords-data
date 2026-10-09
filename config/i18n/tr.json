@@ -564,7 +564,29 @@
     "Prices are what Etsy shows a shopper in the chosen country.": "Fiyatlar, Etsy'nin seçilen ülkedeki bir alıcıya gösterdiği fiyatlardır.",
     "Sales come from each shop's public sales counter; pace is measured between our reads.": "Satışlar her mağazanın herkese açık satış sayacından gelir; hız okumalarımız arasında ölçülür.",
     "New shops get a sales figure after their second daily read; until then, sales per day and 7-day change come back empty.": "Yeni mağazalar ikinci günlük okumalarından sonra bir satış rakamı alır; o zamana kadar günlük satış ve 7 günlük değişim boş döner.",
-    "No shop has 7 days of reads yet, so Breakout shops returns nothing for now.": "Henüz hiçbir mağazanın 7 günlük okuması yok, bu yüzden Sıçrayan mağazalar şimdilik hiçbir şey döndürmüyor."
+    "No shop has 7 days of reads yet, so Breakout shops returns nothing for now.": "Henüz hiçbir mağazanın 7 günlük okuması yok, bu yüzden Sıçrayan mağazalar şimdilik hiçbir şey döndürmüyor.",
+    "Your shop or listing links <em>(optional)</em>": "Mağazanız veya ilan bağlantılarınız <em>(isteğe bağlı)</em>",
+    "Your listings get their own “vs the market” section in the report. This field isn't sent anywhere and costs nothing.": "İlanlarınız raporda kendi “pazara karşı” bölümünü alır. Bu alan hiçbir yere gönderilmez ve ücretsizdir.",
+    "Your product vs the market": "Ürününüz pazara karşı",
+    "None of your listings showed up in these results. That's a finding too: the listings below are the ones buyers see first for this search. Try more listings per keyword, or the words a buyer would type.": "İlanlarınızdan hiçbiri bu sonuçlarda çıkmadı. Bu da bir bulgu: aşağıdaki ilanlar, alıcıların bu aramada ilk gördükleri. Daha fazla ilan okutmayı deneyin veya bir alıcının yazacağı kelimeleri kullanın.",
+    "Search position": "Aramadaki sıra",
+    "ad": "reklam",
+    "for “{q}”": "“{q}” için",
+    "What it charges": "İstediği fiyat",
+    "{a} of these listings charge less, {b} charge more": "Bu ilanların {a} kadarı daha az, {b} kadarı daha fazla istiyor",
+    "Yes": "Evet",
+    "No": "Hayır",
+    "vs {s} of results": "sonuçların {s} kadarına karşı",
+    "Badges": "Rozetler",
+    "None": "Yok",
+    "top {n}: {b} Bestseller, {p} Popular now": "ilk {n}: {b} Çok satan, {p} Şu an popüler",
+    "Ads in the top results": "İlk sonuçlardaki reklamlar",
+    "{a} of {n}": "{n} içinde {a}",
+    "this listing is an ad": "bu ilan reklam",
+    "this listing shows unpaid": "bu ilan reklamsız çıkıyor",
+    "Reviews on its card": "Kartındaki yorumlar",
+    "top {n}: {lo}–{hi}": "ilk {n}: {lo}–{hi}",
+    "Each of your listings found in this run, against the other listings in the same search.": "Bu çalıştırmada bulunan her ilanınız, aynı aramadaki diğer ilanlara karşı."
   },
   "pg": {
     "common": {
@@ -752,6 +774,59 @@
       "try_alt": "Yapay zekâ kullanmak istemiyor musun? {build} ya da {apify}.",
       "try_build": "Burada bir rapor oluştur",
       "try_apify": "Apify içinde çalıştır"
+    },
+    "compare": {
+      "title": "Etsy ürününüz pazara karşı: fiyat, arama sırası, rozetler, yorumlar, satış hızı | Etsy Pulse",
+      "desc": "Etsy ilanlarınızdan birini alıcıların kullandığı aramayla karşılaştırın: diğer satıcıların istediği fiyatlara karşı fiyatı, arama sırası, ücretsiz kargo, rozetler, yorumlar ve mağazanızın satış hızı. Canlı, kendi Apify hesabınızda.",
+      "eyebrow": "Etsy Pulse · Ürün pazara karşı",
+      "h1": "Ürününüz pazara karşı",
+      "lede": "İlanlarınızdan birini seçin ve alıcıların gerçekten kullandığı aramada nerede durduğunu görün. Sonra aynı karşılaştırmayı tüm ürün yelpazenizde, burada, canlı verilerle çalıştırın.",
+      "show_h2": "Karşılaştırma neyi gösterir",
+      "show_sub": "Her satır canlı bir çalıştırmadan gelir. Gerçek veriyle doldurulamayan satır kartta yer almaz, asla tahmin edilmez.",
+      "rows": [
+        [
+          "İstediği fiyat",
+          "Fiyatınızın, aynı aramada diğer satıcıların istediği fiyatlar arasında nerede durduğu."
+        ],
+        [
+          "Aramadaki sıra",
+          "İlanınızın anahtar kelimede nerede çıktığı ve o yerin reklam olup olmadığı."
+        ],
+        [
+          "Ücretsiz kargo",
+          "Sizinki, bunu sunan sonuçların payına karşı."
+        ],
+        [
+          "Rozetler",
+          "İlanınızdaki Çok satan ve Şu an popüler rozetleri, ilk 10 sonuca karşı."
+        ],
+        [
+          "Yorumlar",
+          "Arama kartınızdaki puan ve yorum sayısı, ilk 10'a karşı."
+        ],
+        [
+          "Mağaza satış hızı",
+          "Mağazanızın eklediği satışlar, adını verdiğiniz mağazalara karşı; herkese açık mağaza satış sayaçlarından."
+        ]
+      ],
+      "img_alt": "Örnek kart: bir önlük ilanı, aprons için ABD Etsy aramasıyla karşılaştırılıyor",
+      "img_cap": "Örnek: gerçek bir önlük ilanı, “aprons” için ABD Etsy aramasına karşı, 7 Ekim.",
+      "form_h2": "Kendi ürünlerinizde çalıştırın",
+      "form_sub": "Kendi Apify hesabınızda iki kısa çalıştırma. Kurulum yok, kod yok.",
+      "f_shop": "Mağaza adınız veya bağlantınız",
+      "f_shop_ph": "MagazaAdiniz",
+      "f_kw": "Alıcıların ürünleriniz için kullandığı anahtar kelimeler <em>(her satıra bir tane)</em>",
+      "f_kw_ph": "aprons\npersonalized apron",
+      "f_links": "Öne çıkarılacak ilan bağlantıları <em>(isteğe bağlı, her satıra bir tane)</em>",
+      "f_links_hint": "Boş bırakırsanız mağazanızdan çıkan her ilan öne çıkarılır.",
+      "f_rivals": "Karşılaştırılacak mağazalar <em>(isteğe bağlı, her satıra bir tane)</em>",
+      "f_rivals_ph": "NisinizdekiEnIyiMagaza",
+      "go1": "1 · Pazar karşılaştırmasını çalıştır →",
+      "go1_note": "Etsy Search aracımız her anahtar kelimenin aramasını okur. İlanlarınız raporda kendi “pazara karşı” bölümünü alır.",
+      "go2": "2 · Mağazanızın satış hızını çalıştır →",
+      "go2_note": "Etsy Shop Sales Tracker aracımız. Henüz okumadığımız bir mağaza bu sefer sonuç döndürmez ve bir sonraki günlük okumaya eklenir; yalnızca dönen satırlar için ödersiniz.",
+      "need": "Önce mağaza adınızı ve en az bir anahtar kelime ekleyin.",
+      "ai": "Yapay zekâ sohbetinizde sormayı mı tercih edersiniz? <a href=\"{ai}\">Etsy Pulse'ı yapay zekâ sohbetinize bağlayın</a> ve “ilanım nasıl karşılaştırılıyor?” diye sorun."
     }
   }
 }

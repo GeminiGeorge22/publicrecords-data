@@ -239,7 +239,9 @@
         field("f-perkw", T("Listings per keyword"), '<input id="f-perkw" type="number" min="1" max="1200" step="1" inputmode="numeric" value="20">' +
           '<span class="quick" data-target="f-perkw"><button type="button" data-v="20">20</button><button type="button" data-v="60">60</button><button type="button" data-v="200">200</button><button type="button" data-v="500">500</button><button type="button" data-v="1200">' + T("max") + '</button></span>', T("Any number from 1 to 1,200 (Etsy shows at most 20 pages per search).")) +
         field("f-sort", T("Which listings Etsy returns"), "<select id=f-sort>" + opt("relevance", T("Etsy's best match (default)")) + opt("top_reviews", T("Most reviewed")) + opt("newest", T("Newest")) + opt("price_asc", T("Cheapest first")) + opt("price_desc", T("Most expensive first")) + "</select>") +
-        "</div></div>" +
+        "</div>" +
+        field("f-mine", T("Your shop or listing links <em>(optional)</em>"), '<textarea id="f-mine" rows="2" placeholder="YourShopName&#10;https://www.etsy.com/listing/1234567890"></textarea>', T("Your listings get their own “vs the market” section in the report. This field isn't sent anywhere and costs nothing.")) +
+        "</div>" +
       '<div data-for="tracker">' +
         '<div data-show="velocity rivals">' + field("f-shops", T("Shop names or links <em>(one per line)</em>"), '<textarea id="f-shops" rows="3" placeholder="CaitlynMinimalist&#10;https://www.etsy.com/shop/OrelCeramics"></textarea>', T("Only shops in our panel return a row, and you pay only for rows returned. A shop that isn't in the panel returns nothing.")) + "</div>" +
         '<p class="hint covnote" data-show="velocity rivals category breakouts" id="covnote" hidden></p>' +
@@ -599,6 +601,45 @@
     });
   }
 
+  /* COMPARE-1 (Mark t645u/t646u): "your product vs the market". f-mine holds the visitor's shop name and/or listing links; it
+   * never leaves the browser (not part of the Actor input). Every number comes from the rows of this run. */
+  function lidOf(r) { return String(r.listing_id || (String(r.url || "").match(/listing\/(\d+)/) || [])[1] || ""); }
+  function mineBlock(rows, c) {
+    var ids = [], shops = [];
+    lines(val("f-mine")).forEach(function (s) {
+      var m = s.match(/listing\/(\d{6,})/) || s.match(/^(\d{6,})$/);
+      if (m) ids.push(m[1]); else { var sn = shopName(s); if (sn) shops.push(sn.toLowerCase()); }
+    });
+    if (!ids.length && !shops.length) return "";
+    var seen = {}, hit = rows.filter(function (r) {
+      var k = lidOf(r) + "|" + r.query, ok = ids.indexOf(lidOf(r)) >= 0 || shops.indexOf(String(r.shop_name || "").toLowerCase()) >= 0;
+      if (!ok || seen[k]) return false; seen[k] = 1; return true;
+    }).sort(function (a, b) { return (a.position || 999) - (b.position || 999); }).slice(0, 6);
+    if (!hit.length) return card(T("Your product vs the market"), "<p>" + T("None of your listings showed up in these results. That's a finding too: the listings below are the ones buyers see first for this search. Try more listings per keyword, or the words a buyer would type.") + "</p>");
+    var byQ = groupBy(rows, "query");
+    var items = hit.map(function (r) {
+      var Q = byQ[r.query] || rows, pr = Q.map(function (x) { return x.price; }).filter(function (x) { return typeof x === "number"; });
+      var top = [], s2 = {}; Q.slice().sort(function (a, b) { return (a.position || 999) - (b.position || 999); }).forEach(function (x) { if (top.length < 10 && !s2[lidOf(x)]) { s2[lidOf(x)] = 1; top.push(x); } });
+      var facts = [];
+      if (r.position) facts.push([T("Search position"), "#" + num(r.position) + (r.is_ad === true ? " · " + T("ad") : ""), T("for “{q}”", { q: esc(r.query) })]);
+      if (typeof r.price === "number" && pr.length) {
+        var less = pr.filter(function (p) { return p < r.price; }).length;
+        facts.push([T("What it charges"), money(r.price, c), T("{a} of these listings charge less, {b} charge more", { a: pct(less / pr.length), b: pct(pr.filter(function (p) { return p > r.price; }).length / pr.length) })]);
+      }
+      if (typeof r.free_shipping === "boolean") facts.push([T("Free shipping"), r.free_shipping ? T("Yes") : T("No"), T("vs {s} of results", { s: pct(share(Q, "free_shipping")) })]);
+      var bd = [["bestseller", T("Bestseller")], ["popular_now", T("Popular now")], ["star_seller", T("Star Seller")], ["etsys_pick", T("Etsy's Pick")]];
+      var has = bd.filter(function (b) { return r[b[0]] === true; });
+      facts.push([T("Badges"), has.length ? has.map(function (b) { return b[1]; }).join(", ") : T("None"),
+        T("top {n}: {b} Bestseller, {p} Popular now", { n: top.length, b: top.filter(function (x) { return x.bestseller === true; }).length, p: top.filter(function (x) { return x.popular_now === true; }).length })]);
+      if (Q.some(function (x) { return typeof x.is_ad === "boolean"; })) facts.push([T("Ads in the top results"), T("{a} of {n}", { a: top.filter(function (x) { return x.is_ad === true; }).length, n: top.length }), r.is_ad === true ? T("this listing is an ad") : T("this listing shows unpaid")]);
+      var rv = top.map(function (x) { return x.review_count; }).filter(function (x) { return typeof x === "number"; });
+      if (typeof r.review_count === "number" && rv.length) facts.push([T("Reviews on its card"), (r.rating_value ? num(r.rating_value, 1) + "★ · " : "") + num(r.review_count), T("top {n}: {lo}–{hi}", { n: top.length, lo: num(Math.min.apply(null, rv)), hi: num(Math.max.apply(null, rv)) })]);
+      return '<div class="mine"><a class="mt" href="' + esc(r.url) + '" target="_blank" rel="noopener">' + esc(r.title || r.url) + '</a><div class="ms">' + esc(r.shop_name || "") + '</div><div class="mf">' +
+        facts.map(function (f) { return '<div><span>' + f[0] + '</span><b>' + f[1] + '</b><small>' + f[2] + "</small></div>"; }).join("") + "</div></div>";
+    });
+    return card(T("Your product vs the market"), items.join(""), T("Each of your listings found in this run, against the other listings in the same search."));
+  }
+
   function searchReport(rows, B) {
     var c = cur(rows), prices = rows.map(function (r) { return r.price; }).filter(function (x) { return typeof x === "number"; });
     var byQ = groupBy(rows, "query"), qs = Object.keys(byQ), out = [], tk = [];
@@ -608,6 +649,7 @@
         rev: Math.max.apply(null, a.map(function (r) { return r.review_count || 0; })), bs: a.filter(function (r) { return r.bestseller; }).length, url: a[0].shop_url };
     }).sort(function (a, b) { return b.n - a.n || a.best - b.best; });
     var totalRes = qs.map(function (q) { return (byQ[q][0] || {}).total_results; }).filter(Boolean);
+    var mineHtml = mineBlock(rows, c); if (mineHtml) out.push(mineHtml);
     if (B.kpis) out.push(kpis([[num(rows.length), qs.length > 1 ? T("listings read across {k} keywords", { k: qs.length }) : T("listings read")], [money(med, c), T("typical price")],
       [money(p25, c) + "–" + money(p75, c), T("most charge")], [pct(bs), T("carry a Bestseller badge")]].concat(totalRes.length === 1 ? [[num(totalRes[0]), T("results Etsy shows for this search")]] : [[pct(fs), T("offer free shipping")]])));
     if (med != null) tk.push(T("Most of these listings charge {r}; the typical price is {m}. Pricing inside that range puts you where the top sellers already are.", { r: "<b>" + money(p25, c) + "–" + money(p75, c) + "</b>", m: "<b>" + money(med, c) + "</b>" }));

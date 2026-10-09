@@ -151,3 +151,13 @@ details.adv.bstep>summary small{font-weight:500;font-size:13px;color:var(--mut)}
 .rw{font-size:13px;color:var(--o);font-weight:650}
 .more{margin:10px 0 0;display:flex;flex-wrap:wrap;gap:8px;align-items:center}
 .pj.wait .dot{background:var(--line);animation:none}
+
+/* COMPARE-1: your product vs the market */
+.mine{border:1px solid #ececee;border-radius:14px;padding:14px 16px;margin:10px 0;background:#fff}
+.mine .mt{font-weight:700;color:#17171a;text-decoration:none;display:block;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+.mine .ms{color:#71717a;font-size:.9em;margin:2px 0 10px}
+.mine .mf{display:grid;grid-template-columns:repeat(auto-fill,minmax(170px,1fr));gap:10px}
+.mine .mf div{background:#fafafa;border-radius:10px;padding:10px 12px}
+.mine .mf span{display:block;font-size:.75em;font-weight:700;color:#71717a;text-transform:uppercase;letter-spacing:.03em}
+.mine .mf b{display:block;font-size:1.25em;color:#FD5E02;margin:2px 0}
+.mine .mf small{color:#71717a}
