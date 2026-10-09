@@ -434,7 +434,8 @@ RUN_FALLBACK = R + "site-run"
 # NAV-1 (Mark t623u): Home, AI, Daily Movers, Fastest-growing niches first (TR nav and home cards follow the same order).
 NAV = [("index.html", "Home"), ("ai.html", "✦ AI"), ("movers/", "⚡ Daily Movers"), ("movers/#niches", "📈 Fastest-growing niches"),
        ("run.html", "★ Custom report"), ("categories.html", "Hot Categories"),
-       ("rising.html", "Rising Shops"), ("breakouts.html", "Breakouts"), ("niche.html", "Niche Prices")]
+       ("rising.html", "Rising Shops"), ("breakouts.html", "Breakouts"), ("niche.html", "Niche Prices"),
+       ("compare.html", "⇄ Compare")]   # COMPARE-1 (Mark t648u): last tab, existing order unchanged
 
 
 def nav_items(ctx):
@@ -1249,7 +1250,7 @@ def loc_home(ctx, P, D, lang):
 # Strings live in config/i18n/<lang>.json "pg"; every number comes from the same data as the English page, formatted for
 # the language. Builder links stay inside the language (/fr/run.html?…&from=fr-…), Store links carry ?t=<lang>.
 LOC_NAV = [("index.html", "home"), ("ai.html", "ai"), ("movers/", "movers"), ("movers/#niches", "niches"),
-           ("run.html", "run"), ("rising.html", "rising"), ("niche.html", "niche")]
+           ("run.html", "run"), ("rising.html", "rising"), ("niche.html", "niche"), ("compare.html", "compare")]
 AI_CLIENT_RX = re.compile(r"\bclaude\b|chatgpt|\bgemini\b|copilot|\bcursor\b|perplexity|openai", re.I)
 
 
@@ -1257,7 +1258,7 @@ def loc_nav(lang, ctx, active, T):
     """Same tabs in the same order as the English nav (NAV-1), labels from <lang>.json, every link inside /<lang>/."""
     lp, nv, M = LOC_PATH[lang], T["nav"], T["movers"]
     lab = {"home": nv["home"], "ai": nv["ai"], "movers": M["nav"], "niches": M["nav_niches"], "run": nv["run"],
-           "rising": nv["rising"], "niche": nv["niche"]}
+           "rising": nv["rising"], "niche": nv["niche"], "compare": nv["compare"]}
     out = []
     for h, k in LOC_NAV:
         if not (h in ctx["pages"] or (h == "movers/#niches" and "movers/" in ctx["pages"] and dm_has_niches())):
