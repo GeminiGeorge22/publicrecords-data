@@ -1,0 +1,172 @@
+{
+  "cut_date": "2026-10-10",
+  "snapshot_date": "2026-10-09",
+  "source": "Hugging Face Publicrecords/etsy-shop-velocity (latest.json + snapshot + STATE/shops.json)",
+  "snapshot_sha256": "0acae9782cbeec9cebab0ed421152420ccdc66b41048f511b96d0016b797ee51",
+  "panel_shops": 138354,
+  "snapshot_rows": 137338,
+  "snapshot_rows_in_file": 137338,
+  "snapshot_built_at": "2026-10-10T03:51:44.012452+00:00",
+  "history_days_max": 10,
+  "min_lifetime_sales": 500,
+  "shops_with_gain_any_size": 64494,
+  "shops_with_gain_ge_min": 46858,
+  "shops_with_gain_ge_min_known_category": 1129,
+  "total_7d_delta_ge_min": 2454648,
+  "total_7d_delta_ge_min_known_category": 100501,
+  "categories": 46,
+  "scaled_share": 0.989,
+  "coverage": {
+    "panel_shops": 138354,
+    "shops_read_once": 137338,
+    "shops_measured": 88042,
+    "shops_measured_7d_span": 866,
+    "shops_one_read_only": 49296,
+    "measured_span_days_max": 9,
+    "series": [
+      {
+        "date": "2026-09-30",
+        "read_once": 313,
+        "measured": 0
+      },
+      {
+        "date": "2026-10-01",
+        "read_once": 869,
+        "measured": 0
+      },
+      {
+        "date": "2026-10-02",
+        "read_once": 869,
+        "measured": 855
+      },
+      {
+        "date": "2026-10-03",
+        "read_once": 893,
+        "measured": 855
+      },
+      {
+        "date": "2026-10-04",
+        "read_once": 893,
+        "measured": 855
+      },
+      {
+        "date": "2026-10-05",
+        "read_once": 53816,
+        "measured": 893
+      },
+      {
+        "date": "2026-10-06",
+        "read_once": 88247,
+        "measured": 893
+      },
+      {
+        "date": "2026-10-07",
+        "read_once": 88247,
+        "measured": 26739
+      },
+      {
+        "date": "2026-10-08",
+        "read_once": 88292,
+        "measured": 78620
+      },
+      {
+        "date": "2026-10-09",
+        "read_once": 137338,
+        "measured": 88042
+      }
+    ],
+    "definition": "measured = public sales counter read on at least two different days, so a sales gain can be computed; read_once = at least one readable sales counter; panel_shops = shops listed in the panel (read or not)."
+  },
+  "rows": {
+    "movers": 10,
+    "rising": 10,
+    "categories": 10
+  },
+  "rows_full": {
+    "movers": 50,
+    "rising": 25,
+    "categories": 46
+  },
+  "public_max_rows": 10,
+  "custom_report": {
+    "rank_field": "delta_7d",
+    "n": 50,
+    "min_sales": 500,
+    "snapshot_rows_with_field": 78,
+    "movers": {
+      "ready": true,
+      "rows_with_field": 50,
+      "max_shops": 64539
+    },
+    "rising": {
+      "ready": true,
+      "rows_with_field": 50,
+      "max_shops": 64539,
+      "max_sales": 999
+    },
+    "categories": {
+      "bags & purses > backpacks": {
+        "ready": false,
+        "rows_with_field": 2,
+        "max_shops": 50,
+        "tracker_value": "bags &amp; purses > backpacks"
+      },
+      "bags & purses > totes": {
+        "ready": false,
+        "rows_with_field": 1,
+        "max_shops": 50,
+        "tracker_value": "bags &amp; purses > totes"
+      },
+      "kids & baby > baby blankets": {
+        "ready": false,
+        "rows_with_field": 1,
+        "max_shops": 50,
+        "tracker_value": "kids &amp; baby > baby blankets"
+      },
+      "accessories > aprons": {
+        "ready": false,
+        "rows_with_field": 3,
+        "max_shops": 50,
+        "tracker_value": "accessories > aprons"
+      },
+      "pet supplies > horse riding & farm animals": {
+        "ready": false,
+        "rows_with_field": 2,
+        "max_shops": 50,
+        "tracker_value": "pet supplies > horse riding &amp; farm animals"
+      },
+      "kids & baby > toys": {
+        "ready": false,
+        "rows_with_field": 4,
+        "max_shops": 50,
+        "tracker_value": "kids &amp; baby > toys"
+      },
+      "accessories > patches & appliques": {
+        "ready": false,
+        "rows_with_field": 0,
+        "max_shops": null,
+        "tracker_value": "accessories > patches &amp; appliques"
+      },
+      "kids & baby > children's books": {
+        "ready": false,
+        "rows_with_field": 0,
+        "max_shops": null,
+        "tracker_value": "kids &amp; baby > children's books"
+      },
+      "kids & baby > games & puzzles": {
+        "ready": false,
+        "rows_with_field": 0,
+        "max_shops": null,
+        "tracker_value": "kids &amp; baby > games &amp; puzzles"
+      },
+      "home & living > home decor > scatter cushions": {
+        "ready": false,
+        "rows_with_field": 1,
+        "max_shops": 53,
+        "tracker_value": "home &amp; living > home decor > scatter cushions"
+      }
+    }
+  },
+  "method": "7-day gain = latest public sales counter minus the read 7+ days earlier; when a shop has fewer than 7 days of reads, the gain over the observed days is scaled to 7. Shops with lifetime sales >= 500 only.",
+  "generated_at": "2026-10-10T10:03:29+00:00"
+}
