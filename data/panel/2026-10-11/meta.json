@@ -9,7 +9,7 @@
   "snapshot_built_at": "2026-10-11T03:29:48.555578+00:00",
   "history_days_max": 11,
   "min_lifetime_sales": 500,
-  "shops_with_gain_any_size": 86797,
+  "shops_with_gain_any_size": 86787,
   "shops_with_gain_ge_min": 63142,
   "shops_with_gain_ge_min_known_category": 1130,
   "total_7d_delta_ge_min": 3075259,
@@ -173,5 +173,5 @@
     }
   },
   "method": "7-day gain = latest public sales counter minus the read 7+ days earlier; when a shop has fewer than 7 days of reads, the gain over the observed days is scaled to 7. Shops with lifetime sales >= 500 only.",
-  "generated_at": "2026-10-11T10:11:07+00:00"
+  "generated_at": "2026-10-11T18:57:56+00:00"
 }

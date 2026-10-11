@@ -13,5 +13,5 @@
   "rising_max_total_sales": 999,
   "pct_min_base_sales": 1000,
   "method": "Sales added = a shop's public Etsy sales counter on 2026-10-10 minus the same counter 1 day(s) earlier, both read exactly on those dates. No scaling. Shops without both reads, with rounded counters, a counter that went down, or an implausible jump are left out.",
-  "generated_at": "2026-10-11T10:11:14+00:00"
+  "generated_at": "2026-10-11T18:58:03+00:00"
 }
