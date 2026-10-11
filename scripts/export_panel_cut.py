@@ -93,6 +93,8 @@ def movers_from(snap: dict, state: dict, min_sales: int) -> list[dict]:
         span = last[0] - cand[0]
         if span <= 0:
             continue
+        if cand[1] <= 0:   # prior count 0 = no prior count (e.g. a failed first read): never ranked
+            continue
         raw = last[1] - cand[1]
         if raw <= 0:
             continue

@@ -10,6 +10,7 @@ Ranking is defined ONLY here, with its knobs in config/movers.json:
     2 days today, so w = 2; 1-day pairs are picked up automatically once they exist.
   * sales added = counter(snapshot date) - counter(snapshot date - w). Excluded, each with a counted reason:
     no read on the snapshot date / no read w days earlier (too little history), non-exact (rounded) counters,
+    prior count 0 (no prior count: carried box-only as a null row with reason "no prior count", never ranked),
     counter went down (reset / correction), zero, jump > max_jump_ratio x earlier counter (garbage), vintage events,
     counter != snapshot sales_count, duplicates (same shop name, case-insensitive), config exclude_shops.
   * list 1: top_n by sales added (ties: bigger shop first, then name). list 2 (pct_list): sales added as % of the earlier
@@ -58,7 +59,7 @@ def valid_rows(snap: dict, state: dict, snapshot_date: str, w: int, C: dict) -> 
     end = dt.date.fromisoformat(snapshot_date)
     end_day = (end - day0(end.year)).days
     excl = {s.lower() for s in C.get("exclude_shops", [])}
-    rows, why = [], {}
+    rows, why, not_rankable = [], {}, []
 
     def drop(k):
         why[k] = why.get(k, 0) + 1
@@ -84,7 +85,13 @@ def valid_rows(snap: dict, state: dict, snapshot_date: str, w: int, C: dict) -> 
             drop("counter_went_down"); continue
         if added == 0:
             drop("no_sales_added"); continue
-        if prev[1] and added > g.get("max_jump_ratio", 0.5) * prev[1]:
+        if int(prev[1]) <= 0:   # prior count 0 = no prior count (first read failed / shop just found): never ranked
+            drop("no_prior_count")
+            not_rankable.append({"shop": shop, "sales_total": int(last[1]), "sales_before": None, "sales_added": None,
+                                 "pct_added": None, "reason": "no prior count", "window_days": w,
+                                 "from_date": (end - dt.timedelta(days=w)).isoformat(), "to_date": snapshot_date})
+            continue
+        if added > g.get("max_jump_ratio", 0.5) * int(prev[1]):
             drop("jump_too_big"); continue
         if g.get("drop_vintage_events", True) and s.get("vintage_event"):
             drop("vintage_event"); continue
@@ -105,11 +112,13 @@ def valid_rows(snap: dict, state: dict, snapshot_date: str, w: int, C: dict) -> 
             "sales_added": added,
             "sales_before": int(prev[1]),
             "sales_total": int(last[1]),
-            "pct_added": round(100.0 * added / prev[1], 2) if prev[1] else None,
+            "pct_added": round(100.0 * added / int(prev[1]), 2),
             "window_days": w,
             "from_date": (end - dt.timedelta(days=w)).isoformat(),
             "to_date": snapshot_date,
         })
+    if not_rankable:
+        why["_not_rankable"] = not_rankable   # popped by callers; carried as null rows with a reason, never ranked
     return rows, why
 
 
@@ -150,21 +159,22 @@ def rank_niches(rows: list, C: dict) -> tuple[list, dict]:
 
 def compute(snap: dict, state: dict, snapshot_date: str, C: dict | None = None) -> dict:
     C = C or cfg()
-    tried, cache = {}, {}
+    tried, cache, nr_by_w = {}, {}, {}
     chosen = None
     for w in C.get("window_days_preferred", [1, 2]):
         rows, why = cache[w] = valid_rows(snap, state, snapshot_date, w, C)
+        nr_by_w[w] = why.pop("_not_rankable", [])
         tried[w] = {"valid": len(rows), "excluded": why}
         if len(rows) >= C.get("min_valid_shops", 500):
             chosen = (w, rows)
             break
     out = {"snapshot_date": snapshot_date, "tried": tried, "window_days": None, "movers": [], "pct": [], "rising": [],
-           "niches": [], "niche_window_days": None, "niche_tried": {}}
+           "niches": [], "niche_window_days": None, "niche_tried": {}, "not_rankable": []}
     # niches: their own shortest window with >= top_n rankable niches (same preferred windows, same clean pairs)
     N = C.get("niche_list", {})
     if N.get("enabled"):
         for w in C.get("window_days_preferred", [1, 2]):
-            rows_w = cache[w][0] if w in cache else valid_rows(snap, state, snapshot_date, w, C)[0]
+            rows_w = cache[w][0] if w in cache else valid_rows(snap, state, snapshot_date, w, C)[0]   # (_not_rankable stays internal)
             nl, nwhy = rank_niches(rows_w, C)
             out["niche_tried"][w] = nwhy
             if len(nl) >= N.get("top_n", C.get("top_n", 10)):
@@ -175,12 +185,14 @@ def compute(snap: dict, state: dict, snapshot_date: str, C: dict | None = None) 
     if not chosen:
         return out
     w, rows = chosen
+    out["not_rankable"] = nr_by_w.get(w, [])
     n = C.get("top_n", 10)
     top = sorted(rows, key=lambda r: (-r["sales_added"], -r["sales_total"], r["shop"].lower()))[:n]
     pc = C.get("pct_list", {})
     pct = []
     if pc.get("enabled"):
-        pool = [r for r in rows if r["sales_before"] >= pc.get("min_base_sales", 1000) and r["sales_added"] >= pc.get("min_added", 25)]
+        pool = [r for r in rows if r["pct_added"] is not None and r["sales_before"] > 0
+                and r["sales_before"] >= pc.get("min_base_sales", 1000) and r["sales_added"] >= pc.get("min_added", 25)]
         pct = sorted(pool, key=lambda r: (-r["pct_added"], -r["sales_added"], r["shop"].lower()))[:n]
     rc = C.get("rising_list", {})
     rising = []
@@ -234,7 +246,8 @@ def main():
     R = compute(snap, state, latest["snapshot_date"])
     summary = {"snapshot_date": R["snapshot_date"], "window_days": R["window_days"], "tried": R["tried"],
                "valid": R.get("valid"), "pct_pool": R.get("pct_pool"), "movers": len(R["movers"]), "pct": len(R["pct"]),
-               "niche_window_days": R["niche_window_days"], "niche_tried": R["niche_tried"], "niches": len(R["niches"])}
+               "niche_window_days": R["niche_window_days"], "niche_tried": R["niche_tried"], "niches": len(R["niches"]),
+               "not_rankable": R["not_rankable"]}
     if a.cmd == "check":
         print(json.dumps(summary, indent=1)); return
     if not R["window_days"] or len(R["movers"]) < cfg().get("top_n", 10):
