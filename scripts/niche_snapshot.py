@@ -27,7 +27,7 @@ import urllib.request
 from zoneinfo import ZoneInfo
 
 ROOT = os.path.normpath(os.path.join(os.path.dirname(os.path.abspath(__file__)), ".."))
-ACTOR = "JbNpPvG1Z7YtM9onP"  # publicrecords/etsy-search-scraper
+ACTOR = "kFQaVNjukfplrm1kf"  # etsy-search-scraper-lab (SR-1: owner runs never hit the public Actor)
 API = "https://api.apify.com/v2"
 BANDS = [(0, 15, "under $15"), (15, 30, "$15–30"), (30, 60, "$30–60"), (60, 10**9, "$60+")]
 PUBLIC_N = 10  # results per keyword in the public repo (t518u: free = top 10; top 50 = the visitor's own report)
