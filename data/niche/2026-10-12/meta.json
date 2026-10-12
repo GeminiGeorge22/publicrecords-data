@@ -1,0 +1,31 @@
+{
+  "cut_date": "2026-10-12",
+  "captured_at": "2026-10-12T12:07:17.375Z",
+  "actor": "publicrecords/etsy-search-scraper",
+  "run_id": "Vd4eQnDDRRZTu0oyA",
+  "dataset_id": "73TUhIFe2b9SPlqUF",
+  "status": "SUCCEEDED",
+  "usage_usd": 0.0575,
+  "charged_events": {
+    "actor-start": 1,
+    "listing-row": 105
+  },
+  "extra_run_ids": [],
+  "keywords": [
+    {
+      "keyword": "backpacks",
+      "from_category": "bags & purses > backpacks"
+    },
+    {
+      "keyword": "horse riding",
+      "from_category": "pet supplies > horse riding & farm animals"
+    }
+  ],
+  "rows": {
+    "listings": 118,
+    "keywords": 2,
+    "listings_public": 20
+  },
+  "public_max_rows_per_keyword": 10,
+  "region": "US (Apify residential proxy), sort=relevance, page 1"
+}
