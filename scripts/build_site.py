@@ -753,6 +753,18 @@ def coverage_line(meta):
     return "New shops get a sales figure after their second daily read."
 
 
+def tracked_count(meta):
+    """SITE-2 (Mark t683u): live tracked-shop count = snapshot_rows of the published snapshot manifest (meta.json,
+    written by export_panel_cut.py from HF latest.json each daily publish). Never hardcoded; None if missing."""
+    v = meta.get("snapshot_rows") or (meta.get("coverage") or {}).get("shops_read_once")
+    return int(v) if v else None
+
+
+def tracking_chip(meta):
+    v = tracked_count(meta)
+    return f'<span class="trk">Tracking {v:,} Etsy shops</span>' if v else ""
+
+
 def coverage_short(meta):
     """t619u: removed from the home hero ('Another N have one read so far and need a second...'). Kept as a no-op."""
     return ""
@@ -2118,6 +2130,14 @@ def check_public(out_dir, meta=None):
                         v_ = int(next(g for g in mt.groups() if g).replace(",", ""))
                         if v_ != cv_.get("panel_shops"):
                             bad.append(f"{rel}: panel count {v_:,} != snapshot manifest {cv_.get('panel_shops')} (SITE-2)")
+                    if f == "index.html" and rel == "index.html":
+                        tv_ = tracked_count(meta)
+                        hits_ = [int(x.replace(",", "")) for x in _re.findall(r"Tracking ([\d,]+) Etsy shops", vt)]
+                        if tv_ and not hits_:
+                            bad.append(f"{rel}: live tracked-shop count missing from home (SITE-2)")
+                        for v_ in hits_:
+                            if v_ != tv_:
+                                bad.append(f"{rel}: tracked count {v_:,} != snapshot manifest {tv_} (SITE-2)")
             elif f.endswith(".csv"):
                 rows = list(csv.reader(open(p, encoding="utf-8")))
                 if rows and BANNED.search(",".join(rows[0])):
@@ -2655,7 +2675,7 @@ def build(out_dir):
 <h1>Etsy shops and niches on the move</h1>
 <p class="lede">The Etsy shops and niches adding the most sales, read straight from public Etsy sales counters. Exact counts, window stated.</p>
 {hero_cta()}
-<div class="chips"><span>{E(win)}</span><span>{E(GROWTH_LINE)}</span></div>
+<div class="chips"><span>{E(win)}</span><span>{E(GROWTH_LINE)}</span>{tracking_chip(meta)}</div>
 </div></div>"""
     over_ins = [f"#1 <b>{E(a['shop_name'])}</b> added <b>{plus(a['sales_added'])}</b> sales {span}, "
                 f"{a['sales_added'] / b['sales_added']:.1f}× the #2 shop ({E(b['shop_name'])}, {plus(b['sales_added'])})."]
