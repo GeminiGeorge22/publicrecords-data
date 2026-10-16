@@ -199,6 +199,11 @@ def build_check():
     return None
 
 
+def sweep_balanced(m) -> bool:
+    """READ-ORDER-2 gate: True only when the snapshot manifest carries balanced=true (missing = not proven = held)."""
+    return bool(m) and m.get("balanced") is True
+
+
 def do_publish(force=False, latest=None):
     git_sync()
     latest = latest or hf_latest()
@@ -223,7 +228,15 @@ def do_publish(force=False, latest=None):
     try:
         sh(sys.executable, "scripts/export_panel_cut.py", "--cut-date", cut)
         meta = json.load(open(os.path.join(cut_dir, "meta.json")))
-        movers_status = daily_movers_export()
+        # READ-ORDER-2 (Mark ORDER 2026-10-16 item 1): the sweep feed (daily movers + its X/FB drafts) publishes only when
+        # the snapshot manifest says balanced=true (exact pairs in every 0-9/A-C/D-L/M-S/T-Z bucket >= 0.75 x panel share).
+        if sweep_balanced(latest):
+            movers_status = daily_movers_export()
+        else:
+            movers_status = "held_unbalanced"
+            log("movers", "held_unbalanced", snapshot=latest.get("snapshot_date"),
+                balanced=str(latest.get("balanced")), buckets=json.dumps((latest.get("pair_balance") or {}).get("buckets"),
+                                                                         separators=(",", ":"))[:300])
         why = completeness(meta, prev)   # prev = the cut live before this export (read before it ran)
         if why and not force:
             raise ValueError("incomplete_after_export:" + why)
