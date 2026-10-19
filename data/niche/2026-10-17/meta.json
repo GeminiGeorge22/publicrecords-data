@@ -1,0 +1,39 @@
+{
+  "cut_date": "2026-10-17",
+  "captured_at": "2026-10-19T12:04:46.477Z",
+  "actor": "publicrecords/etsy-search-scraper",
+  "run_id": "vTDBxDixpNeG85Vkf",
+  "dataset_id": "CFc0Bgj58yrRhbvF2",
+  "status": "SUCCEEDED",
+  "usage_usd": 0.0608,
+  "charged_events": {
+    "actor-start": 1,
+    "listing-row": 229
+  },
+  "extra_run_ids": [],
+  "keywords": [
+    {
+      "keyword": "jewellery sets",
+      "from_category": "jewellery > jewellery sets"
+    },
+    {
+      "keyword": "backpacks",
+      "from_category": "bags & purses > backpacks"
+    },
+    {
+      "keyword": "horse riding",
+      "from_category": "pet supplies > horse riding & farm animals"
+    },
+    {
+      "keyword": "faux plants",
+      "from_category": "home & living > home decor > faux plants & greenery"
+    }
+  ],
+  "rows": {
+    "listings": 229,
+    "keywords": 4,
+    "listings_public": 40
+  },
+  "public_max_rows_per_keyword": 10,
+  "region": "US (Apify residential proxy), sort=relevance, page 1"
+}
