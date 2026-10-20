@@ -2,7 +2,7 @@
 """Niche snapshot: Etsy search results for keywords taken from the hottest categories (box-side).
 
   APIFY_TOKEN=... python scripts/niche_snapshot.py run [--cut-date D] [--per-keyword 60]
-      starts publicrecords/etsy-search-scraper on the first 5 distinct categories in
+      starts the publicrecords/etsy-search-scraper lab twin (SR-1) on the first 5 distinct categories in
       data/panel/<cut>/movers.csv (keyword = leaf category name), 1 page per keyword, waits, then writes data/niche/<cut>/.
   APIFY_TOKEN=... python scripts/niche_snapshot.py fetch --run-id RUN [--cut-date D]
       writes data/niche/<cut>/ from an existing run.
@@ -27,7 +27,11 @@ import urllib.request
 from zoneinfo import ZoneInfo
 
 ROOT = os.path.normpath(os.path.join(os.path.dirname(os.path.abspath(__file__)), ".."))
-ACTOR = "JbNpPvG1Z7YtM9onP"  # publicrecords/etsy-search-scraper
+# SR-1 (Mark t878u 2026-10-09; t930u D-3 2026-10-19): every owner run goes to the lab twin, never the public Store
+# Actor. etsy-search-scraper-lab is parity-enforced with public latest (same commit / source; fleet ops/lab_parity.py).
+# Visitor runs (assets/builder.js) stay on the public Actor: they run on the visitor's own Apify account.
+ACTOR = "kFQaVNjukfplrm1kf"  # publicrecords/etsy-search-scraper-lab (lab twin of JbNpPvG1Z7YtM9onP)
+PUBLIC_ACTOR = "JbNpPvG1Z7YtM9onP"  # publicrecords/etsy-search-scraper; never started from this script
 API = "https://api.apify.com/v2"
 BANDS = [(0, 15, "under $15"), (15, 30, "$15–30"), (30, 60, "$30–60"), (60, 10**9, "$60+")]
 PUBLIC_N = 10  # results per keyword in the public repo (t518u: free = top 10; top 50 = the visitor's own report)
@@ -131,6 +135,7 @@ def write(cut, run, items, kw_map):
         "cut_date": cut,
         "captured_at": run.get("finishedAt") or run.get("startedAt"),
         "actor": "publicrecords/etsy-search-scraper",
+        "run_actor_id": ACTOR,
         "run_id": run["id"], "dataset_id": run["defaultDatasetId"], "status": run["status"],
         "usage_usd": round(run.get("usageTotalUsd") or 0, 4),
         "charged_events": run.get("chargedEventCounts"),
