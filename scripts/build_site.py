@@ -21,6 +21,7 @@ import html
 import json
 import os
 import shutil
+import sys
 import re
 import statistics
 from zoneinfo import ZoneInfo
@@ -1836,7 +1837,7 @@ def check_lang(out_dir):
             p = os.path.join(root, f)
             rel = os.path.relpath(p, out_dir).replace(os.sep, "/")
             raw = open(p, encoding="utf-8").read()
-            if 'http-equiv="refresh"' in raw:
+            if 'http-equiv="refresh"' in raw or '<meta name="ep-lang" content="en-only">' in raw:   # REPORTS-1: checked by check_reports
                 continue
             n_ += 1
             if raw.count('<details class="lsel">') != 1:
@@ -2839,6 +2840,11 @@ These are not all of Etsy: they are the shops and niches we read.</p>
     # ---- DAILY MOVERS (t613u)
     dm_paths = build_daily_movers(out_dir, ctx)
 
+    # ---- REPORTS-1 (Mark t778u): dated English-only niche report pages + how-we-measure (scripts/report_pages.py)
+    sys.path.insert(0, os.path.dirname(os.path.abspath(__file__)))
+    import report_pages
+    rp_paths, rp_lastmod = report_pages.build(out_dir, globals(), meta, ctx, ROOT)
+
     # ---- seo files
     with open(os.path.join(out_dir, "robots.txt"), "w") as fh:
         fh.write(f"User-agent: *\nAllow: /\nSitemap: {SITE_URL}sitemap.xml\n")
@@ -2848,6 +2854,8 @@ These are not all of Etsy: they are the shops and niches we read.</p>
             for p in pages:
                 if p != "movers/":
                     fh.write(f"  <url><loc>{SITE_URL}{lp_}{'' if p == 'index.html' else p}</loc><lastmod>{snap}</lastmod></url>\n")
+        for p in rp_paths:   # REPORTS-1: English only
+            fh.write(f"  <url><loc>{SITE_URL}{p}</loc><lastmod>{rp_lastmod[p]}</lastmod></url>\n")
         for p in dm_paths:
             fh.write(f"  <url><loc>{SITE_URL}{p}</loc><lastmod>{p.strip('/').split('/')[-1] if p[-11:-1].count('-') == 2 else dm_days()[-1]}</lastmod></url>\n")
         fh.write("</urlset>\n")
@@ -2868,6 +2876,7 @@ These are not all of Etsy: they are the shops and niches we read.</p>
     check_exact(out_dir, D)
     check_movers(out_dir, cta(ctx))
     check_lang(out_dir)
+    report_pages.check_reports(out_dir, rp_paths, SITE_URL)
     for lg in ("fr", "tr"):
         check_loc_pages(out_dir, lg)
     print(json.dumps(report))
