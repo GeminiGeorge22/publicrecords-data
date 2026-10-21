@@ -354,24 +354,31 @@ def do_niche(force=False):
 
 def do_poll():
     """One poll: fetch latest.json once, then box-only internal export, public publish, weekly niche."""
-    latest = hf_latest()
     try:
-        do_internal(latest)
-    except Exception as e:
-        log("internal", "error", err=str(e)[-300:].replace("\n", " "))
-    do_publish(latest=latest)
-    do_niche()
-    do_held_check()
+        latest = hf_latest()
+        try:
+            do_internal(latest)
+        except Exception as e:
+            log("internal", "error", err=str(e)[-300:].replace("\n", " "))
+        do_publish(latest=latest)
+        do_niche()
+    finally:   # SITE-HELD-1c: held_check runs on every poll, even when the HF fetch (429) or publish raises
+        do_held_check()
 
 
 def do_held_check():
     """SITE-HELD-1 (Claude t781u): the live /, /movers/, /rising.html (en/fr/tr) must label every data date older than the newest
-    snapshot - 1 day as Held, with no 'today'/'daily' next to it (scripts/held_check.py). Logged once per status change."""
+    snapshot - 1 day as Held, with no 'today'/'daily' next to it (scripts/held_check.py). Logged on every poll (SITE-HELD-1c),
+    so the log proves each poll checked the live site; never raises (a crash here must not stop the loop)."""
     base = json.load(open(os.path.join(ROOT, "config", "site.json")))["base_url"]
-    r = subprocess.run([sys.executable, os.path.join(ROOT, "scripts", "held_check.py"), "--base", base],
-                       capture_output=True, text=True, timeout=180)
+    try:
+        r = subprocess.run([sys.executable, os.path.join(ROOT, "scripts", "held_check.py"), "--base", base],
+                           capture_output=True, text=True, timeout=180)
+    except subprocess.TimeoutExpired:
+        log("held_check", "FAIL", out="timeout_180s")
+        return
     last = (r.stdout.strip().splitlines() or r.stderr.strip().splitlines() or ["-"])[-1]
-    log_once("held_check", "held_check", "pass" if r.returncode == 0 else "FAIL", out=last[:200].replace(" ", "_"))
+    log("held_check", "pass" if r.returncode == 0 else "FAIL", out=last[:200].replace(" ", "_"))
 
 
 def posts():
