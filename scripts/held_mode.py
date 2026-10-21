@@ -69,8 +69,22 @@ SUBS = {
 }
 
 
+NAV_HELD = {"en": ("⚡ Daily Movers", "⚡ Movers"), "fr": ("⚡ Palmarès du jour", "⚡ Palmarès"), "tr": ("⚡ Günün yükselenleri", "⚡ Yükselenler")}
+
+
 def apply(out_dir, held_day, newest, short_date_fn, date_loc_fn):
     changed = []
+    # SITE-HELD-1b: while held, the Movers tab drops "daily"/"du jour"/"Günün" on EVERY page (the tab sits next to held dates)
+    for root, _, fs in os.walk(out_dir):
+        for fn in fs:
+            if fn.endswith(".html"):
+                f = os.path.join(root, fn)
+                raw = open(f, encoding="utf-8").read()
+                out = raw
+                for old, new in NAV_HELD.values():
+                    out = out.replace(f">{old}</a>", f">{new}</a>")
+                if out != raw:
+                    open(f, "w", encoding="utf-8").write(out)
     for lg, lp in LANGS.items():
         d = short_date_fn(held_day, lg)
         tag = TAG[lg].format(d=d)
