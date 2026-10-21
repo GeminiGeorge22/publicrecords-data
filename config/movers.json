@@ -48,5 +48,9 @@
   "x_teaser_rows": 3,
   "tagline_note": "Mark t616u: generic AI wording in the tagline (no client named). Swap here only.",
   "x_teaser_rows_niches": 3,
-  "x_post_url_niches": "https://www.etsypulse.ca/movers/#niches"
+  "x_post_url_niches": "https://www.etsypulse.ca/movers/#niches",
+  "bucket_cap": {
+    "enabled": true,
+    "_note": "t943u item 5 fix B (ranked card): before ranking, each first-character bucket (0-9, A-C, D-L, M-S, T-Z) of the clean pairs is capped at ceil(its panel share x pairs), hash-sampled per snapshot date. Feed-side only; the snapshot manifest balanced gate (scripts/box_refresh.py sweep_balanced) is unchanged."
+  }
 }
