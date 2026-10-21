@@ -1999,6 +1999,15 @@ def scaled_figures():
             for k in ("sales_added", "sales_before", "sales_total", "top_shop_added", "shops"):
                 if r.get(k) not in (None, ""):
                     exact.add(int(float(r[k])))
+    # REPORTS-2: the niche sales pages are exact counter pairs too (data/sales-niches/<snapshot>.json, balanced snapshots only)
+    for f in glob.glob(os.path.join(ROOT, "data", "sales-niches", "*.json")):
+        S_ = json.load(open(f, encoding="utf-8"))
+        exact.update(int(S_[k]) for k in ("clean_pairs", "clean_pairs_gaining", "snapshot_rows") if S_.get(k) is not None)
+        for pg_ in S_.get("pages", []):
+            exact.update(int(pg_[k]) for k in ("shops", "shops_gaining", "sales_added"))
+            for t_ in pg_["top"]:
+                exact.update(int(t_[k]) for k in ("sales_added", "sales_before", "sales_total"))
+        exact.update(int(x_["shops"]) for x_ in S_.get("skipped", []) if x_.get("shops") is not None)
     return {v for v in scaled - exact if v >= 100}
 
 
