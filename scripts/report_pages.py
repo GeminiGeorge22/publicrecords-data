@@ -155,8 +155,8 @@ and the counter did not go down. Jumps bigger than half the earlier count, and v
 <h2>When we hold data back</h2>
 <p>The tracker reads shops in a rolling order. On some days the shops read on both dates lean toward part of the alphabet, which would
 make a ranking lopsided. Each snapshot is checked: the shops with exact pairs must match the whole tracked set across five
-name buckets (0-9, A-C, D-L, M-S, T-Z). If a snapshot fails that check, its sales rankings are held and the pages keep the last date that passed,
-clearly dated. We never present held or older data as today's.</p>
+name buckets (0-9, A-C, D-L, M-S, T-Z). If a snapshot fails that check, it is held: it is not used for new sales rankings, and every report shows the date
+of the data it uses.</p>
 <h2>Niches</h2>
 <p>A niche is either the shop's Etsy category or, where a report says so, the words in the shop's own headline. Each niche report names its rule,
 its date and how many shops it covers.</p>
@@ -166,7 +166,7 @@ listing on the first results page with its listed price, badges and free-shippin
 “Half of listings between” is the range that holds the middle two quarters of listings by price. We publish a product type only when one read has at least
 {P['min_listings'] if P else 50} priced listings.</p>
 <h2>What we leave out</h2>
-<p>Our own Etsy shops are excluded from every ranking. We are not affiliated with Etsy. We built and sell the tools that collect this data, so weigh our links accordingly.</p>
+<p>Our own Etsy shop is excluded from the price reports. We are not affiliated with Etsy. We built and sell the tools that collect this data, so weigh our links accordingly.</p>
 <p><a href="reports.html">All niche reports</a></p>"""
     return name, title, shell(H, name, title, desc, "How we measure", "Where every Etsy Pulse number comes from, and when we hold one back.", body, ctx)
 
