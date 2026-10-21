@@ -157,6 +157,41 @@ def rank_niches(rows: list, C: dict) -> tuple[list, dict]:
     return out, why
 
 
+BUCKETS = ("0-9", "A-C", "D-L", "M-S", "T-Z")   # same buckets as fleet-box etsy_velocity/pair_balance.py
+
+
+def bucket(shop: str):
+    c = (shop or "")[:1].upper()
+    if c.isdigit(): return "0-9"
+    for b in BUCKETS[1:]:
+        if b[0] <= c <= b[2]: return b
+    return None
+
+
+def cap_buckets(rows: list, panel, snapshot_date: str) -> tuple[list, dict, int]:
+    """t943u item 5 fix B: keep at most ceil(panel_share x len(rows)) clean pairs per first-character bucket, chosen by a
+    per-snapshot-date hash (never by name or by sales added), so one echoed cohort cannot fill the ranked lists."""
+    import math
+    panel = list(panel)
+    pc = {b: 0 for b in BUCKETS}
+    for sh in panel:
+        b = bucket(sh)
+        if b: pc[b] += 1
+    n, N = len(rows), len(panel) or 1
+    by = {}
+    for r in rows:
+        by.setdefault(bucket(r["shop"]), []).append(r)
+    kept, info, dropped = [], {}, 0
+    for b, rs in by.items():
+        if b is None:
+            kept += rs; continue
+        cap = math.ceil(pc[b] / N * n)
+        rs = sorted(rs, key=lambda r: hashlib.sha256(f"{snapshot_date}:{r['shop']}".encode()).hexdigest())
+        kept += rs[:cap]; dropped += max(0, len(rs) - cap)
+        info[b] = {"pairs": len(rs), "cap": cap, "kept": min(cap, len(rs))}
+    return kept, info, dropped
+
+
 def compute(snap: dict, state: dict, snapshot_date: str, C: dict | None = None) -> dict:
     C = C or cfg()
     tried, cache, nr_by_w = {}, {}, {}
@@ -185,6 +220,10 @@ def compute(snap: dict, state: dict, snapshot_date: str, C: dict | None = None) 
     if not chosen:
         return out
     w, rows = chosen
+    if C.get("bucket_cap", {}).get("enabled"):
+        rows, out["bucket_cap"], dropped = cap_buckets(rows, snap.keys() or state.keys(), snapshot_date)
+        if dropped:
+            tried[w]["excluded"]["bucket_capped"] = dropped
     out["not_rankable"] = nr_by_w.get(w, [])
     n = C.get("top_n", 10)
     top = sorted(rows, key=lambda r: (-r["sales_added"], -r["sales_total"], r["shop"].lower()))[:n]
