@@ -1,0 +1,198 @@
+{
+ "cut": "2026-10-17",
+ "read_at_utc": "2026-10-19T12:04:46.477Z",
+ "read_date": "2026-10-19",
+ "run_id": "vTDBxDixpNeG85Vkf",
+ "actor": "publicrecords/etsy-search-scraper",
+ "region": "US (Apify residential proxy), sort=relevance, page 1",
+ "min_listings": 50,
+ "max_age_days": 7,
+ "pages": [
+  {
+   "keyword": "backpacks",
+   "from_category": "bags & purses > backpacks",
+   "listings": 58,
+   "shops": 58,
+   "price_p25": 26.1,
+   "price_typical": 46.62,
+   "price_p75": 79.97,
+   "price_min": 8.39,
+   "price_max": 200.0,
+   "bestseller": 15,
+   "star_seller": 30,
+   "free_shipping": 27,
+   "etsy_total_results": 435227,
+   "bands": [
+    [
+     "under $15",
+     7
+    ],
+    [
+     "$15–30",
+     9
+    ],
+    [
+     "$30–60",
+     18
+    ],
+    [
+     "$60 and up",
+     24
+    ]
+   ]
+  },
+  {
+   "keyword": "faux plants",
+   "from_category": "home & living > home decor > faux plants & greenery",
+   "listings": 53,
+   "shops": 52,
+   "price_p25": 18.99,
+   "price_typical": 27.0,
+   "price_p75": 39.28,
+   "price_min": 4.79,
+   "price_max": 179.0,
+   "bestseller": 4,
+   "star_seller": 13,
+   "free_shipping": 28,
+   "etsy_total_results": 56863,
+   "bands": [
+    [
+     "under $15",
+     5
+    ],
+    [
+     "$15–30",
+     22
+    ],
+    [
+     "$30–60",
+     20
+    ],
+    [
+     "$60 and up",
+     6
+    ]
+   ]
+  },
+  {
+   "keyword": "horse riding",
+   "from_category": "pet supplies > horse riding & farm animals",
+   "listings": 58,
+   "shops": 56,
+   "price_p25": 19.18,
+   "price_typical": 27.29,
+   "price_p75": 37.88,
+   "price_min": 6.96,
+   "price_max": 138.61,
+   "bestseller": 13,
+   "star_seller": 40,
+   "free_shipping": 14,
+   "etsy_total_results": 220145,
+   "bands": [
+    [
+     "under $15",
+     9
+    ],
+    [
+     "$15–30",
+     24
+    ],
+    [
+     "$30–60",
+     23
+    ],
+    [
+     "$60 and up",
+     2
+    ]
+   ]
+  },
+  {
+   "keyword": "jewellery sets",
+   "from_category": "jewellery > jewellery sets",
+   "listings": 60,
+   "shops": 59,
+   "price_p25": 23.68,
+   "price_typical": 30.38,
+   "price_p75": 62.64,
+   "price_min": 9.45,
+   "price_max": 328.0,
+   "bestseller": 20,
+   "star_seller": 32,
+   "free_shipping": 42,
+   "etsy_total_results": 2766417,
+   "bands": [
+    [
+     "under $15",
+     5
+    ],
+    [
+     "$15–30",
+     24
+    ],
+    [
+     "$30–60",
+     16
+    ],
+    [
+     "$60 and up",
+     15
+    ]
+   ]
+  }
+ ],
+ "skipped": [
+  {
+   "keyword": "aprons",
+   "why": "last read 2026-10-07, more than a week old"
+  },
+  {
+   "keyword": "patches",
+   "why": "last read 2026-10-07, more than a week old"
+  },
+  {
+   "keyword": "pet storage",
+   "why": "last read 2026-10-07, more than a week old"
+  }
+ ],
+ "history": {
+  "backpacks": [
+   {
+    "read_date": "2026-10-07",
+    "run_id": "mZPhcYgZOJ8SKb9fW",
+    "listings": 58,
+    "price_typical": 53.01,
+    "price_p25": 19.16,
+    "price_p75": 89.62
+   },
+   {
+    "read_date": "2026-10-12",
+    "run_id": "Vd4eQnDDRRZTu0oyA",
+    "listings": 58,
+    "price_typical": 73.34,
+    "price_p25": 39.8,
+    "price_p75": 110.45
+   }
+  ],
+  "faux plants": [
+   {
+    "read_date": "2026-10-07",
+    "run_id": "mZPhcYgZOJ8SKb9fW",
+    "listings": 58,
+    "price_typical": 25.57,
+    "price_p25": 14.96,
+    "price_p75": 41.25
+   }
+  ],
+  "horse riding": [
+   {
+    "read_date": "2026-10-12",
+    "run_id": "Vd4eQnDDRRZTu0oyA",
+    "listings": 60,
+    "price_typical": 29.18,
+    "price_p25": 16.68,
+    "price_p75": 39.99
+   }
+  ]
+ }
+}
