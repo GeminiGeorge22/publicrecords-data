@@ -2722,11 +2722,11 @@ def build(out_dir):
     cards = lead + cards
     if "niche.html" in pages:
         nr = [x for x in N["rows"] if (x.get("listings") or 0) >= 20]
-        cards.append(("niche.html", "Niche Prices", f"{len(nr)}", f"What top sellers charge, and their badges, in the niches of the top movers on {nice_date(N['cut'])}.",
+        cards.append(("niche.html", "Niche Prices", f"{len(nr)}", f"What top sellers charge, and their badges, in the niches of the top movers, read {nice_date((N['meta'].get('captured_at') or N['cut'])[:10])}.",
                       mini(nr, lambda x: x["keyword"], lambda x: f"typical {money(x['price_median'])}")))
     cards_html = "".join(f'<a class="rcard" href="{h}"><div class="t">{t}<span>{k}</span></div><div class="d">{d}</div>{mn}</a>'
                          for h, t, k, d, mn in cards)
-    body = f"""{fresh_box(nice_date(D['day']), f"{len(D['movers'])} movers · {len(nz)} niches · {len(rz)} rising", cut)}
+    body = f"""{fresh_box(nice_date(D['day']), f"{len(D['movers'])} movers · " + (f"{len(nz)} niches · " if nz else "") + f"{len(rz)} rising", cut)}
 {kpis}
 <section>{insights_block(over_ins, "Today's takeaways")}</section>
 <section id="reports"><h2>Reports</h2><p class="sub">Each report has its own page, a plain-English read and a CSV.</p>
@@ -2739,7 +2739,7 @@ def build(out_dir):
 Niches: the same counter pairs summed by the shop's Etsy category.</p>
 <h3>Coverage</h3><p>A shop's sales gain can only be computed once its counter has been read on two different days. {coverage_line(meta)}
 These are not all of Etsy: they are the shops and niches we read.</p>
-{"<h3>Niche prices</h3><p>The top results of an Etsy search (US shopper, Etsy's best-match order, first results page) for keywords taken from the top categories on " + nice_date(N['cut']) + ", captured " + E((N['meta'].get('captured_at') or '')[:10]) + " with our Etsy Search Scraper (Apify run " + E(N['meta']['run_id']) + "). Typical price is the middle price of those results; most charge = the middle 50% of prices.</p>" if "niche.html" in pages else ""}
+{"<h3>Niche prices</h3><p>The top results of an Etsy search (US shopper, Etsy's best-match order, first results page) for keywords taken from the top movers' categories, captured " + E((N['meta'].get('captured_at') or '')[:10]) + " with our Etsy Search Scraper (Apify run " + E(N['meta']['run_id']) + "). Typical price is the middle price of those results; most charge = the middle 50% of prices.</p>" if "niche.html" in pages else ""}
 <h3>Free top {PUBLIC_N}, your own top {CUSTOM_N}</h3><p>Free reports show the top {PUBLIC_N}. For the top {CUSTOM_N}, or any other niche or category, run your own report: the button under each report opens the builder already set up.</p></section>"""
     # DAILY-1: no shop-coverage count in the description (X shows it under posts; check_public enforces it).
     desc_home = (f"Etsy's biggest movers, {sd_}: {a['shop_name']} {plus(a['sales_added'])} sales {span}"
@@ -2854,6 +2854,16 @@ These are not all of Etsy: they are the shops and niches we read.</p>
     import report_pages
     rp_paths, rp_lastmod = report_pages.build(out_dir, globals(), meta, ctx, ROOT)
 
+    # ---- SITE-HELD-1 (Claude t781u): newest shop-sales day > 1 day older than the newest snapshot = held (scripts/held_mode.py)
+    import held_mode
+    held_day = D["day"]
+    if (dt.date.fromisoformat(snap) - dt.date.fromisoformat(held_day)).days > 1:
+        _TL = {lg: load_loc(lg) for lg in ("fr", "tr")}
+        held_pages = held_mode.apply(out_dir, held_day, snap,
+                                     lambda iso, lg: short_date(iso, lg, _TL.get(lg)),
+                                     lambda iso, lg: iso if lg == "en" else date_loc(iso, _TL[lg]))
+        print(f"held mode: shop sales held since {held_day} (newest snapshot {snap}); rewrote {len(held_pages)} pages")
+
     # ---- seo files
     with open(os.path.join(out_dir, "robots.txt"), "w") as fh:
         fh.write(f"User-agent: *\nAllow: /\nSitemap: {SITE_URL}sitemap.xml\n")
@@ -2886,6 +2896,13 @@ These are not all of Etsy: they are the shops and niches we read.</p>
     check_movers(out_dir, cta(ctx))
     check_lang(out_dir)
     report_pages.check_reports(out_dir, rp_paths, SITE_URL)
+    import held_check   # SITE-HELD-1: same check the keepalive runs on the live site
+    _hb = [b_ for lg_, lp_ in held_check.LANGS.items() for p_ in held_check.PAGES
+           for b_ in held_check.check_page(lp_ + p_ or "/", open(os.path.join(out_dir, lp_ + p_ + ("index.html" if p_ in ("", "movers/") else "")), encoding="utf-8").read(),
+                                          lg_, dt.date.fromisoformat(snap))]
+    if _hb:
+        raise SystemExit("held check failed (SITE-HELD-1):\n  " + "\n  ".join(_hb))
+    print("held check ok: / /movers/ /rising.html x en/fr/tr")
     for lg in ("fr", "tr"):
         check_loc_pages(out_dir, lg)
     print(json.dumps(report))

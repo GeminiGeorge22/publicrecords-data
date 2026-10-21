@@ -361,6 +361,17 @@ def do_poll():
         log("internal", "error", err=str(e)[-300:].replace("\n", " "))
     do_publish(latest=latest)
     do_niche()
+    do_held_check()
+
+
+def do_held_check():
+    """SITE-HELD-1 (Claude t781u): the live /, /movers/, /rising.html (en/fr/tr) must label every data date older than the newest
+    snapshot - 1 day as Held, with no 'today'/'daily' next to it (scripts/held_check.py). Logged once per status change."""
+    base = json.load(open(os.path.join(ROOT, "config", "site.json")))["base_url"]
+    r = subprocess.run([sys.executable, os.path.join(ROOT, "scripts", "held_check.py"), "--base", base],
+                       capture_output=True, text=True, timeout=180)
+    last = (r.stdout.strip().splitlines() or r.stderr.strip().splitlines() or ["-"])[-1]
+    log_once("held_check", "held_check", "pass" if r.returncode == 0 else "FAIL", out=last[:200].replace(" ", "_"))
 
 
 def posts():
@@ -431,6 +442,8 @@ if __name__ == "__main__":
         locked(do_niche, force)
     elif mode == "poll":
         locked(do_poll)
+    elif mode == "heldcheck":
+        do_held_check()
     elif mode == "loop":
         loop()
     else:
