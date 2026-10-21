@@ -4,7 +4,7 @@
   python scripts/held_check.py --base https://www.etsypulse.ca/ [--snapshot YYYY-MM-DD] [--dir LOCAL_SITE]
 
 newest = --snapshot, else the newest data/panel/<cut>/meta.json snapshot_date (what the box keepalive publishes).
-Rules, per page, on visible text outside <header>/<nav> and outside archive links (class "arch"):
+Rules, per page, on visible text (nav tabs included, <header> brand/language button excluded) outside archive links (class "arch"):
   R1 any data date older than newest - 1 day must have the held word (Held / Retenu / Bekletiliyor) within HELD_BEFORE chars
      before it or HELD_AFTER chars after it;
   R2 'today' / 'daily' / 'every day' (fr: aujourd'hui, quotidien, chaque jour; tr: bugün, günlük, her gün) within FRESH_NEAR chars
@@ -18,7 +18,7 @@ PAGES = ["", "movers/", "rising.html"]
 LANGS = {"en": "", "fr": "fr/", "tr": "tr/"}
 HELD = {"en": r"\bHeld\b", "fr": r"\bRetenue?s?\b", "tr": r"\bBekletiliyor\b|\bBekletilen\b"}
 FRESH = {"en": r"\btoday(?:'s)?\b|\bdaily\b|\bevery day\b",
-         "fr": r"aujourd['’]hui|\bquotidien\w*|\bchaque jour\b",
+         "fr": r"aujourd['’]hui|\bquotidien\w*|\bchaque jour\b|\bdu jour\b",
          "tr": r"\bbugün\w*|\bgünlük\b|\bher gün\b|\bgünün\b"}
 ZERO_N = {"en": r"\b0 niches\b", "fr": r"\b0 niches?\b", "tr": r"\b0 niş\b"}
 MON = {"jan": 1, "feb": 2, "mar": 3, "apr": 4, "may": 5, "jun": 6, "jul": 7, "aug": 8, "sep": 9, "oct": 10, "nov": 11, "dec": 12,
@@ -30,7 +30,7 @@ HELD_BEFORE, HELD_AFTER, FRESH_NEAR = 320, 160, 120
 
 
 def vis(raw):
-    raw = re.sub(r"<(script|style|header|nav)\b[^>]*>.*?</\1>", " ", raw, flags=re.S | re.I)
+    raw = re.sub(r"<(script|style|header)\b[^>]*>.*?</\1>", " ", raw, flags=re.S | re.I)   # SITE-HELD-1b: nav tabs ARE in scope
     raw = re.sub(r'<(\w+)[^>]*class="[^"]*\barch\b[^"]*"[^>]*>.*?</\1>', " ", raw, flags=re.S)
     foot = re.search(r"<footer\b.*?</footer>", raw, re.S)
     ft = foot.group(0) if foot else ""
