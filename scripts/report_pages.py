@@ -125,13 +125,14 @@ A product type is listed only when its read has at least {P['min_listings']} pri
     return name, title, shell(H, name, title, desc, "Typical Etsy prices by product type", lede, body, ctx)
 
 
-def index_page(H, P, items, ctx):
+def index_page(H, P, items, ctx, sales_items=()):
     E = H["E"]
     lis = "".join(f'<li><a href="{n}">{E(t)}</a></li>' for n, t in items)
     name = "reports.html"
     title = "Etsy niche reports: prices and sales, dated"
     desc = "Every Etsy Pulse niche report in one place: typical Etsy prices by product type and shops gaining sales by niche, each dated."
     body = f"""<p>Each report is dated and says what it covers. Nothing here is live: every number comes from one dated read.</p>
+<h2>Etsy shops gaining sales</h2><ul>{"".join(f'<li><a href="{n}">{E(t)}</a></li>' for n, t in sales_items)}</ul>
 <h2>Typical Etsy prices</h2><ul>{lis}</ul>
 <p><a href="how-we-measure.html">How we measure</a></p>"""
     return name, title, shell(H, name, title, desc, "Etsy niche reports", "Typical prices and sales movement by niche, each with its date and coverage.", body, ctx)
@@ -171,8 +172,86 @@ listing on the first results page with its listed price, badges and free-shippin
     return name, title, shell(H, name, title, desc, "How we measure", "Where every Etsy Pulse number comes from, and when we hold one back.", body, ctx)
 
 
+def latest_sales_cut(root):
+    d = os.path.join(root, "data", "sales-niches")
+    if not os.path.isdir(d):
+        return None
+    fs = sorted(f for f in os.listdir(d) if f.endswith(".json"))
+    for f in reversed(fs):
+        S = json.load(open(os.path.join(d, f), encoding="utf-8"))
+        if S.get("balanced") is True:   # held (unbalanced) snapshots never get a page
+            return S
+    return None
+
+
+def sales_page(H, S, r, ctx):
+    E = H["E"]
+    fd, td = nice(S["from_date"]), nice(S["snapshot_date"])
+    span = f"{fd[:-6]} → {td}"
+    name = f"etsy-shops-gaining-sales-{r['slug']}.html"
+    title = f"Etsy shops gaining sales in {r['niche']} ({span})"
+    desc = (f"Which Etsy {r['niche']} shops added the most sales {span}, from exact public sales counter reads on both days. "
+            f"Dated, with coverage and method.")
+    t0 = r["top"][0]
+    lede = (f"Between {fd[:-6]} and {td}, the {r['shops_gaining']:,} gaining shops in this group added <b>{r['sales_added']:,} sales</b>. "
+            f"The biggest gain: {E(t0['shop'])}, +{t0['sales_added']:,}.")
+    rows = "".join(f"<tr><td class=r>{t['rank']}</td><td><a href=\"{E(t['shop_url'])}\" rel=\"nofollow noopener\">{E(t['shop'])}</a>"
+                   f"<br><small>{E(t['headline'])}</small></td><td class=r><b>+{t['sales_added']:,}</b></td><td class=r>{t['sales_total']:,}</td></tr>"
+                   for t in r["top"])
+    others = [x for x in S["pages"] if x["slug"] != r["slug"]]
+    body = f"""<p class="asof">Data as of {td} · sales added {span} · not live</p>
+<h2>Top {len(r['top'])} by sales added, {span}</h2>
+<table><tr><th class=r>#</th><th>Shop (its Etsy headline)</th><th class=r>Sales added</th><th class=r>Lifetime sales on {td[:-6]}</th></tr>{rows}</table>
+<h2>The group at a glance</h2>
+<table>
+<tr><td>Shops in this group with an exact read on both days</td><td class=r>{r['shops']:,}</td></tr>
+<tr><td>…of which added at least one sale</td><td class=r>{r['shops_gaining']:,}</td></tr>
+<tr><td>Sales added by the whole group, {span}</td><td class=r><b>{r['sales_added']:,}</b></td></tr>
+<tr><td>Share of those sales from the top 10 above</td><td class=r>{round(100 * r['top10_share'])}%</td></tr>
+<tr><td>Share from the single biggest gainer</td><td class=r>{round(100 * r['top_shop_share'], 1)}%</td></tr>
+</table>
+<div class="cov"><h2 style="margin-top:0">Coverage: which shops, and how we read them</h2>
+<p><b>Who is in this group:</b> shops whose own Etsy shop headline contains {r['rule']}. We group by headline words because Etsy's
+category is known for too few of the shops we read. A headline-word group is broader than an Etsy category: for example a supply
+shop that mentions {E(r['niche'])} in its headline is included. A shop can be in more than one group.</p>
+<p><b>How the sales were read:</b> the public lifetime sales counter on each shop's Etsy page, read on {fd} and again on {td}.
+Sales added = the second count minus the first. Only shops with an exact count on both days are used (rounded counts, counters that went down,
+jumps bigger than half the earlier count and vintage-shop events are left out). Nothing is projected or estimated.</p>
+<p><b>Why this date:</b> {td} is the newest snapshot that passed our balance check (the shops read on both days match the whole tracked set
+across name buckets). Later snapshots did not pass, so they are held and not used here. These {r['shops']:,} shops are the ones in this group
+our tracker read on both days, not every {E(r['niche'])} shop on Etsy. We publish a group only when at least {S['min_shops']} shops qualify.
+Our own shop is excluded.</p>
+<p><a href="how-we-measure.html">How we measure</a> · <a href="reports.html">All niche reports</a></p></div>
+<h2>Other groups, same dates</h2><ul>{"".join(f'<li><a href="etsy-shops-gaining-sales-{x["slug"]}.html">Etsy shops gaining sales in {E(x["niche"])}</a></li>' for x in others)}</ul>
+<h2>Track your own shops</h2><p>This page is one dated read. To read today's counters for shops you name, <a href="{H['BUILDER']}?type=velocity&amp;from=sales-{r['slug']}">run a shop report</a>.</p>"""
+    return name, title, shell(H, name, title, desc, f"Etsy shops gaining sales in {r['niche']}", lede, body, ctx)
+
+
+def sales_overview(H, S, ctx):
+    E = H["E"]
+    fd, td = nice(S["from_date"]), nice(S["snapshot_date"])
+    span = f"{fd[:-6]} → {td}"
+    rs = sorted(S["pages"], key=lambda x: -x["sales_added"])
+    rows = "".join(f"<tr><td><a href=\"etsy-shops-gaining-sales-{x['slug']}.html\">{E(x['niche'])}</a></td><td class=r>{x['shops']:,}</td>"
+                   f"<td class=r>{x['shops_gaining']:,}</td><td class=r><b>{x['sales_added']:,}</b></td><td class=r>{E(x['top'][0]['shop'])} (+{x['top'][0]['sales_added']})</td></tr>" for x in rs)
+    name = "etsy-shops-gaining-sales.html"
+    title = f"Etsy shops gaining sales by niche ({span})"
+    desc = f"Sales added by Etsy niche {span}, from exact public sales counter reads on both days. Dated, with coverage and method."
+    lede = f"From exact sales counter reads on {fd[:-6]} and {td}: which niches added the most sales, and which shop led each one."
+    body = f"""<p class="asof">Data as of {td} · sales added {span} · not live</p>
+<table><tr><th>Niche (shop headline words)</th><th class=r>Shops read both days</th><th class=r>Shops gaining</th><th class=r>Sales added</th><th class=r>Biggest gainer</th></tr>{rows}</table>
+<div class="cov"><h2 style="margin-top:0">Coverage</h2><p>{S['clean_pairs']:,} shops had an exact sales count on both {fd} and {td} in the newest
+snapshot that passed our balance check. A niche here is a word rule on the shop's own Etsy headline (each page states its rule); a shop can be in more than one niche,
+so the rows do not add up to a total. Niches need at least {S['min_shops']} shops with exact reads on both days. Niches we checked but left out:
+{", ".join(E(x['niche']) + " (" + E(x['why']) + ")" for x in S['skipped'])}.</p>
+<p><a href="how-we-measure.html">How we measure</a> · <a href="reports.html">All niche reports</a></p></div>"""
+    return name, title, shell(H, name, title, desc, "Etsy shops gaining sales, by niche", lede, body, ctx)
+
+
 def build(out_dir, H, meta, ctx, root):
     P = latest_price_cut(root)
+    S = latest_sales_cut(root)
+    sales_items = []
     made = []
     items = []
 
@@ -187,11 +266,18 @@ def build(out_dir, H, meta, ctx, root):
             w(name, h); items.append((name, title))
         name, title, h = compare_page(H, P, ctx)
         w(name, h); items.insert(0, (name, title))
+    if S and S["pages"]:
+        for r in S["pages"]:
+            name, title, h = sales_page(H, S, r, ctx)
+            w(name, h); sales_items.append((name, title))
+        name, title, h = sales_overview(H, S, ctx)
+        w(name, h); sales_items.insert(0, (name, title))
     name, title, h = measure_page(H, meta, P, ctx)
     w(name, h)
-    name, title, h = index_page(H, P, items, ctx)
+    name, title, h = index_page(H, P, items, ctx, sales_items)
     w(name, h)
-    lastmod = {n: (P["read_date"] if P and n.startswith("etsy-prices") else meta["snapshot_date"]) for n in made}
+    lastmod = {n: (P["read_date"] if P and n.startswith("etsy-prices") else S["snapshot_date"] if S and n.startswith("etsy-shops-gaining")
+                   else meta["snapshot_date"]) for n in made}
     return made, lastmod
 
 
@@ -212,7 +298,9 @@ def check_reports(out_dir, names, site_url):
                 bad.append(f"{n}: no 'Data as of' line")
         if f"<loc>{site_url}{n}</loc>" not in sm:
             bad.append(f"{n}: not in sitemap")
-        if n.startswith("etsy-prices") and f'href="{n}"' not in idx:
+        if n.startswith("etsy-shops-gaining") and "Data as of" not in raw:
+            bad.append(f"{n}: no 'Data as of' line")
+        if (n.startswith("etsy-prices") or n.startswith("etsy-shops-gaining")) and f'href="{n}"' not in idx:
             bad.append(f"{n}: not linked from reports.html")
     if bad:
         raise SystemExit("reports check failed:\n  " + "\n  ".join(bad))

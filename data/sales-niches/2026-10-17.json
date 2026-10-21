@@ -1,0 +1,978 @@
+{
+ "snapshot_date": "2026-10-17",
+ "from_date": "2026-10-16",
+ "window_days": 1,
+ "balanced": true,
+ "manifest_sha256": "2105cac0dadee33f36544865a0059e5b386115f264dc9a3fba0ff3f289f421f4",
+ "snapshot_rows": 201761,
+ "clean_pairs": 27076,
+ "clean_pairs_gaining": 13858,
+ "excluded": {
+  "no_read_on_both_dates": 174307,
+  "no_prior_count": 252,
+  "counter_went_down": 108,
+  "rounded_counter": 14,
+  "jump_too_big": 3,
+  "own_shop_excluded": 1
+ },
+ "min_shops": 200,
+ "rule": "headline words",
+ "pages": [
+  {
+   "slug": "jewelry",
+   "niche": "jewelry",
+   "rule": "“jewelry” or “jewellery”",
+   "regex": "\\bjewel(?:le)?ry\\b|\\bjewellery\\b",
+   "shops": 1072,
+   "shops_gaining": 595,
+   "sales_added": 2724,
+   "top_shop_share": 0.033,
+   "top10_share": 0.186,
+   "top": [
+    {
+     "shop": "CreatingUnkamen",
+     "shop_url": "https://www.etsy.com/shop/CreatingUnkamen",
+     "sales_before": 794971,
+     "sales_total": 795061,
+     "sales_added": 90,
+     "headline": "Handmade Jewelry, Supplies, and Inspiration",
+     "rank": 1
+    },
+    {
+     "shop": "PEPPYBEADS",
+     "shop_url": "https://www.etsy.com/shop/PEPPYBEADS",
+     "sales_before": 427176,
+     "sales_total": 427249,
+     "sales_added": 73,
+     "headline": "All Jewellery Making Supplies, Miyuki Beads, Gemstones",
+     "rank": 2
+    },
+    {
+     "shop": "bohobabasupplies",
+     "shop_url": "https://www.etsy.com/shop/bohobabasupplies",
+     "sales_before": 176102,
+     "sales_total": 176170,
+     "sales_added": 68,
+     "headline": "UNIQUE JEWELRY SUPPLIES, TASSELS",
+     "rank": 3
+    },
+    {
+     "shop": "ImprintedSupplies",
+     "shop_url": "https://www.etsy.com/shop/ImprintedSupplies",
+     "sales_before": 364782,
+     "sales_total": 364841,
+     "sales_added": 59,
+     "headline": "Premium Permanent Jewelry Supplies - USA",
+     "rank": 4
+    },
+    {
+     "shop": "LatestFashion4You",
+     "shop_url": "https://www.etsy.com/shop/LatestFashion4You",
+     "sales_before": 162392,
+     "sales_total": 162445,
+     "sales_added": 53,
+     "headline": "Minimalist Fashion Jewellery",
+     "rank": 5
+    },
+    {
+     "shop": "SilverIndia2020",
+     "shop_url": "https://www.etsy.com/shop/SilverIndia2020",
+     "sales_before": 43952,
+     "sales_total": 43992,
+     "sales_added": 40,
+     "headline": "Handmade Jewelry Manufacturer And Wholesaler",
+     "rank": 6
+    },
+    {
+     "shop": "LCDIYJewelry",
+     "shop_url": "https://www.etsy.com/shop/LCDIYJewelry",
+     "sales_before": 9030,
+     "sales_total": 9068,
+     "sales_added": 38,
+     "headline": "We offer diverse DIY jewelry accessories—beads",
+     "rank": 7
+    },
+    {
+     "shop": "BridesBaubles",
+     "shop_url": "https://www.etsy.com/shop/BridesBaubles",
+     "sales_before": 14758,
+     "sales_total": 14791,
+     "sales_added": 33,
+     "headline": "Custom Jewelry – Telling Your Romantic Story.",
+     "rank": 8
+    },
+    {
+     "shop": "TheVaultOfTreasures",
+     "shop_url": "https://www.etsy.com/shop/TheVaultOfTreasures",
+     "sales_before": 9076,
+     "sales_total": 9104,
+     "sales_added": 28,
+     "headline": "vintage and new jewelry making supplies",
+     "rank": 9
+    },
+    {
+     "shop": "TitaniumFashion",
+     "shop_url": "https://www.etsy.com/shop/TitaniumFashion",
+     "sales_before": 110072,
+     "sales_total": 110097,
+     "sales_added": 25,
+     "headline": "Titanium and 316L Stainless Steel Body Piercing Jewelry",
+     "rank": 10
+    }
+   ]
+  },
+  {
+   "slug": "digital-downloads",
+   "niche": "digital downloads and printables",
+   "rule": "“digital”, “printable(s)” or “download(s)”",
+   "regex": "\\bdigital\\b|\\bprintables?\\b|\\bdownloads?\\b",
+   "shops": 1171,
+   "shops_gaining": 718,
+   "sales_added": 4749,
+   "top_shop_share": 0.015,
+   "top10_share": 0.125,
+   "top": [
+    {
+     "shop": "NorthPrints",
+     "shop_url": "https://www.etsy.com/shop/NorthPrints",
+     "sales_before": 483435,
+     "sales_total": 483507,
+     "sales_added": 72,
+     "headline": "Timeless Printable Art",
+     "rank": 1
+    },
+    {
+     "shop": "WaterSpriteArtStore",
+     "shop_url": "https://www.etsy.com/shop/WaterSpriteArtStore",
+     "sales_before": 45096,
+     "sales_total": 45164,
+     "sales_added": 68,
+     "headline": "Gift Shop - Stickers, Printables & More",
+     "rank": 2
+    },
+    {
+     "shop": "PolkaArtStudio",
+     "shop_url": "https://www.etsy.com/shop/PolkaArtStudio",
+     "sales_before": 195719,
+     "sales_total": 195784,
+     "sales_added": 65,
+     "headline": "A different take on paper craft printables!",
+     "rank": 3
+    },
+    {
+     "shop": "MyEaseDigital",
+     "shop_url": "https://www.etsy.com/shop/MyEaseDigital",
+     "sales_before": 12758,
+     "sales_total": 12821,
+     "sales_added": 63,
+     "headline": "Digital Planners, Printables & Creative Product Ideas",
+     "rank": 4
+    },
+    {
+     "shop": "TETIprintable",
+     "shop_url": "https://www.etsy.com/shop/TETIprintable",
+     "sales_before": 9901,
+     "sales_total": 9964,
+     "sales_added": 63,
+     "headline": "Teti Printable",
+     "rank": 5
+    },
+    {
+     "shop": "PaperoxStd",
+     "shop_url": "https://www.etsy.com/shop/PaperoxStd",
+     "sales_before": 18268,
+     "sales_total": 18326,
+     "sales_added": 58,
+     "headline": "Therapy Worksheets & Mental Health Printables",
+     "rank": 6
+    },
+    {
+     "shop": "EmmaParrishArtist",
+     "shop_url": "https://www.etsy.com/shop/EmmaParrishArtist",
+     "sales_before": 81223,
+     "sales_total": 81276,
+     "sales_added": 53,
+     "headline": "Junk Journal & Papercraft Printables & Tutorials",
+     "rank": 7
+    },
+    {
+     "shop": "FlashFriendsStudio",
+     "shop_url": "https://www.etsy.com/shop/FlashFriendsStudio",
+     "sales_before": 15763,
+     "sales_total": 15815,
+     "sales_added": 52,
+     "headline": "Creative Digital Shop",
+     "rank": 8
+    },
+    {
+     "shop": "VerdotStudio",
+     "shop_url": "https://www.etsy.com/shop/VerdotStudio",
+     "sales_before": 62296,
+     "sales_total": 62346,
+     "sales_added": 50,
+     "headline": "Frame Tv Art and Printable Wall Art",
+     "rank": 9
+    },
+    {
+     "shop": "ANDigitalz",
+     "shop_url": "https://www.etsy.com/shop/ANDigitalz",
+     "sales_before": 6839,
+     "sales_total": 6888,
+     "sales_added": 49,
+     "headline": "Birthday, Party & Event Digital Designs",
+     "rank": 10
+    }
+   ]
+  },
+  {
+   "slug": "t-shirts-apparel",
+   "niche": "t-shirts and apparel",
+   "rule": "“t-shirt(s)”, “tee(s)”, “apparel” or “clothing”",
+   "regex": "\\bt-?shirts?\\b|\\btees?\\b|\\bapparel\\b|\\bclothing\\b",
+   "shops": 986,
+   "shops_gaining": 531,
+   "sales_added": 2720,
+   "top_shop_share": 0.03,
+   "top10_share": 0.161,
+   "top": [
+    {
+     "shop": "TypicalTinaTransfers",
+     "shop_url": "https://www.etsy.com/shop/TypicalTinaTransfers",
+     "sales_before": 105657,
+     "sales_total": 105739,
+     "sales_added": 82,
+     "headline": "UVDTF & DTF transfers, trendy drinkware and apparel",
+     "rank": 1
+    },
+    {
+     "shop": "AuroseStudioUS",
+     "shop_url": "https://www.etsy.com/shop/AuroseStudioUS",
+     "sales_before": 14818,
+     "sales_total": 14875,
+     "sales_added": 57,
+     "headline": "Apparel & Custom Design",
+     "rank": 2
+    },
+    {
+     "shop": "TheArtofDanialRyan",
+     "shop_url": "https://www.etsy.com/shop/TheArtofDanialRyan",
+     "sales_before": 74064,
+     "sales_total": 74112,
+     "sales_added": 48,
+     "headline": "Original art, prints, and apparel by yours truly!",
+     "rank": 3
+    },
+    {
+     "shop": "TeeForUSA",
+     "shop_url": "https://www.etsy.com/shop/TeeForUSA",
+     "sales_before": 72896,
+     "sales_total": 72942,
+     "sales_added": 46,
+     "headline": "Custom T-Shirts | Family Vacation | Birthday and More",
+     "rank": 4
+    },
+    {
+     "shop": "ILApparelBoutique",
+     "shop_url": "https://www.etsy.com/shop/ILApparelBoutique",
+     "sales_before": 32998,
+     "sales_total": 33037,
+     "sales_added": 39,
+     "headline": "Unique out of the box, occasional apparel & accessories",
+     "rank": 5
+    },
+    {
+     "shop": "StyleArtUS",
+     "shop_url": "https://www.etsy.com/shop/StyleArtUS",
+     "sales_before": 67020,
+     "sales_total": 67055,
+     "sales_added": 35,
+     "headline": "Style Art Apparel and Gifts",
+     "rank": 6
+    },
+    {
+     "shop": "HitDesignTees",
+     "shop_url": "https://www.etsy.com/shop/HitDesignTees",
+     "sales_before": 1163,
+     "sales_total": 1198,
+     "sales_added": 35,
+     "headline": "Custom & Graphic Tees  The Best Gift Ideas for Everyone",
+     "rank": 7
+    },
+    {
+     "shop": "PrincessTwirl",
+     "shop_url": "https://www.etsy.com/shop/PrincessTwirl",
+     "sales_before": 28253,
+     "sales_total": 28286,
+     "sales_added": 33,
+     "headline": "Princess Dresses, Personalized Princess Gifts & Apparel",
+     "rank": 8
+    },
+    {
+     "shop": "TheMidnightComet",
+     "shop_url": "https://www.etsy.com/shop/TheMidnightComet",
+     "sales_before": 72353,
+     "sales_total": 72385,
+     "sales_added": 32,
+     "headline": "Stylish and unique T-shirts  for everyone.",
+     "rank": 9
+    },
+    {
+     "shop": "Flossandfable",
+     "shop_url": "https://www.etsy.com/shop/Flossandfable",
+     "sales_before": 65278,
+     "sales_total": 65310,
+     "sales_added": 32,
+     "headline": "Custom Embroidered Clothing",
+     "rank": 10
+    }
+   ]
+  },
+  {
+   "slug": "home-decor",
+   "niche": "home decor",
+   "rule": "“decor” (including “home decor”)",
+   "regex": "\\bhome decor\\b|\\bdecor\\b",
+   "shops": 1144,
+   "shops_gaining": 564,
+   "sales_added": 2153,
+   "top_shop_share": 0.025,
+   "top10_share": 0.174,
+   "top": [
+    {
+     "shop": "AvisFloralsAndGifts",
+     "shop_url": "https://www.etsy.com/shop/AvisFloralsAndGifts",
+     "sales_before": 76183,
+     "sales_total": 76236,
+     "sales_added": 53,
+     "headline": "Dried Flowers / Home Decor / Hand-made Gifts",
+     "rank": 1
+    },
+    {
+     "shop": "AkCraftCrazy",
+     "shop_url": "https://www.etsy.com/shop/AkCraftCrazy",
+     "sales_before": 193549,
+     "sales_total": 193601,
+     "sales_added": 52,
+     "headline": "Personalised Party Decor & Cards for all occasions",
+     "rank": 2
+    },
+    {
+     "shop": "StickyArtUK",
+     "shop_url": "https://www.etsy.com/shop/StickyArtUK",
+     "sales_before": 88229,
+     "sales_total": 88280,
+     "sales_added": 51,
+     "headline": "Personalised Gifts & Decor",
+     "rank": 3
+    },
+    {
+     "shop": "ShowStopperDesigns",
+     "shop_url": "https://www.etsy.com/shop/ShowStopperDesigns",
+     "sales_before": 44434,
+     "sales_total": 44481,
+     "sales_added": 47,
+     "headline": "Designer Ribbon, Floral, Wreath, Door Swag & Home Decor",
+     "rank": 4
+    },
+    {
+     "shop": "LindysSignCreations",
+     "shop_url": "https://www.etsy.com/shop/LindysSignCreations",
+     "sales_before": 79442,
+     "sales_total": 79479,
+     "sales_added": 37,
+     "headline": "Aluminum signs for wreath & home decor projects",
+     "rank": 5
+    },
+    {
+     "shop": "LoveDictionary",
+     "shop_url": "https://www.etsy.com/shop/LoveDictionary",
+     "sales_before": 58161,
+     "sales_total": 58191,
+     "sales_added": 30,
+     "headline": "DIGITAL PRINTS / DIY WALL DECOR / PRINTABLE  ART",
+     "rank": 6
+    },
+    {
+     "shop": "PaperyBear",
+     "shop_url": "https://www.etsy.com/shop/PaperyBear",
+     "sales_before": 18503,
+     "sales_total": 18530,
+     "sales_added": 27,
+     "headline": "Digital invitations & And Decor",
+     "rank": 7
+    },
+    {
+     "shop": "EzoArtDesign",
+     "shop_url": "https://www.etsy.com/shop/EzoArtDesign",
+     "sales_before": 8974,
+     "sales_total": 9001,
+     "sales_added": 27,
+     "headline": "Perfect for junk journals, home decor, and more!",
+     "rank": 8
+    },
+    {
+     "shop": "TwoOppositesAttract",
+     "shop_url": "https://www.etsy.com/shop/TwoOppositesAttract",
+     "sales_before": 26520,
+     "sales_total": 26545,
+     "sales_added": 25,
+     "headline": "Decor for ANY Magnetic door - Cruise, School, Hospitals",
+     "rank": 9
+    },
+    {
+     "shop": "SeasideSorcery",
+     "shop_url": "https://www.etsy.com/shop/SeasideSorcery",
+     "sales_before": 21958,
+     "sales_total": 21983,
+     "sales_added": 25,
+     "headline": "Wicca-Pagan-Occult Decals, Stickers & Decor",
+     "rank": 10
+    }
+   ]
+  },
+  {
+   "slug": "art-prints",
+   "niche": "art prints",
+   "rule": "“prints” or “art print”",
+   "regex": "\\bart prints?\\b|\\bprints\\b",
+   "shops": 534,
+   "shops_gaining": 303,
+   "sales_added": 1479,
+   "top_shop_share": 0.032,
+   "top10_share": 0.252,
+   "top": [
+    {
+     "shop": "TheArtofDanialRyan",
+     "shop_url": "https://www.etsy.com/shop/TheArtofDanialRyan",
+     "sales_before": 74064,
+     "sales_total": 74112,
+     "sales_added": 48,
+     "headline": "Original art, prints, and apparel by yours truly!",
+     "rank": 1
+    },
+    {
+     "shop": "TheBloomingPlum",
+     "shop_url": "https://www.etsy.com/shop/TheBloomingPlum",
+     "sales_before": 6874,
+     "sales_total": 6919,
+     "sales_added": 45,
+     "headline": "SVG Cut Files, Sublimation Prints, Fonts & More",
+     "rank": 2
+    },
+    {
+     "shop": "PixiePrintDesignCo",
+     "shop_url": "https://www.etsy.com/shop/PixiePrintDesignCo",
+     "sales_before": 5277,
+     "sales_total": 5321,
+     "sales_added": 44,
+     "headline": "Specializing in UV DTF and DTF Prints!",
+     "rank": 3
+    },
+    {
+     "shop": "EvoArtPrint",
+     "shop_url": "https://www.etsy.com/shop/EvoArtPrint",
+     "sales_before": 5988,
+     "sales_total": 6028,
+     "sales_added": 40,
+     "headline": "Custom & Curated Canvas Wall Art Prints",
+     "rank": 4
+    },
+    {
+     "shop": "TheColoringGalleryMX",
+     "shop_url": "https://www.etsy.com/shop/TheColoringGalleryMX",
+     "sales_before": 26523,
+     "sales_total": 26558,
+     "sales_added": 35,
+     "headline": "Coloring pages, activities, art prints and more!",
+     "rank": 5
+    },
+    {
+     "shop": "LunovaStudioDTF",
+     "shop_url": "https://www.etsy.com/shop/LunovaStudioDTF",
+     "sales_before": 670,
+     "sales_total": 705,
+     "sales_added": 35,
+     "headline": "Premium DTF Transfers | Fast Shipping | Vibrant Prints",
+     "rank": 6
+    },
+    {
+     "shop": "LandonFrakerArt",
+     "shop_url": "https://www.etsy.com/shop/LandonFrakerArt",
+     "sales_before": 7612,
+     "sales_total": 7646,
+     "sales_added": 34,
+     "headline": "Original Artwork & Prints",
+     "rank": 7
+    },
+    {
+     "shop": "LollipopsbyHelen",
+     "shop_url": "https://www.etsy.com/shop/LollipopsbyHelen",
+     "sales_before": 5126,
+     "sales_total": 5160,
+     "sales_added": 34,
+     "headline": "Personalized Edible Prints & Toppers for Celebrations",
+     "rank": 8
+    },
+    {
+     "shop": "LoveDictionary",
+     "shop_url": "https://www.etsy.com/shop/LoveDictionary",
+     "sales_before": 58161,
+     "sales_total": 58191,
+     "sales_added": 30,
+     "headline": "DIGITAL PRINTS / DIY WALL DECOR / PRINTABLE  ART",
+     "rank": 9
+    },
+    {
+     "shop": "SOYMOSSART",
+     "shop_url": "https://www.etsy.com/shop/SOYMOSSART",
+     "sales_before": 10058,
+     "sales_total": 10085,
+     "sales_added": 27,
+     "headline": "Prints, Originals, Goodies, and more!",
+     "rank": 10
+    }
+   ]
+  },
+  {
+   "slug": "3d-printing",
+   "niche": "3D printing",
+   "rule": "“3D”",
+   "regex": "\\b3d\\b",
+   "shops": 448,
+   "shops_gaining": 245,
+   "sales_added": 1183,
+   "top_shop_share": 0.047,
+   "top10_share": 0.303,
+   "top": [
+    {
+     "shop": "RokoCut",
+     "shop_url": "https://www.etsy.com/shop/RokoCut",
+     "sales_before": 5969,
+     "sales_total": 6025,
+     "sales_added": 56,
+     "headline": "USA Heritage Laser Arts | 3D Patriotic Layered SVG",
+     "rank": 1
+    },
+    {
+     "shop": "OrangeYewCurios",
+     "shop_url": "https://www.etsy.com/shop/OrangeYewCurios",
+     "sales_before": 37192,
+     "sales_total": 37246,
+     "sales_added": 54,
+     "headline": "3D Printed Nicknacks and Custom Printing Services",
+     "rank": 2
+    },
+    {
+     "shop": "WonderCutsCutters",
+     "shop_url": "https://www.etsy.com/shop/WonderCutsCutters",
+     "sales_before": 43635,
+     "sales_total": 43687,
+     "sales_added": 52,
+     "headline": "3D Printed Cookie Cutters",
+     "rank": 3
+    },
+    {
+     "shop": "mscarrotandthepeas",
+     "shop_url": "https://www.etsy.com/shop/mscarrotandthepeas",
+     "sales_before": 9317,
+     "sales_total": 9365,
+     "sales_added": 48,
+     "headline": "Files for plotting, laser cutting and 3D printing",
+     "rank": 4
+    },
+    {
+     "shop": "5DPrintFactory",
+     "shop_url": "https://www.etsy.com/shop/5DPrintFactory",
+     "sales_before": 41875,
+     "sales_total": 41908,
+     "sales_added": 33,
+     "headline": "Where 2D and 3D come together",
+     "rank": 5
+    },
+    {
+     "shop": "CookieCuttersByNori",
+     "shop_url": "https://www.etsy.com/shop/CookieCuttersByNori",
+     "sales_before": 64670,
+     "sales_total": 64697,
+     "sales_added": 27,
+     "headline": "3D Printed Cookie Cutters, Stencils Made in America",
+     "rank": 6
+    },
+    {
+     "shop": "Amora3DStore",
+     "shop_url": "https://www.etsy.com/shop/Amora3DStore",
+     "sales_before": 158,
+     "sales_total": 185,
+     "sales_added": 27,
+     "headline": "Premium STL Files for 3D Printing",
+     "rank": 7
+    },
+    {
+     "shop": "my3dsvg",
+     "shop_url": "https://www.etsy.com/shop/my3dsvg",
+     "sales_before": 89564,
+     "sales_total": 89588,
+     "sales_added": 24,
+     "headline": "My 3D SVG",
+     "rank": 8
+    },
+    {
+     "shop": "LEDBFG",
+     "shop_url": "https://www.etsy.com/shop/LEDBFG",
+     "sales_before": 42522,
+     "sales_total": 42541,
+     "sales_added": 19,
+     "headline": "High Quality 3D Printed Items",
+     "rank": 9
+    },
+    {
+     "shop": "MINISEKT",
+     "shop_url": "https://www.etsy.com/shop/MINISEKT",
+     "sales_before": 12474,
+     "sales_total": 12492,
+     "sales_added": 18,
+     "headline": "Resin 3D printing service",
+     "rank": 10
+    }
+   ]
+  },
+  {
+   "slug": "stickers",
+   "niche": "stickers",
+   "rule": "“sticker(s)”",
+   "regex": "\\bstickers?\\b",
+   "shops": 375,
+   "shops_gaining": 228,
+   "sales_added": 1466,
+   "top_shop_share": 0.08,
+   "top10_share": 0.323,
+   "top": [
+    {
+     "shop": "StickerPacked",
+     "shop_url": "https://www.etsy.com/shop/StickerPacked",
+     "sales_before": 86885,
+     "sales_total": 87003,
+     "sales_added": 118,
+     "headline": "Planner Stickers to keep your life organized.",
+     "rank": 1
+    },
+    {
+     "shop": "WaterSpriteArtStore",
+     "shop_url": "https://www.etsy.com/shop/WaterSpriteArtStore",
+     "sales_before": 45096,
+     "sales_total": 45164,
+     "sales_added": 68,
+     "headline": "Gift Shop - Stickers, Printables & More",
+     "rank": 2
+    },
+    {
+     "shop": "TyrianDesign",
+     "shop_url": "https://www.etsy.com/shop/TyrianDesign",
+     "sales_before": 102128,
+     "sales_total": 102174,
+     "sales_added": 46,
+     "headline": "Stickers and Stationery for Planning Journaling & Life",
+     "rank": 3
+    },
+    {
+     "shop": "LemonJellyStudio",
+     "shop_url": "https://www.etsy.com/shop/LemonJellyStudio",
+     "sales_before": 22382,
+     "sales_total": 22428,
+     "sales_added": 46,
+     "headline": "Cute planner stickers made for you!",
+     "rank": 4
+    },
+    {
+     "shop": "BellaRoseCreatesCo",
+     "shop_url": "https://www.etsy.com/shop/BellaRoseCreatesCo",
+     "sales_before": 10618,
+     "sales_total": 10662,
+     "sales_added": 44,
+     "headline": "Stickers, Tumblers, Keychains & More",
+     "rank": 5
+    },
+    {
+     "shop": "SimplyMadeByJessieB",
+     "shop_url": "https://www.etsy.com/shop/SimplyMadeByJessieB",
+     "sales_before": 100544,
+     "sales_total": 100582,
+     "sales_added": 38,
+     "headline": "You Favorite Sticker Dealer",
+     "rank": 6
+    },
+    {
+     "shop": "BriannaNicoleDesignz",
+     "shop_url": "https://www.etsy.com/shop/BriannaNicoleDesignz",
+     "sales_before": 123945,
+     "sales_total": 123977,
+     "sales_added": 32,
+     "headline": "planner stickers",
+     "rank": 7
+    },
+    {
+     "shop": "ErinandElleDecals",
+     "shop_url": "https://www.etsy.com/shop/ErinandElleDecals",
+     "sales_before": 16562,
+     "sales_total": 16591,
+     "sales_added": 29,
+     "headline": "Vinyl Stickers and Labels",
+     "rank": 8
+    },
+    {
+     "shop": "jrodsdecal",
+     "shop_url": "https://www.etsy.com/shop/jrodsdecal",
+     "sales_before": 47712,
+     "sales_total": 47739,
+     "sales_added": 27,
+     "headline": "Decal Stickers",
+     "rank": 9
+    },
+    {
+     "shop": "SeasideSorcery",
+     "shop_url": "https://www.etsy.com/shop/SeasideSorcery",
+     "sales_before": 21958,
+     "sales_total": 21983,
+     "sales_added": 25,
+     "headline": "Wicca-Pagan-Occult Decals, Stickers & Decor",
+     "rank": 10
+    }
+   ]
+  },
+  {
+   "slug": "embroidery",
+   "niche": "embroidery",
+   "rule": "“embroidery”, “embroidered” or similar",
+   "regex": "\\bembroider\\w*",
+   "shops": 275,
+   "shops_gaining": 196,
+   "sales_added": 1888,
+   "top_shop_share": 0.05,
+   "top10_share": 0.312,
+   "top": [
+    {
+     "shop": "JLdizains",
+     "shop_url": "https://www.etsy.com/shop/JLdizains",
+     "sales_before": 347326,
+     "sales_total": 347420,
+     "sales_added": 94,
+     "headline": "Top Quality Machine Embroidery Designs.",
+     "rank": 1
+    },
+    {
+     "shop": "SHEENBeads",
+     "shop_url": "https://www.etsy.com/shop/SHEENBeads",
+     "sales_before": 128372,
+     "sales_total": 128453,
+     "sales_added": 81,
+     "headline": "High Quality hand Embroidery material & Bijoux Findings",
+     "rank": 2
+    },
+    {
+     "shop": "TheCozyStudioCrafts",
+     "shop_url": "https://www.etsy.com/shop/TheCozyStudioCrafts",
+     "sales_before": 9090,
+     "sales_total": 9171,
+     "sales_added": 81,
+     "headline": "Personalized Embroidered Gifts & Keepsakes for Babies &",
+     "rank": 3
+    },
+    {
+     "shop": "RubyDearDesigns",
+     "shop_url": "https://www.etsy.com/shop/RubyDearDesigns",
+     "sales_before": 75994,
+     "sales_total": 76062,
+     "sales_added": 68,
+     "headline": "Machine Embroidery Designs",
+     "rank": 4
+    },
+    {
+     "shop": "HexAndHem",
+     "shop_url": "https://www.etsy.com/shop/HexAndHem",
+     "sales_before": 2999,
+     "sales_total": 3053,
+     "sales_added": 54,
+     "headline": "🪡🧵 Small-Batch Embroidery | Whimsical Wearable Charms",
+     "rank": 5
+    },
+    {
+     "shop": "AhsCreationStudio",
+     "shop_url": "https://www.etsy.com/shop/AhsCreationStudio",
+     "sales_before": 19446,
+     "sales_total": 19491,
+     "sales_added": 45,
+     "headline": "Stitch Your Dreams with Our Embroidery Designs AHS",
+     "rank": 6
+    },
+    {
+     "shop": "CheerfullyMadeEmb",
+     "shop_url": "https://www.etsy.com/shop/CheerfullyMadeEmb",
+     "sales_before": 16570,
+     "sales_total": 16614,
+     "sales_added": 44,
+     "headline": "Embroidered Bodysuits and Gifts",
+     "rank": 7
+    },
+    {
+     "shop": "StitchPatternLabArt",
+     "shop_url": "https://www.etsy.com/shop/StitchPatternLabArt",
+     "sales_before": 2121,
+     "sales_total": 2165,
+     "sales_added": 44,
+     "headline": "Adorable Embroidery Designs for DIY Makers, Small Business",
+     "rank": 8
+    },
+    {
+     "shop": "AnnaEmbDesign",
+     "shop_url": "https://www.etsy.com/shop/AnnaEmbDesign",
+     "sales_before": 188150,
+     "sales_total": 188191,
+     "sales_added": 41,
+     "headline": "Machine Embroidery Designs",
+     "rank": 9
+    },
+    {
+     "shop": "PixieThreadsDesign",
+     "shop_url": "https://www.etsy.com/shop/PixieThreadsDesign",
+     "sales_before": 13716,
+     "sales_total": 13754,
+     "sales_added": 38,
+     "headline": "Personalized Embroidered Gifts & Custom Keepsakes",
+     "rank": 10
+    }
+   ]
+  }
+ ],
+ "skipped": [
+  {
+   "niche": "wood",
+   "shops": 546,
+   "why": "meets the threshold; not built in this batch"
+  },
+  {
+   "niche": "wedding",
+   "shops": 316,
+   "why": "meets the threshold; not built in this batch"
+  },
+  {
+   "niche": "kids",
+   "shops": 316,
+   "why": "meets the threshold; not built in this batch"
+  },
+  {
+   "niche": "leather",
+   "shops": 277,
+   "why": "meets the threshold; not built in this batch"
+  },
+  {
+   "niche": "fabric and sewing",
+   "shops": 271,
+   "why": "meets the threshold; not built in this batch"
+  },
+  {
+   "niche": "patterns",
+   "shops": 260,
+   "why": "meets the threshold; not built in this batch"
+  },
+  {
+   "niche": "ceramics and pottery",
+   "shops": 223,
+   "why": "meets the threshold; not built in this batch"
+  },
+  {
+   "niche": "pets",
+   "shops": 220,
+   "why": "meets the threshold; not built in this batch"
+  },
+  {
+   "niche": "crochet",
+   "shops": 216,
+   "why": "meets the threshold; not built in this batch"
+  },
+  {
+   "niche": "svg and cut files",
+   "shops": 211,
+   "why": "meets the threshold; not built in this batch"
+  },
+  {
+   "niche": "craft supplies",
+   "shops": 205,
+   "why": "meets the threshold; not built in this batch"
+  },
+  {
+   "niche": "bags",
+   "shops": 199,
+   "why": "199 shops < 200"
+  },
+  {
+   "niche": "witchy and spiritual",
+   "shops": 196,
+   "why": "196 shops < 200"
+  },
+  {
+   "niche": "silver",
+   "shops": 180,
+   "why": "180 shops < 200"
+  },
+  {
+   "niche": "baby",
+   "shops": 160,
+   "why": "160 shops < 200"
+  },
+  {
+   "niche": "planners",
+   "shops": 143,
+   "why": "143 shops < 200"
+  },
+  {
+   "niche": "candles",
+   "shops": 135,
+   "why": "135 shops < 200"
+  },
+  {
+   "niche": "knitting and yarn",
+   "shops": 119,
+   "why": "119 shops < 200"
+  },
+  {
+   "niche": "miniatures",
+   "shops": 89,
+   "why": "89 shops < 200"
+  },
+  {
+   "niche": "beads",
+   "shops": 85,
+   "why": "85 shops < 200"
+  },
+  {
+   "niche": "earrings",
+   "shops": 68,
+   "why": "68 shops < 200"
+  },
+  {
+   "niche": "necklaces",
+   "shops": 68,
+   "why": "68 shops < 200"
+  },
+  {
+   "niche": "rings",
+   "shops": 64,
+   "why": "64 shops < 200"
+  },
+  {
+   "niche": "christmas",
+   "shops": 58,
+   "why": "58 shops < 200"
+  },
+  {
+   "niche": "soap and skincare",
+   "shops": 41,
+   "why": "41 shops < 200"
+  },
+  {
+   "niche": "halloween",
+   "shops": 24,
+   "why": "24 shops < 200"
+  }
+ ]
+}
