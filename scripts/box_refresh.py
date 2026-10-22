@@ -39,6 +39,7 @@ LOCK = os.environ.get("REFRESH_LOCK", "/tmp/etsypulse-refresh.lock")
 STATE = os.environ.get("REFRESH_STATE", "/workspace/x-etsypulse/refresh-state.json")
 INTERNAL = os.environ.get("INTERNAL_PANEL", "/workspace/x-etsypulse/internal/panel")
 APIFY_TOKEN_FILE = os.environ.get("APIFY_TOKEN_FILE", "/home/box/apify-marketer/secrets/apify-publicrecords-api-token.txt")
+HEARTBEAT = os.environ.get("REFRESH_HEARTBEAT", "/workspace/x-etsypulse/loop-heartbeat.json")   # LOOP-HB-1
 CHECK_OUT = "/tmp/etsypulse-site-check"
 POSTS = "/workspace/x-etsypulse/make_posts.py"
 DAYS = ["Mon", "Tue", "Wed", "Thu", "Fri", "Sat", "Sun"]
@@ -416,6 +417,19 @@ def next_poll(t, c):
     return x
 
 
+def heartbeat(next_poll=None):
+    """LOOP-HB-1 (Claude t793u item 2): rewritten every loop tick (30 s), in and out of the poll window, so
+    scripts/loop_heartbeat_check.py can page when the loop is silent > 30 min. Never raises."""
+    try:
+        tmp = HEARTBEAT + ".tmp"
+        with open(tmp, "w") as fh:
+            json.dump({"at": now().isoformat(timespec="seconds"), "pid": os.getpid(),
+                       "next_poll": next_poll.isoformat(timespec="minutes") if next_poll else None}, fh)
+        os.replace(tmp, HEARTBEAT)
+    except OSError:
+        pass
+
+
 def loop():
     with open("/tmp/etsypulse-refresh-loop.lock", "w") as lf:
         try:
@@ -431,6 +445,7 @@ def loop():
             window="-".join(c.get("poll_window_et", [])), next_poll=nxt.isoformat(timespec="minutes"),
             niche=f"{c.get('niche_weekday')}@{c.get('niche_time_et')}")
         while True:
+            heartbeat(nxt)
             if now() >= nxt:
                 locked(do_poll)
                 c = cfg()
