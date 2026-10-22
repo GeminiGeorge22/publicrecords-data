@@ -9,10 +9,14 @@ if [ "${1:-}" = "--restart" ] && [ -f "$PIDF" ] && kill -0 "$(cat "$PIDF")" 2>/d
   kill "$(cat "$PIDF")"; sleep 2
 fi
 if [ -f "$PIDF" ] && kill -0 "$(cat "$PIDF")" 2>/dev/null; then
-  echo "running pid $(cat "$PIDF")"; exit 0
+  echo "running pid $(cat "$PIDF")"
+  setsid nohup scripts/loop_heartbeat_watchdog.sh >/dev/null 2>&1 < /dev/null &   # LOOP-HB-1 (idempotent)
+  exit 0
 fi
 if [ -z "${HF_READ_TOKEN:-}${HF_TOKEN:-}" ]; then
   echo "HF_READ_TOKEN missing in this shell: loop not started" >&2; exit 1
 fi
 setsid nohup python3 scripts/box_refresh.py loop >> /tmp/etsypulse-refresh-loop.out 2>&1 < /dev/null &
 sleep 2; echo "started pid $(cat "$PIDF")"
+# LOOP-HB-1: the heartbeat pager runs whenever the loop is (re)started (idempotent, flock'd)
+setsid nohup scripts/loop_heartbeat_watchdog.sh >/dev/null 2>&1 < /dev/null &
