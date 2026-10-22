@@ -11,6 +11,9 @@ Rules, per page, on visible text (nav tabs included, <header> brand/language but
      of a held date fails;
   R3 the footer's dates must equal the newest data date shown in the body (or the footer says Held);
   R4 no '0 niches' line (fr '0 niches', tr '0 niş').
+SITE-HELD-1d (Claude t793u): for R1 a date also counts as labelled when its OWN sentence states its cadence (CADENCE, e.g.
+  'refreshed weekly') and the date is no older than that cadence + 1 day (config/publish.json niche_cadence_days). An old date
+  with no held word and no cadence in its sentence still fails; capture dates are not treated as source dates in general.
 Exit 1 on any failure; prints one line per finding."""
 import argparse, datetime as dt, glob, html, json, os, re, sys, urllib.request
 ROOT = os.path.normpath(os.path.join(os.path.dirname(os.path.abspath(__file__)), ".."))
@@ -27,6 +30,26 @@ MON = {"jan": 1, "feb": 2, "mar": 3, "apr": 4, "may": 5, "jun": 6, "jul": 7, "au
        "temmuz": 7, "ağustos": 8, "eylül": 9, "ekim": 10, "kasım": 11, "aralık": 12, "october": 10, "september": 9, "november": 11}
 DATE_RX = re.compile(r"\b(20\d\d)-(\d\d)-(\d\d)\b|\b([A-Z][a-z]{2,8})\.? (\d{1,2})\b|\b(\d{1,2}) ([a-zéûçşığüö]{3,9}|[A-ZÇŞĞÜÖİ][a-zçşığüö]{2,8})\.?")
 HELD_BEFORE, HELD_AFTER, FRESH_NEAR = 320, 160, 120
+CADENCE = {"en": r"\brefreshed weekly\b"}   # SITE-HELD-1d: only qualifiers a page actually uses, each one honest
+
+
+def cadence_days():
+    try:
+        return int(json.load(open(os.path.join(ROOT, "config", "publish.json"))).get("niche_cadence_days", 7))
+    except (FileNotFoundError, ValueError):
+        return 7
+
+
+def sentence(t, s, e):
+    """The sentence holding t[s:e] (bounded by '. ', '! ', '? ' or the text ends)."""
+    a = max(t.rfind(x, 0, s) for x in (". ", "! ", "? "))
+    ends = [i for i in (t.find(x, e) for x in (". ", "! ", "? ")) if i >= 0]
+    return t[(a + 2 if a >= 0 else 0): (min(ends) + 1 if ends else len(t))]
+
+
+def cadence_ok(t, s, e, d, lg, newest):
+    rx = CADENCE.get(lg)
+    return bool(rx) and (newest - d).days <= cadence_days() + 1 and re.search(rx, sentence(t, s, e), re.I) is not None
 
 
 def vis(raw):
@@ -75,7 +98,7 @@ def check_page(url, raw, lg, newest):
     held = [x for x in ds if (newest - x[2]).days > 1]
     for s, e, d, txt in held:
         win = body[max(0, s - HELD_BEFORE): e + HELD_AFTER]
-        if not re.search(HELD[lg], win, re.I):
+        if not re.search(HELD[lg], win, re.I) and not cadence_ok(body, s, e, d, lg, newest):
             bad.append(f"R1 {url}: held date '{txt}' ({d}) has no held word nearby: …{body[max(0, s - 70): e + 40]}…")
         near = body[max(0, s - FRESH_NEAR): e + FRESH_NEAR]
         for m in re.finditer(FRESH[lg], near, re.I):

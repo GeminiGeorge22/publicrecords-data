@@ -725,6 +725,26 @@ def cadence_word(kind="panel"):
     return "daily" if c.get("publish") == "daily_on_new_snapshot" else "weekly"
 
 
+def next_niche_refresh(captured):
+    """SITE-HELD-1d (Claude t793u): the next niche run box_refresh.niche_due() would make after a capture on `captured`
+    (a date): the first niche_weekday at least niche_cadence_days - 3 days later. From config, never typed."""
+    c = publish_cfg()
+    wd = ["Mon", "Tue", "Wed", "Thu", "Fri", "Sat", "Sun"].index(c.get("niche_weekday", "Mon"))
+    d = captured + dt.timedelta(days=max(1, c.get("niche_cadence_days", 7) - 3))
+    while d.weekday() != wd:
+        d += dt.timedelta(days=1)
+    return d
+
+
+def niche_cadence_sentence(N):
+    """Home 'Niche prices' paragraph (Claude t793u item 1): the capture date carries its cadence in the same sentence.
+    capture_date and next_refresh come from data/niche/<cut>/meta.json + config/publish.json, never typed."""
+    cap = dt.date.fromisoformat((N["meta"].get("captured_at") or N["cut"])[:10])
+    nxt = next_niche_refresh(cap)
+    return (f"Niche keywords are refreshed {cadence_word('niche')}; this set was captured {cap.isoformat()} with our Etsy Search Scraper "
+            f"(next refresh {nxt.strftime('%a')} {nxt.strftime('%m-%d')}).")
+
+
 def cov_of(meta):
     """Coverage numbers from meta.json (written by export_panel_cut.py at publish time). Never hardcoded."""
     c = dict(meta.get("coverage") or {})
@@ -2739,7 +2759,7 @@ def build(out_dir):
 Niches: the same counter pairs summed by the shop's Etsy category.</p>
 <h3>Coverage</h3><p>A shop's sales gain can only be computed once its counter has been read on two different days. {coverage_line(meta)}
 These are not all of Etsy: they are the shops and niches we read.</p>
-{"<h3>Niche prices</h3><p>The top results of an Etsy search (US shopper, Etsy's best-match order, first results page) for keywords taken from the top movers' categories, captured " + E((N['meta'].get('captured_at') or '')[:10]) + " with our Etsy Search Scraper (Apify run " + E(N['meta']['run_id']) + "). Typical price is the middle price of those results; most charge = the middle 50% of prices.</p>" if "niche.html" in pages else ""}
+{"<h3>Niche prices</h3><p>" + niche_cadence_sentence(N) + " The set is the top results of an Etsy search (US shopper, Etsy's best-match order, first results page) for keywords taken from the top movers' categories (Apify run " + E(N['meta']['run_id']) + "). Typical price is the middle price of those results; most charge = the middle 50% of prices.</p>" if "niche.html" in pages else ""}
 <h3>Free top {PUBLIC_N}, your own top {CUSTOM_N}</h3><p>Free reports show the top {PUBLIC_N}. For the top {CUSTOM_N}, or any other niche or category, run your own report: the button under each report opens the builder already set up.</p></section>"""
     # DAILY-1: no shop-coverage count in the description (X shows it under posts; check_public enforces it).
     desc_home = (f"Etsy's biggest movers, {sd_}: {a['shop_name']} {plus(a['sales_added'])} sales {span}"
