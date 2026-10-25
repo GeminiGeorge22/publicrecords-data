@@ -627,7 +627,7 @@ def page(name, title, desc, body, ctx, hero=None, scripts=""):
 <footer><div class="wrap">
 <p><b>Etsy Pulse</b> is published by publicrecords, and the data comes from our own tools: the publicrecords Etsy Shop Sales Tracker panel
 (public shop sales counters) and the publicrecords Etsy Search Scraper on Apify. We built them and we sell them, so weigh the links accordingly.</p>
-<p>Movers cut {E(ctx['cut'])} (counters read through {E(ctx['snap'])}). Not affiliated with, endorsed by, or sponsored by Etsy, Inc.
+<p>Movers cut {E(ctx['snap'])} (counters read through {E(ctx['snap'])}). Not affiliated with, endorsed by, or sponsored by Etsy, Inc.
 Etsy is a trademark of Etsy, Inc.</p>
 </div></footer>
 {LANG_JS}
@@ -1269,7 +1269,7 @@ def loc_home(ctx, P, D, lang):
 </main>
 <footer><div class="wrap">
 <p>{T['footer_1']}</p>
-<p>{E(T['footer_2'].format(cut=date_loc(cut, T), snap=day))}</p>
+<p>{E(T['footer_2'].format(cut=day, snap=day))}</p>
 </div></footer>
 {LANG_JS}
 {view_js(lang + "-home")}
@@ -1426,7 +1426,7 @@ def loc_page(lang, rel, title, desc, body, ctx, T, hero="", scripts="", with_cta
 </main>
 <footer><div class="wrap">
 <p>{T['footer_1']}</p>
-<p>{E(T['footer_2'].format(cut=date_loc(ctx['cut'], T), snap=date_loc(ctx['snap'], T)))}</p>
+<p>{E(T['footer_2'].format(cut=date_loc(ctx['snap'], T), snap=date_loc(ctx['snap'], T)))}</p>
 </div></footer>
 {LANG_JS}
 {view_js(f"{lang}-{pg}")}
@@ -2488,7 +2488,7 @@ def dm_page(out_dir, D, days, ctx, lang="en", archive=False):
 {pct_sec}
 {arch}
 <section class="method"><h3>{M["method_h"] if tr else "How we count"}</h3><p>{E(method)}</p></section>"""
-    foot = (f'<p>{T["footer_1"]}</p><p>{E(T["footer_2"].format(cut=date_loc(ctx["cut"], T), snap=date_loc(day, T)))}</p>' if tr else
+    foot = (f'<p>{T["footer_1"]}</p><p>{E(T["footer_2"].format(cut=date_loc(day, T), snap=date_loc(day, T)))}</p>' if tr else
             '<p><b>Etsy Pulse</b> is published by publicrecords, and the data comes from our own tools: the publicrecords Etsy Shop Sales Tracker panel '
             '(public shop sales counters). We built them and we sell them, so weigh the links accordingly.</p>'
             f'<p>Counters read through {E(nice_date(day))}. Not affiliated with, endorsed by, or sponsored by Etsy, Inc. Etsy is a trademark of Etsy, Inc.</p>')
@@ -2742,7 +2742,7 @@ def build(out_dir):
     cards = lead + cards
     if "niche.html" in pages:
         nr = [x for x in N["rows"] if (x.get("listings") or 0) >= 20]
-        cards.append(("niche.html", "Niche Prices", f"{len(nr)}", f"What top sellers charge, and their badges, in the niches of the top movers, read {nice_date((N['meta'].get('captured_at') or N['cut'])[:10])}.",
+        cards.append(("niche.html", "Niche Prices", f"{len(nr)}", f"What top sellers charge, and their badges, in the niches of the top movers, read {nice_date((N['meta'].get('captured_at') or N['cut'])[:10])}, refreshed {cadence_word('niche')}.",
                       mini(nr, lambda x: x["keyword"], lambda x: f"typical {money(x['price_median'])}")))
     cards_html = "".join(f'<a class="rcard" href="{h}"><div class="t">{t}<span>{k}</span></div><div class="d">{d}</div>{mn}</a>'
                          for h, t, k, d, mn in cards)
