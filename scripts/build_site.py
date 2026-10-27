@@ -36,6 +36,38 @@ assert SITE_URL.startswith("https://") and SITE_URL.endswith("/"), "config/site.
 CTA_URL = "https://publicrecords-redirect.publicrecords.workers.dev/r/site-cta"
 TRACKER_URL = "https://publicrecords-redirect.publicrecords.workers.dev/r/site-tracker"
 R = "https://publicrecords-redirect.publicrecords.workers.dev/r/"
+# FIRST-USERS-ETSY (t840u/t837u): every page links to Velocity via the logged /r/ hand-off
+# (BEACON-1: no direct apify.com Store hrefs). CLICKS-1 site UTM rides on the request;
+# worker withUtm merges utm_* onto the bare site-store-tracker target
+# (https://apify.com/publicrecords/etsy-shop-velocity). Read-back counts utm_content=track-shop.
+TRACK_SHOP_SLUG = "site-store-tracker"
+TRACK_SHOP_UTM = "utm_source=site&utm_medium=web&utm_campaign=etsypulse&utm_content=track-shop"
+TRACK_SHOP_LABEL = {
+    "en": "Track this shop's sales",
+    "fr": "Suivre les ventes de cette boutique",
+    "tr": "Bu mağazanın satışlarını izle",
+}
+
+
+def track_shop_href(shop=None, lang="en"):
+    from urllib.parse import quote
+    parts = []
+    if lang and lang != "en":
+        parts.append(f"t={lang}")  # check_loc: Store /r/site-* links need ?t=<lang>
+    parts.append(TRACK_SHOP_UTM)
+    if shop:
+        parts.append("utm_term=" + quote(str(shop)[:80], safe=""))
+    return f"{R}{TRACK_SHOP_SLUG}?{'&'.join(parts)}"
+
+
+def track_shop_a(lang="en", T=None, shop=None):
+    label = (T or {}).get("track_shop") or TRACK_SHOP_LABEL.get(lang) or TRACK_SHOP_LABEL["en"]
+    return f'<a class="track" href="{E(track_shop_href(shop, lang))}" rel="noopener">{E(label)}</a>'
+
+
+def track_shop_footer_p(lang="en", T=None):
+    return f"<p>{track_shop_a(lang, T)}</p>"
+
 # BEACON-1 (Mark 2026-10-08): every page sends ONE anonymous page-view beacon to the worker: page name, referrer host only,
 # utm_content/from tag, ?me=1 (own) and ?test=1 (not logged) passed through. No cookies (credentials:'omit'), no storage, no IDs.
 VIEW_BEACON = "https://publicrecords-redirect.publicrecords.workers.dev/e/view"
@@ -419,6 +451,8 @@ h2{font-size:clamp(21px,4.4vw,27px);letter-spacing:-.02em;margin:0 0 6px;font-we
 .facts{display:flex;flex-wrap:wrap;gap:6px 14px;font-size:13px;color:var(--mut)}.facts b{color:var(--ink)}
 footer{border-top:1px solid var(--line);margin-top:30px;padding:22px 0 40px;color:var(--mut);font-size:13.5px}
 footer p{margin:0 0 8px}
+a.track{font-size:12.5px;font-weight:600;color:var(--o);text-decoration:underline;text-underline-offset:2px}
+.row .meta a.track{white-space:nowrap}
 .method{font-size:14px;color:var(--mut)}
 .method h3{color:var(--ink);font-size:16px;margin:16px 0 4px}
 """
@@ -627,6 +661,7 @@ def page(name, title, desc, body, ctx, hero=None, scripts="", footer_date=None):
 <footer><div class="wrap">
 <p><b>Etsy Pulse</b> is published by publicrecords, and the data comes from our own tools: the publicrecords Etsy Shop Sales Tracker panel
 (public shop sales counters) and the publicrecords Etsy Search Scraper on Apify. We built them and we sell them, so weigh the links accordingly.</p>
+{track_shop_footer_p("en")}
 <p>Movers cut {E(footer_date if footer_date is not None else ctx['snap'])} (counters read through {E(footer_date if footer_date is not None else ctx['snap'])}). Not affiliated with, endorsed by, or sponsored by Etsy, Inc.
 Etsy is a trademark of Etsy, Inc.</p>
 </div></footer>
@@ -820,7 +855,7 @@ def shop_rows(rows, maxv, cols_label, extra=None):
         out.append(
             f'<div class="{cls}" role="row"><span class="rk">{r["rank"]}</span>'
             f'<a class="nm" href="{E(r["shop_url"])}" rel="nofollow noopener">{E(r["shop_name"])}</a>'
-            f'<span class="meta"><span class="c" title="{E(title)}">{E(cat)}</span>'
+            f'<span class="meta"><span class="c" title="{E(title)}">{E(cat)}</span>{track_shop_a("en", None, r["shop_name"])}'
             f'<span><b>{n(r["sales_total"])}</b><em> lifetime</em></span>'
             f'<span><em>week = </em><b>{r["gain_pct_of_lifetime"]:.1f}%</b><em> of lifetime</em></span></span>'
             f'<span class="bar"><i style="width:{w}%"></i></span>'
@@ -1269,6 +1304,7 @@ def loc_home(ctx, P, D, lang):
 </main>
 <footer><div class="wrap">
 <p>{T['footer_1']}</p>
+{track_shop_footer_p(lang, T)}
 <p>{E(T['footer_2'].format(cut=day, snap=day))}</p>
 </div></footer>
 {LANG_JS}
@@ -1426,6 +1462,7 @@ def loc_page(lang, rel, title, desc, body, ctx, T, hero="", scripts="", with_cta
 </main>
 <footer><div class="wrap">
 <p>{T['footer_1']}</p>
+{track_shop_footer_p(lang, T)}
 <p>{E(T['footer_2'].format(cut=date_loc(footer_date if footer_date is not None else ctx['snap'], T), snap=date_loc(footer_date if footer_date is not None else ctx['snap'], T)))}</p>
 </div></footer>
 {LANG_JS}
@@ -1972,7 +2009,7 @@ def check_loc_pages(out_dir, lang):
                 if money_set(lv, lang) != money_set(ev):
                     bad.append(f"{rel}: $/¢ amounts {money_set(lv, lang)} != English page {money_set(ev)}")
             # untranslated English: sentences of common English words outside product names / quoted search terms
-            left = EN_OK.sub(" ", visible_text(re.sub(r'(?is)<a class="nm"[^>]*>.*?</a>|<span class="nm"[^>]*>.*?</span>|<h3>“.*?”</h3>|<li>\d+\. .*?</li>|<div class="snap">.*?</div>', " ", raw)))
+            left = EN_OK.sub(" ", visible_text(re.sub(r'(?is)<a class="nm"[^>]*>.*?</a>|<span class="nm"[^>]*>.*?</span>|<a class="track"[^>]*>.*?</a>|<h3>“.*?”</h3>|<li>\d+\. .*?</li>|<div class="snap">.*?</div>', " ", raw)))
             hits = [m.group(0) for m in re.finditer(r"(?:\b[A-Za-z']+\b[ ,]+){0,2}\b[A-Za-z']+\b", left)
                     if len(EN_LEFTOVER.findall(m.group(0))) >= 2]
             if hits:
@@ -2336,7 +2373,7 @@ def dm_rows(rows, key, lang="en", T=None):
         out.append(
             f'<div class="{"row top3" if r["rank"] <= 3 else "row"}" role="row"><span class="rk">{r["rank"]}</span>'
             f'<a class="nm" href="{E(r["shop_url"])}" rel="nofollow noopener">{E(r["shop_name"])}</a>'
-            f'<span class="meta">{chip}'
+            f'<span class="meta">{chip}{track_shop_a(lang, T, r["shop_name"])}'
             f'<span><b>{num(r["sales_total"])}</b><em> {L.get("row_total", "total sales") if lang != "en" else "total sales"}</em></span>'
             + (f'<span><em>{L.get("row_before", "was ") if lang != "en" else "was "}</em><b>{num(r["sales_before"])}</b></span></span>' if key == "sales_added"
                else f'<span><b>{pl(r["sales_added"])}</b><em> {L.get("row_sales", "sales") if lang != "en" else "sales added"}</em></span></span>')
@@ -2369,7 +2406,7 @@ def dm_niche_rows(rows, lang="en", T=None):
             f'<span class="meta"><span class="c">{E(dname)}</span>'
             f'<span><em>{L.get("row_shops", "shops: ") if tr else "shops: "}</em><b>{num(r["shops"])}</b></span>'
             f'<span class="ld"><em>{L.get("row_top", "top: ") if tr else "top: "}</em><a href="{E(r["top_shop_url"])}" rel="nofollow noopener">{E(r["top_shop"])}</a>'
-            f' <b>{pl(r["top_shop_added"])}</b></span></span>'
+            f' {track_shop_a(lang, T, r["top_shop"])} <b>{pl(r["top_shop_added"])}</b></span></span>'
             f'<span class="bar"><i style="width:{w}%"></i></span><span class="big">{pl(r["sales_added"])}</span></div>')
     cols = "34px minmax(150px,1.2fr) minmax(110px,.9fr) 70px minmax(150px,1.1fr) minmax(80px,.8fr) 100px"
     return f'<div class="tc" role="table" style="--cols:{cols}">{"".join(out)}</div>'
@@ -2489,10 +2526,11 @@ def dm_page(out_dir, D, days, ctx, lang="en", archive=False):
 {pct_sec}
 {arch}
 <section class="method"><h3>{M["method_h"] if tr else "How we count"}</h3><p>{E(method)}</p></section>"""
-    foot = (f'<p>{T["footer_1"]}</p><p>{E(T["footer_2"].format(cut=date_loc(day, T), snap=date_loc(day, T)))}</p>' if tr else
+    foot = (f'<p>{T["footer_1"]}</p>{track_shop_footer_p(lang, T)}<p>{E(T["footer_2"].format(cut=date_loc(day, T), snap=date_loc(day, T)))}</p>' if tr else
             '<p><b>Etsy Pulse</b> is published by publicrecords, and the data comes from our own tools: the publicrecords Etsy Shop Sales Tracker panel '
             '(public shop sales counters). We built them and we sell them, so weigh the links accordingly.</p>'
-            f'<p>Counters read through {E(nice_date(day))}. Not affiliated with, endorsed by, or sponsored by Etsy, Inc. Etsy is a trademark of Etsy, Inc.</p>')
+            + track_shop_footer_p("en")
+            + f'<p>Counters read through {E(nice_date(day))}. Not affiliated with, endorsed by, or sponsored by Etsy, Inc. Etsy is a trademark of Etsy, Inc.</p>')
     ld = {"@context": "https://schema.org", "@type": "Dataset", "name": h1, "description": desc, "url": url,
           "dateModified": day, "temporalCoverage": f"{frm}/{day}", "creator": {"@type": "Organization", "name": "publicrecords"},
           "isAccessibleForFree": True, "license": "https://creativecommons.org/licenses/by/4.0/"}

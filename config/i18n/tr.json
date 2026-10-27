@@ -19,6 +19,7 @@
   "title": "Etsy Pulse: Etsy'de satışı en çok artan mağazalar ve nişler ({date})",
   "desc": "Etsy'de en çok satış ekleyenler, {date}: {shop} {span} {gain} satış; nişlerde {niche} önde ({niche_gain}). Herkese açık Etsy satış sayaçlarından.",
   "follow": "Takip et: @EtsyPulse",
+  "track_shop": "Bu mağazanın satışlarını izle",
   "nav": {
     "home": "Ana sayfa",
     "ai": "✦ Yapay zekâ",

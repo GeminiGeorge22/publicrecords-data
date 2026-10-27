@@ -34,6 +34,7 @@
   "title": "Etsy Pulse : les boutiques et niches Etsy qui vendent le plus ({date})",
   "desc": "Les plus fortes hausses sur Etsy, {date} : {shop}, {gain} ventes {span}; {niche} mène les niches ({niche_gain}). D'après les compteurs de ventes publics d'Etsy.",
   "follow": "Suivre @EtsyPulse",
+  "track_shop": "Suivre les ventes de cette boutique",
   "nav": {
     "home": "Accueil",
     "ai": "✦ IA",
