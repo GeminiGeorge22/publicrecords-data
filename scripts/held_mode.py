@@ -1,5 +1,5 @@
-"""SITE-HELD-1 (Claude t781u): when the newest published shop-sales data (data/daily-movers/<day>/) is more than 1 day older
-than the newest snapshot (data/panel/<cut>/meta.json snapshot_date), the snapshots in between failed the balance check and the
+"""SITE-HELD-1 (Claude t781u): when the newest published shop-sales data (data/daily-movers/<day>/) is 1 or more days older
+than the newest snapshot (data/panel/<cut>/meta.json snapshot_date), the newer snapshot(s) failed the balance check and the
 sales lists are HELD. Then /, /movers/ and /rising.html in en/fr/tr must say so in plain words next to every held date, drop the
 'today' / 'daily' / 'every day' claims, and the footer must name the held data date instead of the newest snapshot.
 
