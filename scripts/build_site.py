@@ -590,7 +590,7 @@ def money_tokens(text, lang="en"):
     return sorted(set(x.replace(" ", "") for x in MONEY_RX.findall(t)))
 
 
-def page(name, title, desc, body, ctx, hero=None, scripts=""):
+def page(name, title, desc, body, ctx, hero=None, scripts="", footer_date=None):
     nav = "".join(f'<a href="{h}"{" class=on" if h == name else ""}>{t}</a>' for h, t in nav_items(ctx))
     url = SITE_URL + ("" if name == "index.html" else name)
     rel_ = "" if name == "index.html" else name
@@ -627,7 +627,7 @@ def page(name, title, desc, body, ctx, hero=None, scripts=""):
 <footer><div class="wrap">
 <p><b>Etsy Pulse</b> is published by publicrecords, and the data comes from our own tools: the publicrecords Etsy Shop Sales Tracker panel
 (public shop sales counters) and the publicrecords Etsy Search Scraper on Apify. We built them and we sell them, so weigh the links accordingly.</p>
-<p>Movers cut {E(ctx['snap'])} (counters read through {E(ctx['snap'])}). Not affiliated with, endorsed by, or sponsored by Etsy, Inc.
+<p>Movers cut {E(footer_date if footer_date is not None else ctx['snap'])} (counters read through {E(footer_date if footer_date is not None else ctx['snap'])}). Not affiliated with, endorsed by, or sponsored by Etsy, Inc.
 Etsy is a trademark of Etsy, Inc.</p>
 </div></footer>
 {LANG_JS}
@@ -1390,7 +1390,7 @@ def loc_simple_hero(lang, T, eyebrow, h1, lede, win, cta_=True):
 ROOT_ASSET_RX = re.compile(r'((?:href|src|poster|action)=")((?:assets|data)/)')
 
 
-def loc_page(lang, rel, title, desc, body, ctx, T, hero="", scripts="", with_cta=True, pg=None):
+def loc_page(lang, rel, title, desc, body, ctx, T, hero="", scripts="", with_cta=True, pg=None, footer_date=None):
     """Shell of one translated page (same layout as page()): /<lang>/<rel>. Assets and data are root-absolute."""
     lp = LOC_PATH[lang]
     url = SITE_URL + lp + rel
@@ -1426,7 +1426,7 @@ def loc_page(lang, rel, title, desc, body, ctx, T, hero="", scripts="", with_cta
 </main>
 <footer><div class="wrap">
 <p>{T['footer_1']}</p>
-<p>{E(T['footer_2'].format(cut=date_loc(ctx['snap'], T), snap=date_loc(ctx['snap'], T)))}</p>
+<p>{E(T['footer_2'].format(cut=date_loc(footer_date if footer_date is not None else ctx['snap'], T), snap=date_loc(footer_date if footer_date is not None else ctx['snap'], T)))}</p>
 </div></footer>
 {LANG_JS}
 {view_js(f"{lang}-{pg}")}
@@ -1451,7 +1451,8 @@ def loc_rising(ctx, D, files, CL, lang):
 {dl("/" + files['rising'], P["dl"].format(k=len(rz), day=D["day"]))}<p class="note">{E(method)}</p></section>"""
     return loc_page(lang, "rising.html", P["title"].format(date=sd_),
                     P["desc"].format(span=span, shop=rz[0]["shop_name"], gain=plus_loc(rz[0]["sales_added"], lang)),
-                    body, ctx, T, loc_simple_hero(lang, T, P["eyebrow"], P["h1"], P["lede"], win))
+                    body, ctx, T, loc_simple_hero(lang, T, P["eyebrow"], P["h1"], P["lede"], win),
+                    footer_date=D["day"])
 
 
 def loc_niche_insights(N, lang, T):
@@ -2765,7 +2766,7 @@ These are not all of Etsy: they are the shops and niches we read.</p>
     desc_home = (f"Etsy's biggest movers, {sd_}: {a['shop_name']} {plus(a['sales_added'])} sales {span}"
                  + (f"; {nz[0]['niche']} lead the niches ({plus(nz[0]['sales_added'])})" if nz else "") + ". From public Etsy sales counters.")
     w = lambda name, html_: open(os.path.join(out_dir, name), "w", encoding="utf-8").write(html_)
-    w("index.html", page("index.html", f"Etsy Pulse: Etsy shops and niches on the move ({nice_date(D['day'])})", desc_home, body, ctx, hero))
+    w("index.html", page("index.html", f"Etsy Pulse: Etsy shops and niches on the move ({nice_date(D['day'])})", desc_home, body, ctx, hero, footer_date=D["day"]))
 
     def simple_hero(eyebrow, h1, lede):
         return (f'<div class="hero">{PULSE_SVG}<div class="wrap" style="padding-bottom:30px"><div class="eyebrow">{eyebrow}</div>'
@@ -2791,7 +2792,8 @@ These are not all of Etsy: they are the shops and niches we read.</p>
 {dl(files['rising'], f'Download CSV (top {len(rz)}, {D["day"]})')}<p class="note">{E(D['meta']['method'])}</p></section>"""
         w("rising.html", page("rising.html", f"Fastest-rising small Etsy shops ({sd_}) | Etsy Pulse",
                               f"Small Etsy shops (under 1,000 sales) that added the most sales {span}. {rz[0]['shop_name']} added {plus(rz[0]['sales_added'])}.",
-                              body, ctx, simple_hero("Report · Rising Shops", "Rising Shops", "Small shops adding sales fast: under 1,000 lifetime sales.")))
+                              body, ctx, simple_hero("Report · Rising Shops", "Rising Shops", "Small shops adding sales fast: under 1,000 lifetime sales."),
+                              footer_date=D["day"]))
 
     # ---- niche
     if "niche.html" in pages:
@@ -2874,10 +2876,11 @@ These are not all of Etsy: they are the shops and niches we read.</p>
     import report_pages
     rp_paths, rp_lastmod = report_pages.build(out_dir, globals(), meta, ctx, ROOT)
 
-    # ---- SITE-HELD-1 (Claude t781u): newest shop-sales day > 1 day older than the newest snapshot = held (scripts/held_mode.py)
+    # ---- SITE-HELD-1 / SITE-PUBLISH-1: newest shop-sales day >= 1 day older than the newest snapshot = held
+    # (unbalanced HF snapshot holds daily-movers; a 1-day trail must label Held so R1/R2/R3 pass)
     import held_mode
     held_day = D["day"]
-    if (dt.date.fromisoformat(snap) - dt.date.fromisoformat(held_day)).days > 1:
+    if (dt.date.fromisoformat(snap) - dt.date.fromisoformat(held_day)).days >= 1:
         _TL = {lg: load_loc(lg) for lg in ("fr", "tr")}
         held_pages = held_mode.apply(out_dir, held_day, snap,
                                      lambda iso, lg: short_date(iso, lg, _TL.get(lg)),
