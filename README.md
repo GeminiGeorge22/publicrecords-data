@@ -21,8 +21,8 @@ report (niche listings: 10 per keyword). Full cuts live only on the box (`/works
 already set up for that report (URL prefill: `type`, `q`, `category`, `f-<input id>`, `rank`/`dir`/`n`, `filter=field:op:value`).
 Shop reports only get the prefilled top-50 button when `meta.json` → `custom_report.<report>.ready` says the Shop Sales Tracker
 returns the gain field for enough shops (checked at export time); until then the button says plainly that it isn't ready and
-offers a niche report. `build_site.py` fails the build if a public file has more than 10 rows per report or uses the banned
-robot words (median, middle half, page 1, 7-day pace) in visible text, CSV headers or builder strings.
+offers a niche report. `build_site.py` stops with an error if a public file has more than 10 rows per report or uses the banned
+robot words (median, middle half, page 1, 7-day pace) in visible text, CSV headers or report-page strings.
 
 Every report page has a "What this means for sellers" block generated from the same rows, and a CSV download
 (`data/<report>-<cut>.csv`, plus `-latest.csv` aliases). Nothing is estimated beyond the 7-day scaling described below.
@@ -52,7 +52,7 @@ one live on the site; the niche price snapshot (a paid Apify run) stays weekly. 
    - **publish**: when the snapshot is newer than the one in the newest `data/panel/<cut>/meta.json` *and complete*:
      the `.gz` sha256 matches `latest.json`, the file holds every row `latest.json` claims, rows ≥ `min_rows_ratio` (0.95) ×
      the live snapshot's rows, panel ≥ `min_panel_ratio` × the live panel, `gates` all true, ≥ `min_movers_rows` movers.
-     It exports `data/panel/<today>/`, builds the whole site locally (`check_public` must pass), then commits and pushes
+     It exports `data/panel/<today>/`, generates the whole site locally (`check_public` must pass), then commits and pushes
      with `pull --rebase` under `/tmp/etsypulse-refresh.lock`. Anything incomplete is logged once (`skipped_incomplete` /
      `skipped`) and nothing is pushed. A newer snapshot later the same day replaces that day's cut.
    - **niche**: on `niche_weekday` (Mon) at/after `niche_time_et`, at most one attempt a day, when the newest niche cut is
@@ -63,10 +63,10 @@ one live on the site; the niche price snapshot (a paid Apify run) stays weekly. 
    fewer than 7 days of reads the observed gain is scaled to 7 days. Same method as fleet `ops/etsy_top_movers.py` (TM-1).
 3. **Niche snapshot**: `scripts/niche_snapshot.py run [--max-usd 0.45]` runs the publicrecords Etsy Search Scraper on the
    first 5 distinct categories of Top Movers (1 page each; retries thin keywords once within budget). `fetch --run-id ID...`
-   rebuilds from existing runs.
+   regenerates from existing runs.
 4. **Site**: `scripts/build_site.py --out _site` renders every page, insights, the refresh callout (snapshot date,
-   row counts, cadence), CSVs, `og.png`, sitemap and robots. No network at build time.
-5. **Deploy**: `.github/workflows/pages.yml` rebuilds on pushes to `data/`, `scripts/`, `assets/`, `config/`, daily at
+   row counts, cadence), CSVs, `og.png`, sitemap and robots. No network while generating.
+5. **Deploy**: `.github/workflows/pages.yml` regenerates the site on pushes to `data/`, `scripts/`, `assets/`, `config/`, daily at
    14:00 UTC (same data → same pages) and on dispatch. No credentials are stored in GitHub.
 
 Legacy: `data/top-movers/` + `scripts/import_cut.py` hold the original top-20 cut from fleet-orders; the site now reads `data/panel/`.
@@ -76,9 +76,9 @@ Legacy: `data/top-movers/` + `scripts/import_cut.py` hold the original top-20 cu
 Etsy Pulse is published by publicrecords. The data comes from our own tools (Etsy Shop Sales Tracker panel and
 Etsy Search Scraper on Apify). Not affiliated with, endorsed by, or sponsored by Etsy, Inc. Etsy is a trademark of Etsy, Inc.
 
-## Report builder (`run.html`)
+## Report page (`run.html`)
 
-Visitors build a custom report on-site and run it on **their own Apify account** after "Sign in with Apify":
+Visitors make a custom report on-site and run it on **their own Apify account** after "Sign in with Apify":
 OAuth 2 authorization code + PKCE against `console-backend.apify.com` (public client `zgo08rBVHw2gUc3ZI`, registered via
 Apify's open dynamic client registration, redirects `https://www.etsypulse.ca/run.html` and `https://geminigeorge22.github.io/publicrecords-data/run.html` (DOMAIN-1; the older client `41bogEetbPU2ZVmGm` allowed github.io only);
 there is no client secret). Token exchange and Actor runs go browser → Apify directly; the token sits in
