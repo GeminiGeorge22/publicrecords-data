@@ -66,7 +66,7 @@
   "cta_p": "Buradaki her sayı, araçlarımızın topladığı herkese açık Etsy verisinden geliyor. Aynı raporu kendi anahtar kelimen ya da rakip mağazalar için oluştur: grafikler, sade bir özet ve birkaç dakikada bir tablo. Kod yok, API anahtarı yok.",
   "cta_niche": "Niş raporu oluştur",
   "cta_rivals": "Rakip mağazaları karşılaştır",
-  "price_line": "Ücretsiz girişten sonra araçlarımızı (Apify üzerinde, publicrecords) kendi Apify hesabında çalıştırır. Sonuç başına ödeme. 1 anahtar kelime (ilk 20 ilan) 8¢'den başlar. İlan başına 0.4¢ + çalıştırma başına 0.005¢ (<a href=\"https://publicrecords-redirect.publicrecords.workers.dev/r/site-store-search?t=tr\" rel=\"noopener\">Store fiyatları</a>). Etsy bir aramayı engellerse önbellekteki en güncel sonuçları, tarihi açıkça yazılı olarak, aynı ücretle alırsın; önbellekte bir şey yoksa hiçbir şey ödemezsin. Ücretsiz Apify planında ayda $5 kullanım dahil.",
+  "price_line": "Ücretsiz girişten sonra araçlarımızı (Apify üzerinde, publicrecords) kendi Apify hesabında çalıştırır. Sonuç başına ödeme: <a href=\"/tr/ai.html#cost\">bir raporun maliyeti</a> (tek bir tarihli fiyat, Store fiyat bağlantısıyla). Etsy bir aramayı engellerse önbellekteki en güncel sonuçları, tarihi açıkça yazılı olarak, aynı ücretle alırsın; önbellekte bir şey yoksa hiçbir şey ödemezsin. Ücretsiz Apify planında ayda $5 kullanım dahil.",
   "footer_1": "<b>Etsy Pulse</b>, publicrecords tarafından yayımlanır. Veriler kendi araçlarımızdan gelir: publicrecords Etsy Shop Sales Tracker paneli (herkese açık mağaza satış sayaçları) ve Apify üzerindeki publicrecords Etsy Search Scraper. Bu araçları biz geliştirdik ve satıyoruz; bağlantıları buna göre değerlendir.",
   "footer_2": "Kesit {cut} (sayaçlar {snap} itibarıyla). Etsy, Inc. ile bağlantılı değildir; Etsy, Inc. tarafından onaylanmamış veya desteklenmemiştir. Etsy, Etsy, Inc.'in ticari markasıdır.",
   "movers": {
@@ -680,7 +680,7 @@
       "step2": "Apify ile giriş yap (ücretsiz)",
       "step3": "Yapay zekâna sor",
       "hero_btn": "Yapay zekânı bağla →",
-      "hero_price": "Kendi Apify hesabında çalışır. 1 anahtar kelime (ilk 20 ilan) 8¢'den başlar. İlan başına 0.4¢ + çalıştırma başına 0.005¢, 28 Ekim 2026 itibarıyla (<a href=\"https://publicrecords-redirect.publicrecords.workers.dev/r/site-store-search?t=tr\" rel=\"noopener\">Store fiyatları</a>). Etsy bir aramayı engellerse önbellekteki en güncel sonuçları, tarihi açıkça yazılı olarak, aynı ücretle alırsın; önbellekte bir şey yoksa hiçbir şey ödemezsin.",
+      "hero_price": "Kendi Apify hesabında çalışır. Sonuç başına ödeme: <a href=\"#cost\">maliyeti aşağıda</a>. Etsy bir aramayı engellerse önbellekteki en güncel sonuçları, tarihi açıkça yazılı olarak, aynı ücretle alırsın; önbellekte bir şey yoksa hiçbir şey ödemezsin.",
       "video_aria": "Demo: Etsy Pulse'ı bağla, Apify ile giriş yap, yapay zekâya birkaç Etsy nişinde en iyi satıcıların kim olduğunu ve çok satanların fiyatlarını herkese açık Etsy arama verisiyle sor, sonra bir rapor al",
       "video_alt": "Demo: Etsy Pulse ile herhangi bir Etsy nişini yapay zekâya sor, herkese açık Etsy arama verisiyle",
       "copy_link": "Bağlantıyı kopyala",

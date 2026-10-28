@@ -82,7 +82,7 @@
   "cta_p": "Chaque chiffre ici vient de données Etsy publiques recueillies par nos outils. Créez le même rapport pour votre propre mot-clé ou pour des boutiques concurrentes : graphiques, résumé en langage clair et tableur en quelques minutes. Sans code, sans clé d'API.",
   "cta_niche": "Créer un rapport de niche",
   "cta_rivals": "Comparer des boutiques concurrentes",
-  "price_line": "Fait tourner nos outils (publicrecords sur Apify) dans votre propre compte Apify après une connexion gratuite. Paiement au résultat. À partir de 8 ¢ pour 1 mot-clé (les 20 premières annonces). 0,4 ¢ par annonce + 0,005 ¢ par exécution (<a href=\"https://publicrecords-redirect.publicrecords.workers.dev/r/site-store-search?t=fr\" rel=\"noopener\">tarifs sur l'Apify Store</a>). Si Etsy bloque une recherche, vous recevez les résultats en cache les plus récents, clairement datés, au même tarif; s'il n'y a rien en cache, vous ne payez rien. Le forfait gratuit d'Apify inclut 5 $ d'utilisation par mois.",
+  "price_line": "Fait tourner nos outils (publicrecords sur Apify) dans votre propre compte Apify après une connexion gratuite. Paiement au résultat : voir <a href=\"/fr/ai.html#cost\">ce que coûte un rapport</a> (un seul prix daté, avec le lien vers les tarifs de l'Apify Store). Si Etsy bloque une recherche, vous recevez les résultats en cache les plus récents, clairement datés, au même tarif; s'il n'y a rien en cache, vous ne payez rien. Le forfait gratuit d'Apify inclut 5 $ d'utilisation par mois.",
   "footer_1": "<b>Etsy Pulse</b> est publié par publicrecords, et les données viennent de nos propres outils : le panel publicrecords Etsy Shop Sales Tracker (compteurs de ventes publics des boutiques) et le publicrecords Etsy Search Scraper sur Apify. Nous les avons créés et nous les vendons; tenez-en compte en suivant les liens.",
   "footer_2": "Données du {cut} (compteurs lus jusqu'au {snap}). Non affilié à Etsy, Inc., ni approuvé ou commandité par Etsy, Inc. Etsy est une marque de commerce d'Etsy, Inc.",
   "movers": {
@@ -698,7 +698,7 @@
       "step2": "Connectez-vous avec Apify (gratuit)",
       "step3": "Posez votre question à votre IA",
       "hero_btn": "Connecter votre IA →",
-      "hero_price": "Tourne dans votre propre compte Apify. À partir de 8 ¢ pour 1 mot-clé (les 20 premières annonces). 0,4 ¢ par annonce + 0,005 ¢ par exécution, en date du 28 octobre 2026 (<a href=\"https://publicrecords-redirect.publicrecords.workers.dev/r/site-store-search?t=fr\" rel=\"noopener\">tarifs sur l'Apify Store</a>). Si Etsy bloque une recherche, vous recevez les résultats en cache les plus récents, clairement datés, au même tarif; s'il n'y a rien en cache, vous ne payez rien.",
+      "hero_price": "Tourne dans votre propre compte Apify. Paiement au résultat : voir <a href=\"#cost\">ce que ça coûte</a> plus bas. Si Etsy bloque une recherche, vous recevez les résultats en cache les plus récents, clairement datés, au même tarif; s'il n'y a rien en cache, vous ne payez rien.",
       "video_aria": "Démo : connecter Etsy Pulse, se connecter avec Apify, demander à l'IA qui sont les meilleurs vendeurs de quelques niches Etsy et comment les best-sellers fixent leurs prix, à partir de données de recherche Etsy publiques, puis obtenir un rapport",
       "video_alt": "Démo : interrogez l'IA sur n'importe quelle niche Etsy avec Etsy Pulse, à partir de données de recherche Etsy publiques",
       "copy_link": "Copier le lien",
