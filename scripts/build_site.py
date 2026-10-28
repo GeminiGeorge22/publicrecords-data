@@ -675,17 +675,17 @@ Etsy is a trademark of Etsy, Inc.</p>
 def cta(ctx):
     return f"""<section class="cta">
 <h2>Run this on any niche</h2>
-<p>Every number here comes from public Etsy data our tools collect. Build the same report for your own keyword or your
+<p>Every number here comes from public Etsy data our tools collect. Run the same report for your own keyword or your
 competitors' shops, right here: charts, plain-English takeaways and a spreadsheet in a few minutes. No code, no API keys.</p>
-<a class="btn" href="{BUILDER}?type=niche&amp;from=cta">Build a niche report</a><a class="btn ghost" href="{BUILDER}?type=rivals&amp;from=cta">Compare competitor shops</a>
-<div class="disc">Runs our tools (publicrecords on Apify) on your own Apify account after a free sign-in. Pay per result. From 13¢ for 1 keyword (top 20 listings). $6 per 1,000 listings + 0.5¢ per run. If Etsy blocks a search, you get the most recent cached results, clearly dated, at the same rate; if there's nothing cached, you pay nothing. Apify's free plan includes $5 of usage a month.</div>
+<a class="btn" href="{BUILDER}?type=niche&amp;from=cta">Make a niche report</a><a class="btn ghost" href="{BUILDER}?type=rivals&amp;from=cta">Compare competitor shops</a>
+<div class="disc">Runs our tools (publicrecords on Apify) on your own Apify account after a free sign-in. Pay per result. From 8¢ for 1 keyword (top 20 listings). 0.4¢ per listing + 0.005¢ per run (<a href="https://publicrecords-redirect.publicrecords.workers.dev/r/site-store-search?from=price" rel="noopener">Store pricing</a>). If Etsy blocks a search, you get the most recent cached results, clearly dated, at the same rate; if there's nothing cached, you pay nothing. Apify's free plan includes $5 of usage a month.</div>
 </section>"""
 
 
 def hero_cta():
     return (f'<form class="qform" action="{BUILDER}" method="get" role="search">'
             '<input name="q" type="search" placeholder="Type a niche, e.g. ceramic mug" aria-label="Your Etsy niche or keyword" enterkeyhint="go" autocomplete="off">'
-            '<input type="hidden" name="from" value="hero"><button type="submit">Build my report →</button></form>'
+            '<input type="hidden" name="from" value="hero"><button type="submit">Get my report →</button></form>'
             '<div class="qsub">Live Etsy data on your keyword: prices, Bestseller badges, top shops, spreadsheet. Free Apify sign-in, no code, '
             f'pay per result. <a href="{RUN_FALLBACK}" rel="noopener">Or open it on Apify</a></div>')
 
@@ -696,7 +696,7 @@ REPORT_TYPE = {"site-movers": "velocity", "site-categories": "category", "site-r
 def report_btn(slug, actor_label, text):
     return (f'<div class="rbtn"><span>{text}</span>'
             f'<a href="{BUILDER}?type={REPORT_TYPE.get(slug, "niche")}&amp;from={slug}">Run this report yourself →</a></div>'
-            f'<p class="note" style="margin-top:6px">Builds it right here with our {actor_label}: free Apify sign-in, no code, pay per result.</p>')
+            f'<p class="note" style="margin-top:6px">Runs it right here with our {actor_label}: free Apify sign-in, no code, pay per result.</p>')
 
 
 def q(params):
@@ -1067,7 +1067,7 @@ def ai_page(ctx, files):
 <p class="lede">Connect our Etsy tools to {tested_names()}. Ask in plain words about any keyword or niche: your AI pulls fresh public Etsy search and shop data,
 answers right in the chat, and turns it into a report when you ask.</p>
 <ol class="steps3"><li>Click Connect</li><li>Sign in with Apify (free)</li><li>Ask your AI</li></ol>
-<div class="hcta"><a class="hbtn" href="#connect">Connect your AI →</a><small>Runs on your own Apify account. From 13¢ for 1 keyword (top 20 listings). $6 per 1,000 listings + 0.5¢ per run. If Etsy blocks a search, you get the most recent cached results, clearly dated, at the same rate; if there's nothing cached, you pay nothing.</small></div></div>
+<div class="hcta"><a class="hbtn" href="#connect">Connect your AI →</a><small>Runs on your own Apify account. From 8¢ for 1 keyword (top 20 listings). 0.4¢ per listing + 0.005¢ per run, as of Oct 28, 2026 (<a href="https://publicrecords-redirect.publicrecords.workers.dev/r/site-store-search?from=price" rel="noopener">Store pricing</a>). If Etsy blocks a search, you get the most recent cached results, clearly dated, at the same rate; if there's nothing cached, you pay nothing.</small></div></div>
 <div><video autoplay muted loop playsinline preload="metadata" poster="assets/ai/etsypulse-ai-wide-poster.png" width="1200" height="676"
 aria-label="Demo: connect Etsy Pulse, sign in with Apify, ask AI who the top sellers are in a few Etsy niches and how Bestsellers price, using public Etsy search data, then get a report">
 <source src="assets/ai/etsypulse-ai-wide.webm" type="video/webm"><source src="assets/ai/etsypulse-ai-wide.mp4" type="video/mp4">
@@ -1168,7 +1168,7 @@ on {day} (US shopper). Every dollar figure is what Etsy sellers charge.</p>
 <div class="b">Here's your report: a price chart of all {n} listings, the top shops, Bestseller badges and paid ads, from the rows above.
 <div class="t">Ask for a document or PDF if your AI app can make files.</div></div>
 </div>
-<p class="note">Source: publicrecords Etsy Search Scraper, Apify run {E(M['run_id'])} (build {E(M['build_number'])}), “{E(kw)}”, {n} listings, {day}.
+<p class="note">Source: publicrecords Etsy Search Scraper, “{E(kw)}”, {n} listings, {day}.
 Answers in your chat will be worded by your AI and use the data from your own run.</p></section>"""
         tryit_file = (f'Download the {n} “{E(kw)}” listings from that run (<a href="{files["ai_sample_csv"]}">CSV</a>) and drop it into any AI chat. Then ask:'
                       f'<ul><li>“What should I charge for {"an" if kw[:1] in "aeiou" else "a"} {E(kw)}?”</li><li>“Which listings have a Bestseller badge, and what do they have in common?”</li>'
@@ -1178,7 +1178,7 @@ Answers in your chat will be worded by your AI and use the data from your own ru
     costs = f"""<section><h2>How it works, and what it costs</h2>
 <div class="costs">
 <div><b>Runs through Apify</b><p>Apify is the platform our tools run on. The link is Apify's MCP server with our two Etsy tools picked. You sign in with your own Apify account: free to create, and the free plan includes $5 of usage a month.</p></div>
-<div><b>Pay per result</b><p>Etsy Search: From 13¢ for 1 keyword (top 20 listings). $6 per 1,000 listings + 0.5¢ per run. If Etsy blocks a search, you get the most recent cached results, clearly dated, at the same rate; if there's nothing cached, you pay nothing. Apify usage included. On default settings one search returns the top 20 listings in total, even for several keywords; your AI can ask for more at the same rate. Shop Sales Tracker: $0.005 per run + $0.003 per shop ($3 per 1,000 shops), plus Apify platform usage when your AI calls it (Apify bills usage for its always-on Standby mode, which AI apps use).</p></div>
+<div><b>Pay per result</b><p>Etsy Search: From 8¢ for 1 keyword (top 20 listings). 0.4¢ per listing + 0.005¢ per run, as of Oct 28, 2026 (<a href="https://publicrecords-redirect.publicrecords.workers.dev/r/site-store-search?from=price" rel="noopener">Store pricing</a>). If Etsy blocks a search, you get the most recent cached results, clearly dated, at the same rate; if there's nothing cached, you pay nothing. Apify usage included. On default settings one search returns the top 20 listings in total, even for several keywords; your AI can ask for more at the same rate. Shop Sales Tracker: 0.3¢ per shop + 0.005¢ per run, as of Oct 28, 2026 (<a href="https://publicrecords-redirect.publicrecords.workers.dev/r/site-store-tracker?from=price" rel="noopener">Store pricing</a>), plus Apify platform usage when your AI calls it (Apify bills usage for its always-on Standby mode, which AI apps use).</p></div>
 <div><b>Your account, your results</b><p>Every run and its results stay in your Apify account. Sign-in happens on Apify's own screen; we never see your password. Remove access any time in Apify Console → Settings → API &amp; Integrations.</p></div>
 </div></section>"""
 
@@ -1187,13 +1187,13 @@ Answers in your chat will be worded by your AI and use the data from your own ru
                       '<ul><li>“Which listings have a Bestseller badge, and what do they have in common?”</li><li>“Write me a one-page report on these niches.”</li></ul>'
                       '<p class="note" style="margin-bottom:0">The free file is one sample run, dated above. Connect above for fresh data on any keyword.')
     tryit = f"""<section><div class="try"><b>No account yet? Try it with our free file.</b> {tryit_file}
-Rather not use AI? <a href="{BUILDER}?from=ai">Build a report here</a> or <a href="{RUN_FALLBACK}" rel="noopener">run it inside Apify</a>.</p></div></section>"""
+Rather not use AI? <a href="{BUILDER}?from=ai">Make a report here</a> or <a href="{RUN_FALLBACK}" rel="noopener">run it inside Apify</a>.</p></div></section>"""
 
     body = (f"<style>{AI_CSS}</style>{apps}<section><h2>What you can do</h2><p class=\"sub\">Six things to ask once you're connected. "
             f"Copy a prompt, swap in your own niche. Keep the first question small (one keyword, top 5 or 10) so it finishes in about 30 seconds; "
             f"bigger asks take longer.</p><div class=\"uses\">{uses_html}</div></section>{convo}{costs}{tryit}")
     return page("ai.html", f"Ask AI about any Etsy niche: connect Etsy Pulse to {tested_names()} | Etsy Pulse",
-                f"Connect our Etsy tools to {tested_names()} through Apify's MCP server. Ask about any Etsy keyword or niche and get answers and reports from fresh public Etsy market data. From 13¢ for 1 keyword (top 20 listings). $6 per 1,000 listings + 0.5¢ per run. If Etsy blocks a search, you get the most recent cached results, clearly dated, at the same rate; if there's nothing cached, you pay nothing.",
+                f"Connect our Etsy tools to {tested_names()} through Apify's MCP server. Ask about any Etsy keyword or niche and get answers and reports from fresh public Etsy market data. If Etsy blocks a search, you get the most recent cached results, clearly dated, at the same rate; if there's nothing cached, you pay nothing.",
                 body, ctx, hero, scripts=AI_JS)
 
 
@@ -1794,7 +1794,7 @@ TR_BANNED = re.compile(r"medyan|ortanca|orta(?:daki)?\s+yar[ıi]|ortadaki\s+%\s?
                        r"engellenen\s+(?:sayfa|arama)\w*\s+(?:için\s+)?(?:ücretsiz|ücret\s+alınmaz|hiçbir\s+şey|bedava)", re.I)
 TR_COVERAGE = re.compile(r"\d[\d.,]*\s*\+?\s*(?:etsy\s+)?mağaza(?:yı|dan|nın)?\s+(?:ölç|takip|izl|oku|tara|panel)|"
                          r"panel(?:imiz)?(?:de|deki)\s+[\d.,]+|[\d.,]+\s+mağazalık|ölçülen\s+[\d.,]+\s+mağaza|[\d.,]+\s+ölçülen\s+mağaza", re.I)
-TR_PRICE_OK = re.compile(r"1 anahtar kelime \(ilk 20 ilan\) 13¢'den başlar")
+TR_PRICE_OK = re.compile(r"1 anahtar kelime \(ilk 20 ilan\) 8¢'den başlar")   # MEMO-1d (2026-10-28, DISCLOSED): 13¢ → live 8¢
 
 
 # French copy rules (LANG-1, Mark t624u). Same bans as the English site, in French: no médiane / moitié du milieu, no
@@ -1809,9 +1809,9 @@ FR_BANNED = re.compile(r"m[ée]diane?s?\b|moiti[ée]\s+(?:du\s+)?(?:milieu|centr
 FR_COVERAGE = re.compile(r"\d[\d\s\u00a0.,]*\s*\+?\s*boutiques?\s+(?:etsy\s+)?(?:mesur|suivi|lue|lu\b|analys|dans\s+notre)|"
                          r"notre\s+panel\s+(?:compte|de)\s+[\d\s\u00a0.,]+|[\d\u00a0.,]+\s+boutiques?\s+(?:au|dans\s+le)\s+panel|"
                          r"mesur[ée]\s+[\d\s\u00a0.,]+\s+(?:sur|boutiques)", re.I)
-FR_PRICE_OK = re.compile(r"À partir de 13 ¢ pour 1 mot-clé \(les 20 premières annonces\)")
-LOC_RULES = {"tr": (TR_BANNED, TR_COVERAGE, TR_PRICE_OK, "1 anahtar kelime (ilk 20 ilan) 13¢'den başlar"),
-             "fr": (FR_BANNED, FR_COVERAGE, FR_PRICE_OK, "À partir de 13 ¢ pour 1 mot-clé (les 20 premières annonces)")}
+FR_PRICE_OK = re.compile(r"À partir de 8 ¢ pour 1 mot-clé \(les 20 premières annonces\)")   # MEMO-1d: 13 ¢ → live 8 ¢
+LOC_RULES = {"tr": (TR_BANNED, TR_COVERAGE, TR_PRICE_OK, "1 anahtar kelime (ilk 20 ilan) 8¢'den başlar"),
+             "fr": (FR_BANNED, FR_COVERAGE, FR_PRICE_OK, "À partir de 8 ¢ pour 1 mot-clé (les 20 premières annonces)")}
 LANG_SWITCH_OLD = re.compile(r'class="lang"|>EN</a>\s*·|<b>EN</b>\s*·|·\s*<b>TR</b>|·\s*<a[^>]*>TR</a>')
 
 
@@ -1857,8 +1857,8 @@ def check_loc(out_dir, en_cta_html, D, lang):
     if not dm or not em or money_tokens(dm.group(1), lang) != money_tokens(em.group(1)):
         bad.append(f"{rel}: price line amounts {money_tokens(dm.group(1), lang) if dm else None} != EN home CTA "
                    f"{money_tokens(em.group(1)) if em else None} (update config/i18n/{lang}.json price_line)")
-    if not OK.search(vt) and "13¢" in (em.group(1) if em else ""):
-        bad.append(f"{rel}: the 13¢ line must keep its scope: '{ok_txt}'")
+    if not OK.search(vt) and "8¢" in (em.group(1) if em else ""):
+        bad.append(f"{rel}: the 8¢ line must keep its scope: '{ok_txt}'")
     top = D["movers"][0]
     if E(top["shop_name"]) not in raw or plus_loc(top["sales_added"], lang) not in vt:
         bad.append(f"{rel}: today's #1 shop / gain missing")
@@ -2109,14 +2109,16 @@ BANNED = _re.compile(r"\bmedian\b|middle half|\bpage[ -]1\b|7-day pace|\biqr\b",
 # LRdhNvPXU8Yei84J8, default maxItems 20, owner run 5jf38ytVjcPMi7nm3 = 20 rows = $0.125), so "13¢" is allowed ONLY as
 # "13¢ for 1 keyword" with the top-20-listings scope (PRICE_OK is removed before BANNED_PRICE runs). maxItems caps the whole
 # run, not each keyword: "13¢ per keyword", "20 per keyword", any ¢/$ "per keyword" price, 63¢ and a bare 13¢ stay banned.
-PRICE_OK = _re.compile(r"(?:from\s+)?13\s?¢ for 1 keyword\s*(?:\(top 20 listings\)|,?\s*(?:and\s+)?(?:the\s+)?top 20 listings)", _re.I)
+PRICE_OK = _re.compile(r"(?:from\s+)?8\s?¢ for 1 keyword\s*(?:\(top 20 listings\)|,?\s*(?:and\s+)?(?:the\s+)?top 20 listings)", _re.I)
+# MEMO-1d (2026-10-28, DISCLOSED): live Etsy Search price is 0.4¢/row + 0.005¢/start, so 20 rows ≈ 8¢. "8¢" is now
+# allowed ONLY in the PRICE_OK scope (a bare 8¢ is banned, as 13¢ was); 13¢, 63¢ and "$6 per 1,000" stay banned as stale.
 # PRICE-2 (Master read-back 21:11 ET): Etsy Search 0.2.11 serves the most recent cached rows (data_source "cache", as_of)
 # when Etsy blocks a keyword on both tries, charged per row delivered, so "Blocked pages charge nothing" is false. Shop Sales
 # Tracker is exactly actor-start $0.005 + shop-row $0.003 (0.2.14); the two lookup events are gone. Never "real-time".
 STALE_PRICE = _re.compile(r"blocked (?:pages?|searche?s?|reads?) (?:charges?|costs?) nothing|blocked pages are never charged|\bnever charged\b|"
                           r"\blookups?\b|shop[- ]history[- ]records?|velocity[- ]records?|\$0?\.05 per (?:shop|record|lookup)|\$0?\.10? per (?:shop|record|lookup)|"
                           r"\$0\.003 per shop plus|usually under \$0\.02|real[- ]?time|\bautomated\b|🤖", _re.I)
-BANNED_PRICE = _re.compile(r"(?:[¢$]|cents?)\s*[\d.,]*\s*(?:per|/|a|for each|each)\s+keyword|\b20 (?:listings )?(?:per|/|for each|each) keyword|\b13\s?¢|\b13 cents\b|\b63\s?¢|\b63 cents\b|≈\s?\$0\.13\b|\$0\.13\b|\$0\.63\b|top 20 listings\)?\s*(?:for|=|≈|:)|\b20 listings\s*(?:for|=|≈|:)", _re.I)
+BANNED_PRICE = _re.compile(r"(?:[¢$]|cents?)\s*[\d.,]*\s*(?:per|/|a|for each|each)\s+keyword|\b20 (?:listings )?(?:per|/|for each|each) keyword|\b13\s?¢|\b13 cents\b|(?<![\d.,])8\s?¢|\b8 cents\b|\$0\.08\b|\$6 per 1,000|\b63\s?¢|\b63 cents\b|≈\s?\$0\.13\b|\$0\.13\b|\$0\.63\b|top 20 listings\)?\s*(?:for|=|≈|:)|\b20 listings\s*(?:for|=|≈|:)", _re.I)
 
 
 def unesc_link(d):
@@ -2431,7 +2433,7 @@ def dm_tagline(lang, T, price_disc, src):
         M = T["movers"]
         p, b1, b2 = M["tag_p"], M["tag_btn_browser"], M["tag_btn_ai"]
     else:
-        p = ("Any niche, any list of shops: build the same report right here in your browser, "
+        p = ("Any niche, any list of shops: run the same report right here in your browser, "
              "or connect our tools to your AI chat and just ask.")
         b1, b2 = "Run a report in your browser →", "Use it in your AI chat →"
     sep = "&amp;" if "?" in L["browser"] else "?"
@@ -2799,7 +2801,7 @@ Niches: the same counter pairs summed by the shop's Etsy category.</p>
 <h3>Coverage</h3><p>A shop's sales gain can only be computed once its counter has been read on two different days. {coverage_line(meta)}
 These are not all of Etsy: they are the shops and niches we read.</p>
 {"<h3>Niche prices</h3><p>" + niche_cadence_sentence(N) + " The set is the top results of an Etsy search (US shopper, Etsy's best-match order, first results page) for keywords taken from the top movers' categories (Apify run " + E(N['meta']['run_id']) + "). Typical price is the middle price of those results; most charge = the middle 50% of prices.</p>" if "niche.html" in pages else ""}
-<h3>Free top {PUBLIC_N}, your own top {CUSTOM_N}</h3><p>Free reports show the top {PUBLIC_N}. For the top {CUSTOM_N}, or any other niche or category, run your own report: the button under each report opens the builder already set up.</p></section>"""
+<h3>Free top {PUBLIC_N}, your own top {CUSTOM_N}</h3><p>Free reports show the top {PUBLIC_N}. For the top {CUSTOM_N}, or any other niche or category, run your own report: the button under each report opens the report page already set up.</p></section>"""
     # DAILY-1: no shop-coverage count in the description (X shows it under posts; check_public enforces it).
     desc_home = (f"Etsy's biggest movers, {sd_}: {a['shop_name']} {plus(a['sales_added'])} sales {span}"
                  + (f"; {nz[0]['niche']} lead the niches ({plus(nz[0]['sales_added'])})" if nz else "") + ". From public Etsy sales counters.")
@@ -2867,20 +2869,20 @@ These are not all of Etsy: they are the shops and niches we read.</p>
 
     # ---- report builder (run.html): Sign in with Apify, run our Actors on the visitor's account, report in-page
     builder_hero = (f'<div class="hero">{PULSE_SVG}<div class="wrap" style="padding-bottom:52px"><div class="eyebrow">Etsy Pulse · Custom report</div>'
-                    '<h1>Build your own Etsy report</h1><p class="lede">Pick a report, type a niche or a few shops, press Run. '
+                    '<h1>Make your own Etsy report</h1><p class="lede">Pick a report, type a niche or a few shops, press Run. '
                     'Charts, plain-English takeaways and a spreadsheet in a few minutes. No code, no API keys.</p></div></div>')
-    body = """<div id="builder" class="bld"><noscript><div class="berr">The report builder needs JavaScript. You can still run our tools directly on Apify:
+    body = """<div id="builder" class="bld"><noscript><div class="berr">The report page needs JavaScript. You can still run our tools directly on Apify:
 <a href="https://publicrecords-redirect.publicrecords.workers.dev/r/site-store-search">Etsy Search Scraper</a> · <a href="https://publicrecords-redirect.publicrecords.workers.dev/r/site-store-tracker">Etsy Shop Sales Tracker</a>.</div></noscript></div>
 <div id="progress" hidden></div>
 <div id="report" hidden></div>
 <section class="how-sec"><h2>How it works</h2><p class="sub">Three steps. Your results and your spend stay in your own Apify account.</p>
 <div class="how">
 <div><b>Sign in with Apify (free)</b><p>Apify is the platform our tools run on. New accounts are free, no credit card, and the free plan includes $5 of usage every month.</p></div>
-<div><b>Press Run</b><p>The report runs on your account. Keyword reports: $6 per 1,000 listings + 0.5¢ per run, Apify platform usage included. If Etsy blocks a search, you get the most recent cached results, clearly dated, at the same rate; if there's nothing cached, you pay nothing. Shop reports: $0.005 per run + $0.003 per shop ($3 per 1,000 shops), Apify platform usage included. The price updates as you change options, and you see “about $X, at most $Y” for the exact number of listings you ask for before you start.</p></div>
+<div><b>Press Run</b><p>The report runs on your account. Keyword reports: 0.4¢ per listing + 0.005¢ per run, as of Oct 28, 2026 (<a href="https://publicrecords-redirect.publicrecords.workers.dev/r/site-store-search?from=price" rel="noopener">Store pricing</a>), Apify platform usage included. If Etsy blocks a search, you get the most recent cached results, clearly dated, at the same rate; if there's nothing cached, you pay nothing. Shop reports: 0.3¢ per shop + 0.005¢ per run, as of Oct 28, 2026 (<a href="https://publicrecords-redirect.publicrecords.workers.dev/r/site-store-tracker?from=price" rel="noopener">Store pricing</a>), Apify platform usage included. The price updates as you change options, and you see “about $X, at most $Y” for the exact number of listings you ask for before you start.</p></div>
 <div><b>Read it, download it</b><p>Takeaways, charts and a sortable table appear right here. Download the spreadsheet (CSV), or print / save as PDF. Your runs and data also stay in your Apify account.</p></div>
 </div>
 <p class="note">Sign-in uses Apify's own OAuth screen; we never see your password. Apify offers one permission level (full account access): this page uses it only to start the report you asked for and read its results. The key stays in this browser tab and is gone when you close it. Remove the approval any time in Apify Console → Settings → API &amp; Integrations.</p></section>"""
-    w(BUILDER, page(BUILDER, "Build your own Etsy report: prices, bestsellers, top shops, shop sales | Etsy Pulse",
+    w(BUILDER, page(BUILDER, "Make your own Etsy report: prices, bestsellers, top shops, shop sales | Etsy Pulse",
                     "Type a niche or a few Etsy shops and get a live report: price bands, Bestseller share, top shops, sales pace, CSV. Free Apify sign-in, no code.",
                     body, ctx, builder_hero, scripts=f'<script src="assets/builder.js?v={cut}-b8" defer></script>'))
 

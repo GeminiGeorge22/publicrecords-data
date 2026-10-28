@@ -23,9 +23,9 @@
   };
   var ACTORS = {
     search: { id: "JbNpPvG1Z7YtM9onP", name: "Etsy Search Scraper", store: "https://publicrecords-redirect.publicrecords.workers.dev/r/site-store-search",
-      start: 0.005, unit: 0.006, unitName: "listing" },
+      start: 0.00005, unit: 0.004, unitName: "listing" },   // MEMO-1d (2026-10-28): live Store FREE-tier prices, 0.005¢/run + 0.4¢/listing
     tracker: { id: "iSqAcbENkn1ZdUMm1", name: "Etsy Shop Sales Tracker", store: "https://publicrecords-redirect.publicrecords.workers.dev/r/site-store-tracker",
-      start: 0.005, unit: 0.003, unitName: "shop", platform: 0 },   // PRICE-2: exactly $0.005/run + $0.003/shop; standard runs, user pays no platform usage
+      start: 0.00005, unit: 0.003, unitName: "shop", platform: 0 },   // MEMO-1d (2026-10-28): live FREE tier 0.005¢/run + 0.3¢/shop; standard runs, user pays no platform usage
   };
   var BLOCKED_NOTE = T("If Etsy blocks a search, you get the most recent cached results, clearly dated, at the same rate; if there's nothing cached, you pay nothing.");
   var BLOCKS = {
@@ -120,7 +120,8 @@
   }
   function dec(v) { return LG === "en" ? v : v.replace(".", ","); }
   function pct(x, d) { if (x == null || !isFinite(x)) return "–"; var v = dec((100 * x).toFixed(d || 0)); return LG === "tr" ? "%" + v : LG === "fr" ? v + "\u00a0%" : v + "%"; }
-  function usd(x) { var v = x < 1 ? x.toFixed(3).replace(/0$/, "") : x.toFixed(2); return LG === "fr" ? dec(v) + "\u00a0$" : "$" + v; }  /* TR keeps "$0.005" like tr.json's price line */
+  /* MEMO-1d (2026-10-28): amounts under 1¢ are shown in cents (0.4¢, 0.005¢), never as "$0.00…" */
+  function usd(x) { if (x > 0 && x < 0.01) { var c = String(+(x * 100).toFixed(3)); return LG === "fr" ? dec(c) + "\u00a0¢" : c + "¢"; } var v = x < 1 ? x.toFixed(3).replace(/0$/, "") : x.toFixed(2); return LG === "fr" ? dec(v) + "\u00a0$" : "$" + v; }  /* TR keeps "$0.005" like tr.json's price line */
   function share(rows, f) { return rows.length ? rows.filter(function (r) { return r[f] === true; }).length / rows.length : null; }
 
   /* ------------------------------------------------------------------ inputs → Actor input JSON */
