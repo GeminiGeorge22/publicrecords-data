@@ -36,6 +36,8 @@ import io
 import json
 import os
 import statistics
+import sys
+import urllib.error
 import urllib.request
 from zoneinfo import ZoneInfo
 
@@ -57,8 +59,43 @@ def hf_get(path: str) -> bytes:
         raise SystemExit("HF_READ_TOKEN missing (or pass --snapshot/--state/--latest)")
     req = urllib.request.Request(f"{HF_BASE}/{path}", headers={"Authorization": f"Bearer {tok}",
                                                                "User-Agent": "etsypulse-export"})
-    with urllib.request.urlopen(req, timeout=180) as r:
-        return r.read()
+    try:
+        with urllib.request.urlopen(req, timeout=180) as r:
+            return r.read()
+    except Exception as e:
+        log_hf_failure(path, e)
+        raise
+
+
+def hf_failure_status(e) -> str:
+    """SITE-UNSTICK-1e: 429 / timeout / reset / http_<code> / <ExceptionName> for a failed HF download."""
+    import socket
+    if isinstance(e, urllib.error.HTTPError):
+        return str(e.code)
+    reason = getattr(e, "reason", e)   # URLError wraps the socket error
+    if isinstance(reason, (socket.timeout, TimeoutError)) or "timed out" in str(reason).lower():
+        return "timeout"
+    if isinstance(reason, ConnectionResetError) or "reset" in str(reason).lower():
+        return "reset"
+    return type(reason).__name__
+
+
+def log_hf_failure(path: str, e) -> None:
+    """Append one line per failed HF download to the publish log. A 429 is flagged for Master's HF STATUS row;
+    anything else retries as now (the loop's next poll)."""
+    import datetime as _dt
+    st = hf_failure_status(e)
+    route = "master_hf_status_row" if st == "429" else "retry_next_poll"
+    log = os.environ.get("REFRESH_LOG", "/workspace/x-etsypulse/data-refresh.log")
+    line = (f"{_dt.datetime.now().astimezone().strftime('%Y-%m-%d %H:%M:%S %Z')} job=hf_download status=failed "
+            f"http={st} path={path} route={route}")
+    try:
+        os.makedirs(os.path.dirname(log), exist_ok=True)
+        with open(log, "a", encoding="utf-8") as fh:
+            fh.write(line + "\n")
+    except OSError:
+        pass
+    print(line, file=sys.stderr, flush=True)
 
 
 def load_snapshot(blob: bytes) -> dict:

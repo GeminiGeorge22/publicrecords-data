@@ -96,7 +96,7 @@ and recorded the {n} listings on the first results page, with their listed price
 {r['etsy_total_results']:,} results for that search, so this is a snapshot of what a shopper sees first, not every listing.
 {"The keyword came from the Etsy category “" + E(r['from_category']) + "”, picked from the Etsy categories of the top shops in our movers list that week." if r.get('from_category') else ""}
 Prices are the listed price shown in the search results at the time of the read. We publish a product type
-only when one read has at least {P['min_listings']} priced listings. Our own shops are excluded. Read ID: Apify run {E(P['run_id'])}.</p>
+only when one read has at least {P['min_listings']} priced listings. Our own shops are excluded.</p>
 <p><a href="how-we-measure.html">How we measure</a> · <a href="etsy-prices.html">Compare product types</a> · <a href="reports.html">All niche reports</a></p></div>
 <h2>Check your own niche</h2><p>This page is one dated read. To read today's results for your own keyword, <a href="{H['BUILDER']}?type=niche&amp;q={E(kw)}&amp;from=price-{slug(kw)}">run a niche report</a>.</p>"""
     return name, title, shell(H, name, title, desc, f"Typical Etsy prices for {kw}", lede, body, ctx)
@@ -117,8 +117,8 @@ def compare_page(H, P, ctx):
             f"the typical “{E(lo['keyword'])}” listing {money(lo['price_typical'])}.")
     body = f"""<p class="asof">Data as of {rd} · one read per product type · not live</p>
 <table><tr><th>Search</th><th class=r>Listings</th><th class=r>Typical price</th><th class=r>Half of listings between</th><th class=r>Free shipping</th><th class=r>Bestseller badge</th></tr>{rows}</table>
-<div class="cov"><h2 style="margin-top:0">Coverage</h2><p>Each row is the first page of US Etsy search results for that keyword, read once on {rd}
-(Apify run {E(P['run_id'])}), {sum(r['listings'] for r in rows_)} listings in total. Typical price = half of the listings cost less, half more.
+<div class="cov"><h2 style="margin-top:0">Coverage</h2><p>Each row is the first page of US Etsy search results for that keyword, read once on {rd},
+{sum(r['listings'] for r in rows_)} listings in total. Typical price = half of the listings cost less, half more.
 A product type is listed only when its read has at least {P['min_listings']} priced listings. Product types we read but left out:
 {", ".join(E(s['keyword']) + " (" + E(s['why']) + ")" for s in P['skipped']) or "none"}.</p>
 <p><a href="how-we-measure.html">How we measure</a> · <a href="reports.html">All niche reports</a></p></div>"""
