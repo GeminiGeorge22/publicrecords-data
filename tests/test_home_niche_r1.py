@@ -26,7 +26,7 @@ def test_home_niche_card_states_cadence_in_its_sentence(tmp_path):
     out, snap, _ = _build(str(tmp_path))
     raw = open(os.path.join(out, "index.html"), encoding="utf-8").read()
     body, _ = held_check.vis(raw)
-    m = re.search(r"in the niches of the top movers, read [^.]*\.", body)
+    m = re.search(r"in the niches of the top movers, captured [^.]*\.", body)
     assert m, "en home Niche Prices card sentence not found"
     assert re.search(held_check.CADENCE["en"], m.group(0)), f"no cadence in card sentence: {m.group(0)!r}"
     r1 = [b for b in held_check.check_page("/", raw, "en", snap) if b.startswith("R1 ")]

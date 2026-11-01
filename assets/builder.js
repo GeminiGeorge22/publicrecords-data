@@ -577,7 +577,7 @@
     var j = await (await fetch(f)).json(), rows = j.rows;
     if (t.actor === "search" && state.type !== "compare") rows = rows.filter(function (r) { return r.query === "aprons"; });
     state.result = { type: state.type, actor: t.actor, rows: rows, runs: [], at: j.captured, live: false,
-      demo: t.actor === "search" ? T("Example: a real run of our Etsy Search Scraper captured {d} (Apify run {r}).", { d: j.captured, r: j.run }) : T("Example: real rows from our Etsy Shop Sales Tracker, snapshot {d}. Current numbers will differ.", { d: j.captured }) };
+      demo: t.actor === "search" ? T("Example: a real run of our Etsy Search Scraper captured {d}.", { d: j.captured }) : T("Example: real rows from our Etsy Shop Sales Tracker, snapshot {d}. Current numbers will differ.", { d: j.captured }) };
     $("#report").dataset.shown = ""; state.page = 1; beacon("demo"); renderReport();
   }
 

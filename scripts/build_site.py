@@ -761,24 +761,22 @@ def cadence_word(kind="panel"):
     return "daily" if c.get("publish") == "daily_on_new_snapshot" else "weekly"
 
 
-def next_niche_refresh(captured):
-    """SITE-HELD-1d (Claude t793u): the next niche run box_refresh.niche_due() would make after a capture on `captured`
-    (a date): the first niche_weekday at least niche_cadence_days - 3 days later. From config, never typed."""
-    c = publish_cfg()
-    wd = ["Mon", "Tue", "Wed", "Thu", "Fri", "Sat", "Sun"].index(c.get("niche_weekday", "Mon"))
-    d = captured + dt.timedelta(days=max(1, c.get("niche_cadence_days", 7) - 3))
-    while d.weekday() != wd:
-        d += dt.timedelta(days=1)
-    return d
-
-
-def niche_cadence_sentence(N):
-    """Home 'Niche prices' paragraph (Claude t793u item 1): the capture date carries its cadence in the same sentence.
-    capture_date and next_refresh come from data/niche/<cut>/meta.json + config/publish.json, never typed."""
+def niche_age_phrase(N, newest, date_txt=None):
+    """SITE-UNSTICK-1 (MEMO-1f row 1a, 2026-11-01): the niche line is computed from its capture date. Capture no more than
+    niche_cadence_days + 1 days older than the newest snapshot: 'captured <date>, refreshed weekly'; older: 'captured <date>,
+    held — refresh paused' (no next-refresh date, so a paused refresh never leaves a date that has already passed).
+    The same limit held_check.cadence_ok() applies; the held check itself is unchanged."""
     cap = dt.date.fromisoformat((N["meta"].get("captured_at") or N["cut"])[:10])
-    nxt = next_niche_refresh(cap)
-    return (f"Niche keywords are refreshed {cadence_word('niche')}; this set was captured {cap.isoformat()} with our Etsy Search Scraper "
-            f"(next refresh {nxt.strftime('%a')} {nxt.strftime('%m-%d')}).")
+    shown = date_txt or nice_date(cap.isoformat())
+    if newest is not None and (newest - cap).days > publish_cfg().get("niche_cadence_days", 7) + 1:
+        return f"captured {shown}, held — refresh paused"
+    return f"captured {shown}, refreshed {cadence_word('niche')}"
+
+
+def niche_cadence_sentence(N, newest=None):
+    """Home 'Niche prices' paragraph: the capture date carries its cadence (or its held label) in the same sentence.
+    No next-refresh date and no Apify run ID (MEMO-1f: buyer pages carry no run IDs and no dates that have passed)."""
+    return f"Niche keywords: this set was {niche_age_phrase(N, newest)}, with our Etsy Search Scraper."
 
 
 def cov_of(meta):
@@ -2666,6 +2664,7 @@ def build(out_dir):
     N = load_niche(nc[-1]) if nc else None
     meta = P["meta"]
     cut, snap = P["cut"], meta["snapshot_date"]
+    _newest_snap = dt.date.fromisoformat(snap)   # SITE-UNSTICK-1: niche line age is measured against the newest snapshot, as held_check does
 
     if os.path.isdir(out_dir):
         shutil.rmtree(out_dir)
@@ -2784,7 +2783,7 @@ def build(out_dir):
     cards = lead + cards
     if "niche.html" in pages:
         nr = [x for x in N["rows"] if (x.get("listings") or 0) >= 20]
-        cards.append(("niche.html", "Niche Prices", f"{len(nr)}", f"What top sellers charge, and their badges, in the niches of the top movers, read {nice_date((N['meta'].get('captured_at') or N['cut'])[:10])}, refreshed {cadence_word('niche')}.",
+        cards.append(("niche.html", "Niche Prices", f"{len(nr)}", f"What top sellers charge, and their badges, in the niches of the top movers, {niche_age_phrase(N, _newest_snap)}.",
                       mini(nr, lambda x: x["keyword"], lambda x: f"typical {money(x['price_median'])}")))
     cards_html = "".join(f'<a class="rcard" href="{h}"><div class="t">{t}<span>{k}</span></div><div class="d">{d}</div>{mn}</a>'
                          for h, t, k, d, mn in cards)
@@ -2801,7 +2800,7 @@ def build(out_dir):
 Niches: the same counter pairs summed by the shop's Etsy category.</p>
 <h3>Coverage</h3><p>A shop's sales gain can only be computed once its counter has been read on two different days. {coverage_line(meta)}
 These are not all of Etsy: they are the shops and niches we read.</p>
-{"<h3>Niche prices</h3><p>" + niche_cadence_sentence(N) + " The set is the top results of an Etsy search (US shopper, Etsy's best-match order, first results page) for keywords taken from the top movers' categories (Apify run " + E(N['meta']['run_id']) + "). Typical price is the middle price of those results; most charge = the middle 50% of prices.</p>" if "niche.html" in pages else ""}
+{"<h3>Niche prices</h3><p>" + niche_cadence_sentence(N, _newest_snap) + " The set is the top results of an Etsy search (US shopper, Etsy's best-match order, first results page) for keywords taken from the top movers' categories. Typical price is the middle price of those results; most charge = the middle 50% of prices.</p>" if "niche.html" in pages else ""}
 <h3>Free top {PUBLIC_N}, your own top {CUSTOM_N}</h3><p>Free reports show the top {PUBLIC_N}. For the top {CUSTOM_N}, or any other niche or category, run your own report: the button under each report opens the report page already set up.</p></section>"""
     # DAILY-1: no shop-coverage count in the description (X shows it under posts; check_public enforces it).
     desc_home = (f"Etsy's biggest movers, {sd_}: {a['shop_name']} {plus(a['sales_added'])} sales {span}"
@@ -2863,7 +2862,7 @@ These are not all of Etsy: they are the shops and niches we read.</p>
 <div class="niche">{''.join(cards)}</div>
 {more50(niche_link(src="site-niche-top50-any"), " results", True)}
 {dl(files['niche_summary'], f"Download summary CSV ({len(N['rows'])} keywords)")} {dl(files['niche_listings'], f"Download listings CSV (top {PUBLIC_N} per keyword, {files['niche_listings_rows']} rows)")}
-<p class="note">Source: publicrecords Etsy Search Scraper, Apify run {E(N['meta']['run_id'])}{(' + ' + ', '.join(E(x) for x in N['meta'].get('extra_run_ids', []))) if N['meta'].get('extra_run_ids') else ''}, captured {E((N['meta'].get('captured_at') or '')[:16].replace('T', ' '))} UTC, {N['meta']['rows']['listings']} listings.{E(miss_note)}</p></section>"""
+<p class="note">Source: publicrecords Etsy Search Scraper, captured {E((N['meta'].get('captured_at') or '')[:16].replace('T', ' '))} UTC, {N['meta']['rows']['listings']} listings.{E(miss_note)}</p></section>"""
         w("niche.html", page("niche.html", f"Etsy niche prices: {', '.join(x['keyword'] for x in nr)} | Etsy Pulse",
                              f"What top Etsy sellers charge, how prices spread and how many have a Bestseller badge, in the niches of the top movers on {nice_date(N['cut'])}.",
                              body, ctx, simple_hero("Report · Niche Prices", "Niche Prices", f"What top Etsy sellers charge in the niches of the top movers on {nice_date(N['cut'])}.")))
@@ -2879,7 +2878,7 @@ These are not all of Etsy: they are the shops and niches we read.</p>
 <section class="how-sec"><h2>How it works</h2><p class="sub">Three steps. Your results and your spend stay in your own Apify account.</p>
 <div class="how">
 <div><b>Sign in with Apify (free)</b><p>Apify is the platform our tools run on. New accounts are free, no credit card, and the free plan includes $5 of usage every month.</p></div>
-<div><b>Press Run</b><p>The report runs on your account. Keyword reports: 0.4¢ per listing + 0.005¢ per run, as of Oct 28, 2026 (<a href="https://publicrecords-redirect.publicrecords.workers.dev/r/site-store-search?from=price" rel="noopener">Store pricing</a>), Apify platform usage included. If Etsy blocks a search, you get the most recent cached results, clearly dated, at the same rate; if there's nothing cached, you pay nothing. Shop reports: 0.3¢ per shop + 0.005¢ per run, as of Oct 28, 2026 (<a href="https://publicrecords-redirect.publicrecords.workers.dev/r/site-store-tracker?from=price" rel="noopener">Store pricing</a>), Apify platform usage included. The price updates as you change options, and you see “about $X, at most $Y” for the exact number of listings you ask for before you start.</p></div>
+<div><b>Press Run</b><p>The report runs on your account and you pay per result: see <a href="/ai.html#cost">what a report costs</a>. If Etsy blocks a search, you get the most recent cached results, clearly dated, at the same rate; if there's nothing cached, you pay nothing. The price updates as you change options, and you see “about $X, at most $Y” for the exact number of listings you ask for before you start.</p></div>
 <div><b>Read it, download it</b><p>Takeaways, charts and a sortable table appear right here. Download the spreadsheet (CSV), or print / save as PDF. Your runs and data also stay in your Apify account.</p></div>
 </div>
 <p class="note">Sign-in uses Apify's own OAuth screen; we never see your password. Apify offers one permission level (full account access): this page uses it only to start the report you asked for and read its results. The key stays in this browser tab and is gone when you close it. Remove the approval any time in Apify Console → Settings → API &amp; Integrations.</p></section>"""
