@@ -61,7 +61,9 @@ def track_shop_href(shop=None, lang="en"):
 
 
 def track_shop_a(lang="en", T=None, shop=None):
-    label = (T or {}).get("track_shop") or TRACK_SHOP_LABEL.get(lang) or TRACK_SHOP_LABEL["en"]
+    # MEMO-1g row 2: en pages may be built with another locale's T (dm_page loads tr strings for en); the label follows
+    # lang only, so an en page never shows a foreign track label.
+    label = ((T or {}).get("track_shop") if lang != "en" else None) or TRACK_SHOP_LABEL.get(lang) or TRACK_SHOP_LABEL["en"]
     return f'<a class="track" href="{E(track_shop_href(shop, lang))}" rel="noopener">{E(label)}</a>'
 
 
