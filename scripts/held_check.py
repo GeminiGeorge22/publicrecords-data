@@ -28,7 +28,20 @@ MON = {"jan": 1, "feb": 2, "mar": 3, "apr": 4, "may": 5, "jun": 6, "jul": 7, "au
        "janv": 1, "févr": 2, "mars": 3, "avr": 4, "mai": 5, "juin": 6, "juil": 7, "août": 8, "sept": 9, "déc": 12,
        "octobre": 10, "septembre": 9, "novembre": 11, "ocak": 1, "şubat": 2, "mart": 3, "nisan": 4, "mayıs": 5, "haziran": 6,
        "temmuz": 7, "ağustos": 8, "eylül": 9, "ekim": 10, "kasım": 11, "aralık": 12, "october": 10, "september": 9, "november": 11}
-DATE_RX = re.compile(r"\b(20\d\d)-(\d\d)-(\d\d)\b|\b([A-Z][a-z]{2,8})\.? (\d{1,2})\b|\b(\d{1,2}) ([a-zéûçşığüö]{3,9}|[A-ZÇŞĞÜÖİ][a-zçşığüö]{2,8})\.?")
+# SITE-HELD-1e: the 'D Month' alternative must END at a word boundary ((?![^\W\d_]) = no letter follows), so a number glued
+# to a longer word (shop handle '4 MarysYarnsEtc') is not read as a date by backtracking to its first letters.
+DATE_RX = re.compile(r"\b(20\d\d)-(\d\d)-(\d\d)\b|\b([A-Z][a-z]{2,8})\.? (\d{1,2})\b|\b(\d{1,2}) ([a-zéûçşığüö]{3,9}|[A-ZÇŞĞÜÖİ][a-zçşığüö]{2,8})(?![^\W\d_])\.?")
+# SITE-HELD-1e: a month word counts only when it IS a month name or an abbreviation of one (a prefix of >= 3 letters of a
+# full en/fr/tr name, e.g. 'Mar', 'Sept', 'juill', 'déc'), or a full Turkish name with a glued case suffix ('Ekimde').
+# Before this, any word whose first 3-4 letters hit MON counted ('Marys' -> mar -> March, 'Decor' -> Dec).
+MONTH_NAMES = {
+    "january": 1, "february": 2, "march": 3, "april": 4, "may": 5, "june": 6, "july": 7, "august": 8, "september": 9,
+    "october": 10, "november": 11, "december": 12,
+    "janvier": 1, "février": 2, "fevrier": 2, "mars": 3, "avril": 4, "mai": 5, "juin": 6, "juillet": 7, "août": 8, "aout": 8,
+    "septembre": 9, "octobre": 10, "novembre": 11, "décembre": 12, "decembre": 12,
+    "ocak": 1, "şubat": 2, "mart": 3, "nisan": 4, "mayıs": 5, "haziran": 6, "temmuz": 7, "ağustos": 8, "eylül": 9,
+    "ekim": 10, "kasım": 11, "aralık": 12}
+TR_MONTHS = ("ocak", "şubat", "mart", "nisan", "mayıs", "haziran", "temmuz", "ağustos", "eylül", "ekim", "kasım", "aralık")
 HELD_BEFORE, HELD_AFTER, FRESH_NEAR = 320, 160, 120
 CADENCE = {"en": r"\brefreshed weekly\b"}   # SITE-HELD-1d: only qualifiers a page actually uses, each one honest
 
@@ -62,6 +75,21 @@ def vis(raw):
     return clean(body), clean(ft)
 
 
+def month_of(word):
+    """Month number when word is a month name or an abbreviation of one (en/fr/tr), else None. SITE-HELD-1e."""
+    k = word.lower().rstrip(".")
+    if k in MON:
+        return MON[k]
+    if len(k) >= 3:
+        hits = {n for name, n in MONTH_NAMES.items() if name.startswith(k)}
+        if len(hits) == 1:
+            return hits.pop()
+        tr = [name for name in TR_MONTHS if k.startswith(name)]
+        if tr:
+            return MONTH_NAMES[tr[0]]
+    return None
+
+
 def dates(t, year=2026):
     out = []
     for m in DATE_RX.finditer(t):
@@ -69,14 +97,12 @@ def dates(t, year=2026):
             if m.group(1):
                 d = dt.date(int(m.group(1)), int(m.group(2)), int(m.group(3)))
             elif m.group(4):
-                mo = MON.get(m.group(4).lower()[:3] if m.group(4).lower()[:3] in MON and len(m.group(4)) <= 4 else m.group(4).lower())
-                mo = mo or MON.get(m.group(4).lower()[:3])
+                mo = month_of(m.group(4))
                 if not mo:
                     continue
                 d = dt.date(year, mo, int(m.group(5)))
             else:
-                k = m.group(7).lower().rstrip(".")
-                mo = MON.get(k) or MON.get(k[:4]) or MON.get(k[:3])
+                mo = month_of(m.group(7))
                 if not mo:
                     continue
                 d = dt.date(year, mo, int(m.group(6)))
