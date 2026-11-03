@@ -12,6 +12,7 @@ Called from build_site.build() with build_site's globals (H) so the shared page 
 import json
 import os
 import re
+import sys
 
 EN_ONLY = '<meta name="ep-lang" content="en-only">'
 TABLE_CSS = ("<style>.rp table{border-collapse:collapse;width:100%;margin:12px 0 20px;font-size:15px}"
@@ -125,13 +126,14 @@ A product type is listed only when its read has at least {P['min_listings']} pri
     return name, title, shell(H, name, title, desc, "Typical Etsy prices by product type", lede, body, ctx)
 
 
-def index_page(H, P, items, ctx, sales_items=()):
+def index_page(H, P, items, ctx, sales_items=(), answer_items=()):
     E = H["E"]
     lis = "".join(f'<li><a href="{n}">{E(t)}</a></li>' for n, t in items)
     name = "reports.html"
     title = "Etsy niche reports: prices and sales, dated"
     desc = "Every Etsy Pulse niche report in one place: typical Etsy prices by product type and shops gaining sales by niche, each dated."
     body = f"""<p>Each report is dated and says what it covers. Nothing here is live: every number comes from one dated read.</p>
+{('<h2>Seller questions</h2><ul>' + "".join(f'<li><a href="{n}">{E(t)}</a></li>' for n, t in answer_items) + '</ul>') if answer_items else ""}
 <h2>Etsy shops gaining sales</h2><ul>{"".join(f'<li><a href="{n}">{E(t)}</a></li>' for n, t in sales_items)}</ul>
 <h2>Typical Etsy prices</h2><ul>{lis}</ul>
 <p><a href="how-we-measure.html">How we measure</a></p>"""
@@ -272,9 +274,13 @@ def build(out_dir, H, meta, ctx, root):
             w(name, h); sales_items.append((name, title))
         name, title, h = sales_overview(H, S, ctx)
         w(name, h); sales_items.insert(0, (name, title))
+    import answer_pages   # ANSWER-1 (MEMO-1h row 2): seller-question pages
+    answer_items = []
+    for name, title, h in answer_pages.build(H, ctx, sys.modules[__name__]):
+        w(name, h); answer_items.append((name, title))
     name, title, h = measure_page(H, meta, P, ctx)
     w(name, h)
-    name, title, h = index_page(H, P, items, ctx, sales_items)
+    name, title, h = index_page(H, P, items, ctx, sales_items, answer_items)
     w(name, h)
     lastmod = {n: (P["read_date"] if P and n.startswith("etsy-prices") else S["snapshot_date"] if S and n.startswith("etsy-shops-gaining")
                    else meta["snapshot_date"]) for n in made}
@@ -300,6 +306,8 @@ def check_reports(out_dir, names, site_url):
             bad.append(f"{n}: not in sitemap")
         if n.startswith("etsy-shops-gaining") and "Data as of" not in raw:
             bad.append(f"{n}: no 'Data as of' line")
+        if n.startswith("how-") and n != "how-we-measure.html" and ("Data as of" not in raw or f'href="{n}"' not in idx):
+            bad.append(f"{n}: answer page needs a 'Data as of' line and a reports.html link")
         if (n.startswith("etsy-prices") or n.startswith("etsy-shops-gaining")) and f'href="{n}"' not in idx:
             bad.append(f"{n}: not linked from reports.html")
     if bad:
