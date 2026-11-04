@@ -58,3 +58,44 @@ def test_answer_page_has_no_prices(tmp_path):
     out = _site(str(tmp_path))
     vis = _visible(open(os.path.join(out, PAGE), encoding="utf-8").read())
     assert not re.search(r"[$¢]|\bcents?\b|free plan", vis), re.findall(r".{40}(?:[$¢]|cents?|free plan).{40}", vis)
+
+
+# ANSWER-2 (MEMO-1h row 2, 2026-11-04): "How to track a competitor's Etsy sales" (Etsy competitor research).
+PAGE2 = "how-to-track-a-competitors-etsy-sales.html"
+SLUG2 = "answer-competitor-sales"
+
+
+def test_competitor_page_built_linked_and_tracked(tmp_path):
+    out = _site(str(tmp_path))
+    p = os.path.join(out, PAGE2)
+    assert os.path.exists(p), "competitor answer page not built"
+    raw = open(p, encoding="utf-8").read()
+    assert "<h1>How to track a competitor's Etsy sales</h1>" in raw or "<h1>How to track a competitor&#x27;s Etsy sales</h1>" in raw
+    assert f"workers.dev/r/{SLUG2}" in raw, "tracked Store link missing"
+    assert f"workers.dev/r/{SLUG}" not in raw, "page 2 must carry its own link id"
+    assert re.search(r'href="run\.html\?type=velocity&amp;shops=[^"&]+&amp;from=answer-competitor-sales"', raw), "prefilled builder link missing"
+    assert f"https://www.etsypulse.ca/{PAGE2}</loc>" in open(os.path.join(out, "sitemap.xml")).read()
+    idx = open(os.path.join(out, "reports.html")).read()
+    assert f'href="{PAGE2}"' in idx and f'href="{PAGE}"' in idx
+    assert "Data as of" in raw
+    assert 'href="how-many-sales-does-an-etsy-shop-make.html"' in raw, "links back to answer page 1"
+
+
+def test_competitor_page_numbers_come_from_published_day(tmp_path):
+    out = _site(str(tmp_path))
+    raw = open(os.path.join(out, PAGE2), encoding="utf-8").read()
+    vis = _visible(raw)
+    d = sorted(p for p in glob.glob(os.path.join(ROOT, "data", "daily-movers", "20*")) if os.path.exists(os.path.join(p, "pct.csv")))[-1]
+    pct = list(csv.DictReader(open(os.path.join(d, "pct.csv"), encoding="utf-8")))
+    for r in pct[:5]:
+        assert r["shop_name"] in vis, r["shop_name"]
+        assert f"{int(r['sales_before']):,}" in vis and f"{int(r['sales_total']):,}" in vis and f"+{int(r['sales_added']):,}" in vis, r["shop_name"]
+        assert f"+{float(r['pct_added']):.1f}%" in vis, r["shop_name"]
+    shops = re.search(r"type=velocity&amp;shops=([^\"&]+)", raw).group(1).split(",")
+    assert shops == [r["shop_name"] for r in pct[:3]]
+
+
+def test_competitor_page_has_no_prices(tmp_path):
+    out = _site(str(tmp_path))
+    vis = _visible(open(os.path.join(out, PAGE2), encoding="utf-8").read())
+    assert not re.search(r"[$¢]|\bcents?\b|free plan", vis), re.findall(r".{40}(?:[$¢]|cents?|free plan).{40}", vis)
