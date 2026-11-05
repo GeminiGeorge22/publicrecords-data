@@ -73,9 +73,12 @@ SUBS = {
 NAV_HELD = {"en": ("⚡ Daily Movers", "⚡ Movers"), "fr": ("⚡ Palmarès du jour", "⚡ Palmarès"), "tr": ("⚡ Günün yükselenleri", "⚡ Yükselenler")}
 
 
-def apply(out_dir, held_day, newest, short_date_fn, date_loc_fn, through_day=None):
+def apply(out_dir, held_day, newest, short_date_fn, date_loc_fn, through_day=None, current_main_multi=False, stale=None):
     changed = []
-    current_window = through_day is not None and (dt.date.fromisoformat(newest) - dt.date.fromisoformat(through_day)).days <= 1
+    current_window = (not stale) if stale is not None else (through_day is not None and (dt.date.fromisoformat(newest) - dt.date.fromisoformat(through_day)).days <= 1)
+    current_main_multi = current_main_multi
+    # A current main movers window must never get a held banner. Its optional niches table may use a longer exact
+    # window; R1 wording for that older start is attached locally to the niches block only.
     # SITE-HELD-1b: while held, the Movers tab drops "daily"/"du jour"/"Günün" on EVERY page (the tab sits next to held dates)
     for root, _, fs in os.walk(out_dir):
         for fn in fs:
@@ -90,10 +93,10 @@ def apply(out_dir, held_day, newest, short_date_fn, date_loc_fn, through_day=Non
     for lg, lp in LANGS.items():
         d = short_date_fn(held_day, lg)
         if current_window:
-            tag = {"en": "Window from {d}; older counter reads held",
-                   "fr": "Fenêtre depuis le {d} ; lectures antérieures retenues",
-                   "tr": "{d} başlangıçlı dönem; önceki sayaç okumaları bekletiliyor"}[lg].format(d=d)
-            banner = tag + "."
+            tag = {"en": "Exact window from {d} (held)",
+                   "fr": "Fenêtre exacte depuis le {d} (retenue)",
+                   "tr": "{d} başlangıçlı kesin dönem (bekletiliyor)"}[lg].format(d=d)
+            banner = None
         else:
             tag = TAG[lg].format(d=d)
             banner = BANNER[lg].format(d=d, ap="&#x27;")
@@ -119,14 +122,29 @@ def apply(out_dir, held_day, newest, short_date_fn, date_loc_fn, through_day=Non
                     text = re.sub(r"\b" + iso + r"\b(?! \()", f"{iso} ({hw})", text)
                 return ">" + text + "<"
             rest = re.sub(r">([^<]*)<", label_iso, rest)
-            # a held tag in front of every dated window line and snapshot chip, and one banner at the top of <main>
-            rest = rest.replace('<div class="dmwin">', f'<div class="dmwin"><b>{tag} ·</b> ')
-            rest = rest.replace('<main class="wrap">', f'<main class="wrap">\n<p class="heldbar" role="status"><b>{banner}</b></p>', 1)
+            # Current main data: qualify only the longer niches window. Stale data: every dated window and a banner.
+            if current_window:
+                if current_main_multi:
+                    rest = rest.replace('<div class="dmwin">', f'<div class="dmwin"><b>{tag} ·</b> ')
+                    rest = rest.replace('<div class="snap">', f'<div class="snap"><b>{tag} ·</b> ')
+                    rest = re.sub(r'(<div class="fresh">)', lambda m: m.group(1) + f'<p><b>{tag}</b></p>', rest, count=1)
+                elif '<section id="niches">' in rest:
+                    rest = re.sub(r'(<section id="niches"><div class="dmwin">)', lambda m: m.group(1) + f'<b>{tag} ·</b> ', rest)
+                else:
+                    rest = rest.replace('<div class="dmwin">', f'<div class="dmwin"><b>{tag} ·</b> ')
+            else:
+                rest = rest.replace('<div class="dmwin">', f'<div class="dmwin"><b>{tag} ·</b> ')
+                rest = rest.replace('<div class="snap">', f'<div class="snap"><b>{tag} ·</b> ')
+                rest = re.sub(r'(<div class="fresh">)', lambda m: m.group(1) + f'<p><b>{tag}</b></p>', rest, count=1)
+                if p == "rising.html":
+                    rest = rest.replace('<main class="wrap">', f'<main class="wrap">\n<p><b>{tag}</b></p>', 1)
+                rest = rest.replace('<main class="wrap">', f'<main class="wrap">\n<p class="heldbar" role="status"><b>{banner}</b></p>', 1)
             if not current_window:
                 foot = FOOT[lg].format(iso=held_day, new=newest, d=date_loc_fn(held_day, lg), nd=date_loc_fn(newest, lg), ap="&#x27;")
                 rest = re.sub(FOOT_RX[lg], foot, rest)
-            # title: the held date in the browser tab / search result carries the word too
-            head = re.sub(r"(<title>[^<]*?)(\s*\|\s*Etsy Pulse)?</title>", lambda m: m.group(1) + f" · {tag}" + (m.group(2) or "") + "</title>", head, 1)
+            # Only stale pages carry held wording in the browser title.
+            if not current_window:
+                head = re.sub(r"(<title>[^<]*?)(\s*\|\s*Etsy Pulse)?</title>", lambda m: m.group(1) + f" · {tag}" + (m.group(2) or "") + "</title>", head, 1)
             out = head + sep + rest
             if out != raw:
                 open(f, "w", encoding="utf-8").write(out)
