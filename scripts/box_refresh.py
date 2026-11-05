@@ -200,9 +200,9 @@ def build_check():
     return None
 
 
-def sweep_balanced(m) -> bool:
-    """READ-ORDER-2 gate: True only when the snapshot manifest carries balanced=true (missing = not proven = held)."""
-    return bool(m) and m.get("balanced") is True
+def velocity_verdict(m) -> str:
+    """The producer's one verdict, shared with the Actor. Missing/false is held, never recomputed by the site."""
+    return "balanced" if bool(m) and m.get("balanced") is True else "held_unbalanced"
 
 
 def do_publish(force=False, latest=None):
@@ -231,7 +231,7 @@ def do_publish(force=False, latest=None):
         meta = json.load(open(os.path.join(cut_dir, "meta.json")))
         # READ-ORDER-2 (Mark ORDER 2026-10-16 item 1): the sweep feed (daily movers + its X/FB drafts) publishes only when
         # the snapshot manifest says balanced=true (exact pairs in every 0-9/A-C/D-L/M-S/T-Z bucket >= 0.75 x panel share).
-        if sweep_balanced(latest):
+        if velocity_verdict(latest) == "balanced":
             movers_status = daily_movers_export()
         else:
             movers_status = "held_unbalanced"
