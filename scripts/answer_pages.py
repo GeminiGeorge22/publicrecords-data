@@ -149,9 +149,87 @@ The shops above are shops our tracker reads, not every shop on Etsy.</p>
     return name, title, out
 
 
+def _growth(x):
+    return f"+{x:.1f}%" if x >= 0.1 else f"+{x:.2f}%"
+
+
+def good_sales(H, ctx, report_pages):
+    """Q3 (2026-11-05): How many sales on Etsy is good? (searched as 'how many sales on etsy is good')."""
+    E = H["E"]
+    D = H["dm_load"](H["dm_days"]()[-1])
+    rs, pc, mv = D["rising"][:3], D["pct"][:3], D["movers"][:3]
+    if len(rs) < 3 or len(pc) < 3 or len(mv) < 3:
+        return None
+    pid = "answer-good-sales"
+    name = "how-many-sales-on-etsy-is-good.html"
+    day = report_pages.nice(D["day"])
+    win = H["dm_win"](D)
+    span = H["dm_span"](D)
+    shops = [rs[0]["shop_name"], pc[0]["shop_name"], mv[0]["shop_name"]]
+    builder = f'{H["BUILDER"]}?type=velocity&amp;shops={",".join(quote(s, safe="") for s in shops)}&amp;from={pid}'
+    store = f'{H["R"]}{pid}'
+    n = lambda x: f"{x:,}"
+    cap = n(int(D["meta"].get("rising_max_total_sales", 999)) + 1)
+    base = n(int(D["meta"].get("pct_min_base_sales") or 1000))
+    title = "How many sales on Etsy is good? Compare your shop with shops your size"
+    desc = ("There is no single good number of Etsy sales. Good depends on how big your shop already is: compare the sales you add "
+            "with your own count and with shops your size. Dated examples at three shop sizes and how to check yours.")
+    lede = ("There is no single good number. A sale count that would be a great day for a new shop is a quiet day for a shop with "
+            "hundreds of thousands of sales. Judge your sales against your own lifetime count and against shops your size. "
+            "Here is what the fastest shops at three sizes did on one real day.")
+    groups = [(f"Under {cap} lifetime sales", rs), (f"{base}+ sales, fastest for their size", pc), ("Most sales added, any size", mv)]
+    rows = "".join(f"<tr><td>{E(g)}</td><td>{_shop_cell(H, r)}</td><td class=r>{n(r['sales_before'])}</td>"
+                   f"<td class=r><b>+{n(r['sales_added'])}</b></td><td class=r>{_growth(r['pct_added'])}</td></tr>"
+                   for g, rr in groups for r in rr)
+    head = "<tr><th>Shop size</th><th>Shop</th><th class=r>Count before</th><th class=r>Sales added</th><th class=r>Growth</th></tr>"
+    s, m, b = rs[0], pc[0], mv[0]
+    body = f"""<p class="asof">Data as of {day} · {E(win)} · not live</p>
+<h2>The short answer</h2>
+<p>A good number of sales is one that grows your shop quickly for its size. Raw counts mislead: on the newest day we published,
+the shop that added the most sales, {_shop_cell(H, b)}, added <b>+{n(b['sales_added'])}</b> {E(span)} on {n(b['sales_before'])} lifetime sales,
+growth of {_growth(b['pct_added'])}. Among shops with under {cap} lifetime sales, {_shop_cell(H, s)} added <b>+{n(s['sales_added'])}</b>
+on {n(s['sales_before'])}, growth of {_growth(s['pct_added'])}. Among shops with {base}+ sales, the fastest for its size, {_shop_cell(H, m)},
+added <b>+{n(m['sales_added'])}</b> on {n(m['sales_before'])}, growth of {_growth(m['pct_added'])}.
+These are the top of each list, not a typical day. Most shops add fewer.</p>
+
+<h2>The fastest shops at three sizes</h2>
+<table>{head}{rows}</table>
+<p>Growth is sales added as a share of the count before. Full lists: <a href="movers/">Daily Movers</a> · <a href="rising.html">Rising Shops</a>.</p>
+
+<h2>How to tell if your Etsy sales are good</h2>
+<ol>
+<li>Write down your shop's lifetime sales count from your shop page, with the date.</li>
+<li>Read it again a week later and subtract. That is how many sales you made that week.</li>
+<li>Divide the sales you made by the count you started with. That is your growth for the week.</li>
+<li>Do the same for a few shops your size that sell what you sell. Compare growth, not just counts.</li>
+<li>Repeat every week. Good sales are growth that holds up week after week, not one big day.</li>
+</ol>
+<p>The count has limits. Some large shops show a rounded number, so small changes are hidden. It doesn't say which listings sold
+or for how much. It is a count of sales, not money.
+More on reading counts: <a href="how-many-sales-does-an-etsy-shop-make.html">How many sales does an Etsy shop make?</a> ·
+<a href="how-to-track-a-competitors-etsy-sales.html">How to track a competitor's Etsy sales</a></p>
+
+<div class="cov"><h2 style="margin-top:0">Compare your shop with shops your size</h2>
+<p>Reading counts by hand works for a few shops. Our Etsy Shop Sales Tracker reads the count for every shop you name and gives you
+the sales added between reads, in a spreadsheet. The report below opens with {E(shops[0])}, {E(shops[1])} and {E(shops[2])} filled in:
+put in your own shop and a few shops your size, and press Run.</p>
+<p><a class="btn" href="{builder}">Compare these shops' sales →</a></p>
+<p>Runs on your own Apify account after a free sign-in. No code. Prefer Apify's own page?
+<a href="{store}" rel="noopener">Open the Etsy Shop Sales Tracker on Apify</a>.</p></div>
+
+<div class="cov"><h2 style="margin-top:0">Coverage: where these numbers come from</h2>
+<p>Sales added is a shop's public Etsy sales count at the end of the window minus the same count at the start, each read on its own date.
+No scaling or estimates. Shops without both reads, with a rounded count, a count that went down, or an implausible jump are left out.
+The shops above are shops our tracker reads, not every shop on Etsy.</p>
+<p><a href="how-we-measure.html">How we measure</a> · <a href="reports.html">All reports</a></p></div>"""
+    out = report_pages.shell(H, name, title, desc, "How many sales on Etsy is good?", lede, body, ctx)
+    out = out.replace(H["cta"](ctx), "")      # no prices on answer pages
+    return name, title, out
+
+
 def build(H, ctx, report_pages):
     built = []
-    for fn in (shop_sales, competitor_sales):
+    for fn in (shop_sales, competitor_sales, good_sales):
         r = fn(H, ctx, report_pages)
         if r:
             built.append(r)

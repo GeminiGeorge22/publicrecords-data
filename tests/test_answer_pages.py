@@ -99,3 +99,52 @@ def test_competitor_page_has_no_prices(tmp_path):
     out = _site(str(tmp_path))
     vis = _visible(open(os.path.join(out, PAGE2), encoding="utf-8").read())
     assert not re.search(r"[$¢]|\bcents?\b|free plan", vis), re.findall(r".{40}(?:[$¢]|cents?|free plan).{40}", vis)
+
+
+# ANSWER-3 (2026-11-05): "How many sales on Etsy is good?" (Etsy autocomplete: "how many sales on etsy is good").
+PAGE3 = "how-many-sales-on-etsy-is-good.html"
+SLUG3 = "answer-good-sales"
+
+
+def _day3():
+    d = sorted(p for p in glob.glob(os.path.join(ROOT, "data", "daily-movers", "20*"))
+               if all(os.path.exists(os.path.join(p, f)) for f in ("movers.csv", "rising.csv", "pct.csv")))[-1]
+    rd = lambda f: list(csv.DictReader(open(os.path.join(d, f), encoding="utf-8")))
+    return rd("rising.csv"), rd("pct.csv"), rd("movers.csv")
+
+
+def test_good_sales_page_built_linked_and_tracked(tmp_path):
+    out = _site(str(tmp_path))
+    p = os.path.join(out, PAGE3)
+    assert os.path.exists(p), "good-sales answer page not built"
+    raw = open(p, encoding="utf-8").read()
+    assert "<h1>How many sales on Etsy is good?</h1>" in raw
+    assert f"workers.dev/r/{SLUG3}" in raw, "tracked Store link missing"
+    assert f"workers.dev/r/{SLUG}" not in raw and f"workers.dev/r/{SLUG2}" not in raw, "page 3 must carry its own link id"
+    assert re.search(r'href="run\.html\?type=velocity&amp;shops=[^"&]+&amp;from=answer-good-sales"', raw), "prefilled builder link missing"
+    assert f"https://www.etsypulse.ca/{PAGE3}</loc>" in open(os.path.join(out, "sitemap.xml")).read()
+    idx = open(os.path.join(out, "reports.html")).read()
+    assert f'href="{PAGE3}"' in idx and f'href="{PAGE2}"' in idx and f'href="{PAGE}"' in idx
+    assert "Data as of" in raw
+    assert f'href="{PAGE}"' in raw and f'href="{PAGE2}"' in raw, "links to answer pages 1 and 2"
+
+
+def test_good_sales_page_numbers_come_from_published_day(tmp_path):
+    out = _site(str(tmp_path))
+    raw = open(os.path.join(out, PAGE3), encoding="utf-8").read()
+    vis = _visible(raw)
+    rs, pc, mv = _day3()
+    for r in rs[:3] + pc[:3] + mv[:3]:
+        assert r["shop_name"] in vis, r["shop_name"]
+        assert f"{int(r['sales_before']):,}" in vis and f"+{int(r['sales_added']):,}" in vis, r["shop_name"]
+        g = float(r["pct_added"])
+        assert (f"+{g:.1f}%" if g >= 0.1 else f"+{g:.2f}%") in vis, r["shop_name"]
+    shops = re.search(r"type=velocity&amp;shops=([^\"&]+)", raw).group(1).split(",")
+    assert shops == [rs[0]["shop_name"], pc[0]["shop_name"], mv[0]["shop_name"]]
+
+
+def test_good_sales_page_has_no_prices_or_internal_labels(tmp_path):
+    out = _site(str(tmp_path))
+    vis = _visible(open(os.path.join(out, PAGE3), encoding="utf-8").read())
+    assert not re.search(r"[$¢]|\bcents?\b|free plan", vis), re.findall(r".{40}(?:[$¢]|cents?|free plan).{40}", vis)
+    assert not re.search(r"MEMO|ANSWER-\d|\brow \d", vis)
