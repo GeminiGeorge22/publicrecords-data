@@ -1,0 +1,22 @@
+{
+  "snapshot_date": "2026-11-04",
+  "window_days": 1,
+  "from_date": "2026-11-03",
+  "to_date": "2026-11-04",
+  "snapshot_sha256": "374d34438e540be9976dfe466c961157ecfcc6a8574c800e975d15c5909b0b2f",
+  "rows": {
+    "movers": 10,
+    "pct": 10,
+    "niches": 10,
+    "rising": 10
+  },
+  "rising_max_total_sales": 999,
+  "pct_min_base_sales": 1000,
+  "method": "Sales added = a shop's public Etsy sales counter on 2026-11-04 minus the same counter 1 day(s) earlier, both read exactly on those dates. No scaling. Shops without both reads, with rounded counters, a counter that went down, or an implausible jump are left out.",
+  "niche_window_days": 2,
+  "niche_from_date": "2026-11-02",
+  "niche_min_shops": 10,
+  "niche_max_top_shop_share": 0.5,
+  "niche_method": "Niche = the shop's Etsy category. Sales added in a niche = the sum of sales added by its shops over the same 2-day exact counter pairs (no scaling). A niche is ranked only with at least 10 shops with clean reads and when no single shop makes up more than 50% of its sales added.",
+  "generated_at": "2026-11-05T18:00:56+00:00"
+}
