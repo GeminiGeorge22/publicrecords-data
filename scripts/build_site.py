@@ -2918,15 +2918,16 @@ These are not all of Etsy: they are the shops and niches we read.</p>
     import report_pages
     rp_paths, rp_lastmod = report_pages.build(out_dir, globals(), meta, ctx, ROOT)
 
-    # ---- SITE-HELD-1 / SITE-PUBLISH-1: newest shop-sales day >= 1 day older than the newest snapshot = held
-    # (unbalanced HF snapshot holds daily-movers; a 1-day trail must label Held so R1/R2/R3 pass)
+    # ---- SITE-HELD-1 / SITE-PUBLISH-1: R1 also covers the start of a multi-day counter window.
+    # Label that older start without replacing the footer when the window's end is current; genuinely stale movers keep
+    # the original held-since wording and held-date footer.
     import held_mode
-    held_day = D["day"]
+    held_day = D["meta"].get("from_date") or D["day"]
     if (dt.date.fromisoformat(snap) - dt.date.fromisoformat(held_day)).days >= 1:
         _TL = {lg: load_loc(lg) for lg in ("fr", "tr")}
         held_pages = held_mode.apply(out_dir, held_day, snap,
                                      lambda iso, lg: short_date(iso, lg, _TL.get(lg)),
-                                     lambda iso, lg: iso if lg == "en" else date_loc(iso, _TL[lg]))
+                                     lambda iso, lg: iso if lg == "en" else date_loc(iso, _TL[lg]), through_day=D["day"])
         print(f"held mode: shop sales held since {held_day} (newest snapshot {snap}); rewrote {len(held_pages)} pages")
 
     # ---- seo files

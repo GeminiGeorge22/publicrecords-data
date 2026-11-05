@@ -7,6 +7,7 @@ apply(out_dir, held_day, newest, short_date_fn) rewrites those 9 built pages in 
 for held-mode wording. scripts/held_check.py is the check (also run by the box keepalive against the live site)."""
 import os
 import re
+import datetime as dt
 
 PAGES = ["index.html", "movers/index.html", "rising.html"]
 LANGS = {"en": "", "fr": "fr/", "tr": "tr/"}
@@ -72,8 +73,9 @@ SUBS = {
 NAV_HELD = {"en": ("⚡ Daily Movers", "⚡ Movers"), "fr": ("⚡ Palmarès du jour", "⚡ Palmarès"), "tr": ("⚡ Günün yükselenleri", "⚡ Yükselenler")}
 
 
-def apply(out_dir, held_day, newest, short_date_fn, date_loc_fn):
+def apply(out_dir, held_day, newest, short_date_fn, date_loc_fn, through_day=None):
     changed = []
+    current_window = through_day is not None and (dt.date.fromisoformat(newest) - dt.date.fromisoformat(through_day)).days <= 1
     # SITE-HELD-1b: while held, the Movers tab drops "daily"/"du jour"/"Günün" on EVERY page (the tab sits next to held dates)
     for root, _, fs in os.walk(out_dir):
         for fn in fs:
@@ -87,8 +89,14 @@ def apply(out_dir, held_day, newest, short_date_fn, date_loc_fn):
                     open(f, "w", encoding="utf-8").write(out)
     for lg, lp in LANGS.items():
         d = short_date_fn(held_day, lg)
-        tag = TAG[lg].format(d=d)
-        banner = BANNER[lg].format(d=d, ap="&#x27;")
+        if current_window:
+            tag = {"en": "Window from {d}; older counter reads held",
+                   "fr": "Fenêtre depuis le {d} ; lectures antérieures retenues",
+                   "tr": "{d} başlangıçlı dönem; önceki sayaç okumaları bekletiliyor"}[lg].format(d=d)
+            banner = tag + "."
+        else:
+            tag = TAG[lg].format(d=d)
+            banner = BANNER[lg].format(d=d, ap="&#x27;")
         for p in PAGES:
             f = os.path.join(out_dir, lp + p)
             if not os.path.exists(f):
@@ -99,14 +107,24 @@ def apply(out_dir, held_day, newest, short_date_fn, date_loc_fn):
                 head, rest = "", raw
             for rx, rep in SUBS[lg]:
                 rest = re.sub(rx, rep.replace("{tag}", tag), rest)
-            # every ISO held date in visible text (method lines, CSV labels) gets the word too; hrefs/filenames untouched
+            # Every ISO date in the held counter-read window (method lines, CSV labels) gets the word too;
+            # hrefs/filenames untouched. With a multi-day window both its start and end can be older than R1 allows.
             hw = {"en": "held", "fr": "retenu", "tr": "bekletiliyor"}[lg]
-            rest = re.sub(r">([^<]*)<", lambda m: ">" + re.sub(r"\b" + held_day + r"\b(?! \()", f"{held_day} ({hw})", m.group(1)) + "<", rest)
+            last = dt.date.fromisoformat(through_day or held_day)
+            first = dt.date.fromisoformat(held_day)
+            held_dates = [(first + dt.timedelta(days=i)).isoformat() for i in range((last - first).days + 1)]
+            def label_iso(m):
+                text = m.group(1)
+                for iso in held_dates:
+                    text = re.sub(r"\b" + iso + r"\b(?! \()", f"{iso} ({hw})", text)
+                return ">" + text + "<"
+            rest = re.sub(r">([^<]*)<", label_iso, rest)
             # a held tag in front of every dated window line and snapshot chip, and one banner at the top of <main>
             rest = rest.replace('<div class="dmwin">', f'<div class="dmwin"><b>{tag} ·</b> ')
             rest = rest.replace('<main class="wrap">', f'<main class="wrap">\n<p class="heldbar" role="status"><b>{banner}</b></p>', 1)
-            foot = FOOT[lg].format(iso=held_day, new=newest, d=date_loc_fn(held_day, lg), nd=date_loc_fn(newest, lg), ap="&#x27;")
-            rest = re.sub(FOOT_RX[lg], foot, rest)
+            if not current_window:
+                foot = FOOT[lg].format(iso=held_day, new=newest, d=date_loc_fn(held_day, lg), nd=date_loc_fn(newest, lg), ap="&#x27;")
+                rest = re.sub(FOOT_RX[lg], foot, rest)
             # title: the held date in the browser tab / search result carries the word too
             head = re.sub(r"(<title>[^<]*?)(\s*\|\s*Etsy Pulse)?</title>", lambda m: m.group(1) + f" · {tag}" + (m.group(2) or "") + "</title>", head, 1)
             out = head + sep + rest
