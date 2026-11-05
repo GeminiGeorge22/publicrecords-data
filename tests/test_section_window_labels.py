@@ -63,3 +63,50 @@ def test_held_main_window_must_say_held(tmp_path):
     eyebrow = re.search(r'<div class="eyebrow">(.*?)</div>', raw).group(1)
     assert "Held since" in eyebrow
     assert 'class="heldbar"' in raw
+
+
+MAIN_HELD_TAGS = {
+    "en": "Exact window from Nov 2 (held)",
+    "fr": "Fenêtre exacte depuis le 2 nov. (retenue)",
+    "tr": "2 Kasım başlangıçlı kesin dönem (bekletiliyor)",
+}
+
+
+def _full_build(tmp_path):
+    import subprocess
+    out = tmp_path / "full-site"
+    r = subprocess.run([sys.executable, os.path.join(ROOT, "scripts", "build_site.py"), "--out", str(out)],
+                       cwd=ROOT, capture_output=True, text=True, timeout=600)
+    assert r.returncode == 0, (r.stdout + "\n" + r.stderr)[-5000:]
+    return out
+
+
+@pytest.mark.parametrize("lang,prefix", (("en", ""), ("fr", "fr/"), ("tr", "tr/")))
+def test_every_main_surface_excludes_held_niche_tag(tmp_path, lang, prefix):
+    import subprocess
+    out = tmp_path / "full-site"
+    r = subprocess.run([sys.executable, os.path.join(ROOT, "scripts", "build_site.py"), "--out", str(out)],
+                       cwd=ROOT, capture_output=True, text=True, timeout=600)
+    assert r.returncode == 0, (r.stdout + "\n" + r.stderr)[-5000:]
+    tag = MAIN_HELD_TAGS[lang]
+    home = (out / prefix / "index.html").read_text(encoding="utf-8")
+    movers = (out / prefix / "movers" / "index.html").read_text(encoding="utf-8")
+    main_surfaces = {
+        "header chip": re.search(r'<div class="chips">.*?</div>', home).group(0),
+        "snapshot": re.search(r'<div class="fresh">.*?</div></div>', home, re.S).group(0) if lang == "en" else "",
+        "takeaways": re.search(r'<div class="insights">.*?</div></section>', home).group(0),
+        "movers lede": re.search(r'<p class="lede">.*?</p>', movers).group(0),
+        "main dmwin": re.search(r'<section><div class="dmwin">.*?</section>', movers, re.S).group(0),
+        "main method": re.search(r'<section class="method">.*?</section>', movers, re.S).group(0),
+        "main footer": re.search(r'<footer.*?</footer>', home, re.S).group(0),
+    }
+    if lang == "en":
+        main_surfaces["Movers card"] = re.search(r'<a class="rcard" href="movers/">.*?</a>', home).group(0)
+    for name, markup in main_surfaces.items():
+        assert tag not in markup, f"{lang} {name}: {markup}"
+    # The held tag is allowed only on the separate two-day niche surfaces.
+    niche_section = re.search(r'<section id="niches">.*?</section>', movers, re.S).group(0)
+    assert tag in niche_section
+    if lang == "en":
+        niche_card = re.search(r'<a class="rcard" href="movers/#niches">.*?</a>', home).group(0)
+        assert tag in niche_card
