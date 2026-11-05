@@ -295,7 +295,7 @@ def movers_card():
     log("movers_card", "ok" if r.returncode == 0 else "error", out=(r.stdout or r.stderr).strip()[-200:].replace(" ", ""))
 
 
-FB_PACK = "/workspace/x-etsypulse/facebook/make_fb_pack.py"
+FB_PACK = os.path.join(ROOT, "scripts", "make_fb_pack.py")
 
 
 def fb_pack():

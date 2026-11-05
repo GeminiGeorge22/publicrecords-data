@@ -2925,10 +2925,24 @@ These are not all of Etsy: they are the shops and niches we read.</p>
     held_day = D["meta"].get("from_date") or D["day"]
     if (dt.date.fromisoformat(snap) - dt.date.fromisoformat(held_day)).days >= 1:
         _TL = {lg: load_loc(lg) for lg in ("fr", "tr")}
-        held_pages = held_mode.apply(out_dir, held_day, snap,
-                                     lambda iso, lg: short_date(iso, lg, _TL.get(lg)),
-                                     lambda iso, lg: iso if lg == "en" else date_loc(iso, _TL[lg]), through_day=D["day"])
-        print(f"held mode: shop sales held since {held_day} (newest snapshot {snap}); rewrote {len(held_pages)} pages")
+        # Only a multi-day niches window needs current-data qualification. A normal one-day
+        # movers window is current and requires no held rewrite at all.
+        niche_day = D["meta"].get("niche_from_date")
+        current_main = (dt.date.fromisoformat(snap) - dt.date.fromisoformat(D["day"])).days == 0
+        main_multi = int(D["meta"].get("window_days") or 1) > 1
+        if current_main and main_multi:
+            # The whole main table uses a multi-day exact window: label its start locally on every dated window.
+            niche_day = None
+        elif current_main and niche_day and (dt.date.fromisoformat(snap) - dt.date.fromisoformat(niche_day)).days > 1:
+            held_day = niche_day
+        elif current_main:
+            niche_day = None
+        if not current_main or (current_main and (main_multi or (niche_day and (dt.date.fromisoformat(snap) - dt.date.fromisoformat(niche_day)).days > 1))):
+            held_pages = held_mode.apply(out_dir, held_day, snap,
+                                         lambda iso, lg: short_date(iso, lg, _TL.get(lg)),
+                                         lambda iso, lg: iso if lg == "en" else date_loc(iso, _TL[lg]), through_day=D["day"],
+                                         current_main_multi=current_main and main_multi, stale=not current_main)
+            print(f"held mode: counter window from {held_day} (newest snapshot {snap}); rewrote {len(held_pages)} pages")
 
     # ---- seo files
     with open(os.path.join(out_dir, "robots.txt"), "w") as fh:
