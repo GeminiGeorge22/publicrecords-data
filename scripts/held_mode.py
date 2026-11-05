@@ -110,7 +110,7 @@ def apply(out_dir, held_day, newest, short_date_fn, date_loc_fn, through_day=Non
                 head, rest = "", raw
             # A current one-day main window must not inherit the niche tag in
             # its eyebrow. Keep the other section-scoped wording rules.
-            section_subs = SUBS[lg]
+            section_subs = SUBS[lg] if (not current_window or current_main_multi) else []
             # Keep the main eyebrow out of niche-section rewrites. Its own
             # window and producer verdict are independent of the niche's.
             eyebrow = re.search(r'<(?:p|div) class="eyebrow">.*?</(?:p|div)>', rest)
@@ -131,19 +131,21 @@ def apply(out_dir, held_day, newest, short_date_fn, date_loc_fn, through_day=Non
                 for iso in held_dates:
                     text = re.sub(r"\b" + iso + r"\b(?! \()", f"{iso} ({hw})", text)
                 return ">" + text + "<"
-            rest = re.sub(r">([^<]*)<", label_iso, rest)
+            if not current_window or current_main_multi:
+                rest = re.sub(r">([^<]*)<", label_iso, rest)
+            else:
+                # A held niche start must not annotate main-window ISO dates.
+                rest = re.sub(r'(<a class="rcard" href="movers/#niches">.*?</a>|<section id="niches">.*?</section>)',
+                              lambda m: re.sub(r">([^<]*)<", label_iso, m.group(1)), rest, flags=re.S)
             # Current main data: qualify only the longer niches window. Stale data: every dated window and a banner.
             if current_window:
-                if not current_main_multi:
-                    # The tag belongs to the niche window here. Remove the
-                    # generic main-window insertion, leaving the niche label
-                    # and stale-main handling below intact.
-                    rest = rest.replace(f'<div class="dmwin"><b>{tag} ·</b> ', '<div class="dmwin">')
                 if current_main_multi:
                     rest = rest.replace('<div class="dmwin">', f'<div class="dmwin"><b>{tag} ·</b> ')
                     rest = rest.replace('<div class="snap">', f'<div class="snap"><b>{tag} ·</b> ')
                     rest = re.sub(r'(<div class="fresh">)', lambda m: m.group(1) + f'<p><b>{tag}</b></p>', rest, count=1)
                 elif '<section id="niches">' in rest:
+                    rest = re.sub(r'(<a class="rcard" href="(?:../)?movers/#niches">.*?<div class="d">)(.*?)(</div>)',
+                                  lambda m: m.group(1) + m.group(2) + f' {tag}.' + m.group(3), rest, flags=re.S)
                     rest = re.sub(r'(<section id="niches">)', lambda m: m.group(1) + f'<p><b>{tag}</b></p>', rest)
                     rest = re.sub(r'(<section id="niches"><div class="dmwin">)', lambda m: m.group(1) + f'<b>{tag} ·</b> ', rest)
                     # Keep freshness phrases outside the held niche window so
@@ -158,13 +160,19 @@ def apply(out_dir, held_day, newest, short_date_fn, date_loc_fn, through_day=Non
                 else:
                     rest = rest.replace('<div class="dmwin">', f'<div class="dmwin"><b>{tag} ·</b> ')
                 if not current_main_multi:
-                    # Only the niche owns this held tag. Restore every main
-                    # window to its own balanced one-day wording.
-                    main_tag = f'<div class="dmwin"><b>{tag} ·</b> '
-                    niche_tag = f'<section id="niches"><p><b>{tag}</b></p><div class="dmwin"><b>{tag} ·</b> '
-                    rest = rest.replace(niche_tag, '@@NICHE_WINDOW@@')
-                    rest = rest.replace(main_tag, '<div class="dmwin">')
-                    rest = rest.replace('@@NICHE_WINDOW@@', niche_tag)
+                    # Only niche surfaces own the niche-held tag. Preserve
+                    # those two blocks and remove every leaked main-surface copy.
+                    niche_parts = []
+                    def keep_niche(m):
+                        niche_parts.append(m.group(0))
+                        return f'@@NICHE_{len(niche_parts) - 1}@@'
+                    rest = re.sub(r'<a class="rcard" href="(?:../)?movers/#niches">.*?</a>|<section id="niches">.*?</section>',
+                                  keep_niche, rest, flags=re.S)
+                    rest = rest.replace(tag + ' · ', '').replace(tag + '.', '').replace(tag + ')', ')').replace(tag, '')
+                    rest = re.sub(r'\s+([.,)])', r'\1', rest)
+                    rest = rest.replace('<b> ·</b> ', '').replace(' ()', '')
+                    for i, part in enumerate(niche_parts):
+                        rest = rest.replace(f'@@NICHE_{i}@@', part)
             else:
                 rest = rest.replace('<div class="dmwin">', f'<div class="dmwin"><b>{tag} ·</b> ')
                 rest = rest.replace('<div class="snap">', f'<div class="snap"><b>{tag} ·</b> ')
@@ -178,6 +186,17 @@ def apply(out_dir, held_day, newest, short_date_fn, date_loc_fn, through_day=Non
             # Only stale pages carry held wording in the browser title.
             if not current_window:
                 head = re.sub(r"(<title>[^<]*?)(\s*\|\s*Etsy Pulse)?</title>", lambda m: m.group(1) + f" · {tag}" + (m.group(2) or "") + "</title>", head, 1)
+            if current_window and not current_main_multi and '<section id="niches">' not in rest:
+                # Home cards are niche surfaces even when no niche table is
+                # present on that page. Their own two-day window keeps the tag.
+                niche_card = re.search(r'<a class="rcard" href="(?:../)?movers/#niches">.*?</a>', rest, flags=re.S)
+                if niche_card and tag not in niche_card.group(0):
+                    card = re.sub(r'(<div class="d">.*?)(</div>)', lambda m: m.group(1) + f' {tag}.' + m.group(2), niche_card.group(0), flags=re.S)
+                    card = re.sub(r'<div class="d">.*?</div>',
+                                  {"en": f'<div class="d">Top 10 Etsy niches by sales added over their exact two-day window. {tag}.</div>',
+                                   "fr": f'<div class="d">Top 10 des niches Etsy par ventes ajoutées sur leur fenêtre exacte de deux jours. {tag}.</div>',
+                                   "tr": f'<div class="d">Kendi kesin iki günlük dönemlerinde eklenen satışlara göre ilk 10 Etsy nişi. {tag}.</div>'}[lg], card, flags=re.S)
+                    rest = rest[:niche_card.start()] + card + rest[niche_card.end():]
             out = head + sep + rest
             if out != raw:
                 open(f, "w", encoding="utf-8").write(out)
