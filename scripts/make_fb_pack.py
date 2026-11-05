@@ -113,27 +113,14 @@ def day_groups(D):
 
 
 # ---------------------------------------------------------------- data
+from fb_pack_windows import load_rows
+
+
 def load(repo, day):
-    dd = os.path.join(repo, "data", "daily-movers", day)
-    meta = json.load(open(os.path.join(dd, "meta.json")))
-    rd = lambda f: list(csv.DictReader(open(os.path.join(dd, f), encoding="utf-8"))) if os.path.exists(os.path.join(dd, f)) else []
-    D = {"meta": meta, "shops": rd("movers.csv"), "jumps": rd("pct.csv"), "niches": rd("niches.csv"), "rising": rd("rising.csv")}
-    if meta.get("snapshot_date") != day:
-        raise SystemExit(f"{day}: meta snapshot_date {meta.get('snapshot_date')} != folder day: mismatched export, no pack")
-    for k in ("shops", "jumps", "rising"):
-        if len(D[k]) < 5:
-            raise SystemExit(f"{day}: {k} has {len(D[k])} rows (<5): incomplete export, no pack")
-    if len(D["niches"]) < 5:   # niche list is optional: some days no categorized shop has an exact pair in the window
-        D["niches"] = []
-    for k in ("shops", "jumps", "niches", "rising"):   # never mix days or windows within a table
-        # Niches deliberately fall back to a longer exact window when too few categorized shops have a 1-day pair.
-        # Their declared niche_window_days/niche_from_date is authoritative; the main meta window belongs to shops/pct/rising.
-        prefix = "niche_" if k == "niches" else ""
-        frm = meta[prefix + "from_date"] if k == "niches" else meta["from_date"]
-        w = int(meta[prefix + "window_days"] if k == "niches" else meta["window_days"])
-        for r in D[k]:
-            if r["to_date"] != day or r["from_date"] != frm or int(r["window_days"]) != w:
-                raise SystemExit(f"{day}: {k} row {r.get('rank')} window {r['from_date']}->{r['to_date']} != declared {frm}->{day} ({w}d): no pack")
+    try:
+        D = load_rows(repo, day)
+    except ValueError as e:
+        raise SystemExit(str(e) + ": no pack")
     tr = json.load(open(os.path.join(repo, "config", "i18n", "tr.json"), encoding="utf-8")).get("movers", {})
     D["trn"] = tr.get("niche_names", {})
     D["tagline"] = json.load(open(os.path.join(repo, "config", "movers.json"), encoding="utf-8"))["tagline"]
