@@ -108,8 +108,18 @@ def apply(out_dir, held_day, newest, short_date_fn, date_loc_fn, through_day=Non
             head, sep, rest = raw.partition("</nav>")   # never touch <head>/<header>/<nav> (tab names stay)
             if not sep:
                 head, rest = "", raw
-            for rx, rep in SUBS[lg]:
+            # A current one-day main window must not inherit the niche tag in
+            # its eyebrow. Keep the other section-scoped wording rules.
+            section_subs = SUBS[lg]
+            # Keep the main eyebrow out of niche-section rewrites. Its own
+            # window and producer verdict are independent of the niche's.
+            eyebrow = re.search(r'<(?:p|div) class="eyebrow">.*?</(?:p|div)>', rest)
+            if current_window and not current_main_multi and eyebrow:
+                rest = rest[:eyebrow.start()] + '@@MAIN_EYEBROW@@' + rest[eyebrow.end():]
+            for rx, rep in section_subs:
                 rest = re.sub(rx, rep.replace("{tag}", tag), rest)
+            if current_window and not current_main_multi and eyebrow:
+                rest = rest.replace('@@MAIN_EYEBROW@@', eyebrow.group(0))
             # Every ISO date in the held counter-read window (method lines, CSV labels) gets the word too;
             # hrefs/filenames untouched. With a multi-day window both its start and end can be older than R1 allows.
             hw = {"en": "held", "fr": "retenu", "tr": "bekletiliyor"}[lg]
@@ -124,14 +134,37 @@ def apply(out_dir, held_day, newest, short_date_fn, date_loc_fn, through_day=Non
             rest = re.sub(r">([^<]*)<", label_iso, rest)
             # Current main data: qualify only the longer niches window. Stale data: every dated window and a banner.
             if current_window:
+                if not current_main_multi:
+                    # The tag belongs to the niche window here. Remove the
+                    # generic main-window insertion, leaving the niche label
+                    # and stale-main handling below intact.
+                    rest = rest.replace(f'<div class="dmwin"><b>{tag} ·</b> ', '<div class="dmwin">')
                 if current_main_multi:
                     rest = rest.replace('<div class="dmwin">', f'<div class="dmwin"><b>{tag} ·</b> ')
                     rest = rest.replace('<div class="snap">', f'<div class="snap"><b>{tag} ·</b> ')
                     rest = re.sub(r'(<div class="fresh">)', lambda m: m.group(1) + f'<p><b>{tag}</b></p>', rest, count=1)
                 elif '<section id="niches">' in rest:
+                    rest = re.sub(r'(<section id="niches">)', lambda m: m.group(1) + f'<p><b>{tag}</b></p>', rest)
                     rest = re.sub(r'(<section id="niches"><div class="dmwin">)', lambda m: m.group(1) + f'<b>{tag} ·</b> ', rest)
+                    # Keep freshness phrases outside the held niche window so
+                    # the section's older start is not presented as current.
+                    rest = re.sub(r'(<section id="niches">.*?</section>)', lambda m: re.sub(
+                        r"New list every day\.|Nouvelle liste chaque jour\.|Her gün yeni liste\.",
+                        {"en": "New list when a balanced snapshot lands.", "fr": "Nouvelle liste dès qu&#x27;un instantané équilibré arrive.", "tr": "Dengeli bir anlık görüntü gelince yeni liste."}[lg], m.group(1)), rest, flags=re.S)
+                    # The niche window must stand apart from adjacent main
+                    # headings; otherwise its older start appears to qualify
+                    # the preceding section's "top of the day" copy.
+                    rest = re.sub(r'(<section id="niches">)', r'</main><main class="wrap">\1', rest)
                 else:
                     rest = rest.replace('<div class="dmwin">', f'<div class="dmwin"><b>{tag} ·</b> ')
+                if not current_main_multi:
+                    # Only the niche owns this held tag. Restore every main
+                    # window to its own balanced one-day wording.
+                    main_tag = f'<div class="dmwin"><b>{tag} ·</b> '
+                    niche_tag = f'<section id="niches"><p><b>{tag}</b></p><div class="dmwin"><b>{tag} ·</b> '
+                    rest = rest.replace(niche_tag, '@@NICHE_WINDOW@@')
+                    rest = rest.replace(main_tag, '<div class="dmwin">')
+                    rest = rest.replace('@@NICHE_WINDOW@@', niche_tag)
             else:
                 rest = rest.replace('<div class="dmwin">', f'<div class="dmwin"><b>{tag} ·</b> ')
                 rest = rest.replace('<div class="snap">', f'<div class="snap"><b>{tag} ·</b> ')
