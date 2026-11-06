@@ -2362,7 +2362,7 @@ def dm_span(D, lang="en"):
 
 def dm_has_niches():
     ds = dm_days()
-    return bool(ds) and bool(dm_load(ds[-1])["niches"])
+    return bool(ds) and bool(dm_public(dm_load(ds[-1]))["niches"])
 
 
 def short_date(iso, lang="en", T=None):
@@ -2463,6 +2463,14 @@ def dm_tagline(lang, T, price_disc, src):
             f'<a class="btn" href="{lp}{L["browser"]}{sep}from={src}">{E(b1)}</a>'
             f'<a class="btn ghost" href="{lp}{cta_l["claude"]}{"&amp;" if "?" in cta_l["claude"] else "?"}from={src}">{E(b2)}</a>'
             f'<div class="disc">{price_disc}</div></section>')
+
+
+def dm_public(D):
+    """Withhold every niche-ranking surface while the producer's niche verdict is held."""
+    if not D["meta"].get("niche_from_date"):
+        return D
+    held = (dt.date.fromisoformat(D["day"]) - dt.date.fromisoformat(D["meta"]["niche_from_date"])).days > 1
+    return dict(D, niches=[]) if held else D
 
 
 def dm_page(out_dir, D, days, ctx, lang="en", archive=False):
@@ -2603,10 +2611,10 @@ def build_daily_movers(out_dir, ctx):
         return []
     paths = []
     for dday in days:
-        Dd = dm_load(dday)
+        Dd = dm_public(dm_load(dday))
         for lg, _, _ in LOCALES:   # LANG-2: /movers/<day>/, /fr/movers/<day>/, /tr/movers/<day>/
             paths.append(dm_page(out_dir, Dd, days, ctx, lg, archive=True))
-    D = dm_load(days[-1])
+    D = dm_public(dm_load(days[-1]))
     paths.insert(0, dm_page(out_dir, D, days, ctx, "en"))
     paths.insert(1, dm_page(out_dir, D, days, ctx, "tr"))
     paths.insert(2, dm_page(out_dir, D, days, ctx, "fr"))
@@ -2662,7 +2670,7 @@ def check_movers(out_dir, en_cta_html):
     for need in ("movers/index.html", os.path.join("tr", "movers", "index.html"), os.path.join("fr", "movers", "index.html")):
         if not os.path.exists(os.path.join(out_dir, need)):
             bad.append(f"{need} missing")
-        elif dm_load(dm_days()[-1])["niches"]:
+        elif dm_public(dm_load(dm_days()[-1]))["niches"]:
             raw = open(os.path.join(out_dir, need), encoding="utf-8").read()
             if raw.count('id="niches"') != 1 or raw.count('href="#niches"') != 1:
                 bad.append(f"{need}: niche section (#niches) or its jump link missing")
@@ -2699,7 +2707,7 @@ def build(out_dir):
     # data/daily-{movers,pct,niches,rising}-<day>.csv from build_daily_movers().
     if not dm_days():
         raise SystemExit("EXACT-1: no data/daily-movers/<day>/ (exact counter pairs): refusing to publish sales figures")
-    D = dm_load(dm_days()[-1])
+    D = dm_public(dm_load(dm_days()[-1]))
     files["rising"] = f"data/daily-rising-{D['day']}.csv"
     if N:
         for k in ("summary", "listings"):

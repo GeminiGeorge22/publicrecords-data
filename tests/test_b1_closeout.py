@@ -1,5 +1,6 @@
 """B-1: held niche leaders stay out of previews; stale Niche Prices do not publish."""
 import datetime as dt
+import csv
 import html
 import glob
 import json
@@ -71,6 +72,48 @@ def test_balanced_niche_clause_remains_in_all_home_previews(tmp_path, lang, pref
     descriptions = _preview_descriptions(raw)
     assert len(descriptions) == 3
     assert all(CLAUSES[lang] in desc for desc in descriptions)
+
+
+def _niche_values(repo):
+    path = sorted(glob.glob(os.path.join(repo, "data", "daily-movers", "20*", "niches.csv")))[-1]
+    with open(path, newline="", encoding="utf-8") as fh:
+        return [int(row["sales_added"]) for row in csv.DictReader(fh)]
+
+
+def _value_hits(pages, values):
+    hits = []
+    for value in values:
+        formats = (f"{value:,}", f"{value:,}".replace(",", " "), f"{value:,}".replace(",", "."))
+        for name, raw in pages.items():
+            for line_no, line in enumerate(raw.splitlines(), 1):
+                if any(token in html.unescape(line).replace("\u00a0", " ") for token in formats):
+                    hits.append((name, line_no, value, line))
+    return hits
+
+
+def test_held_niche_values_do_not_render_anywhere(tmp_path):
+    repo = os.path.join(str(tmp_path), "repo")
+    out = _build(tmp_path, balanced=False)
+    pages = _all_html(out)
+    current = {name: raw for name, raw in pages.items()
+               if name in ("index.html", "fr/index.html", "tr/index.html", "movers/index.html", "fr/movers/index.html", "tr/movers/index.html")}
+    hits = _value_hits(current, _niche_values(repo))
+    assert not hits, "\n".join(f"{name}:{line}: niche value {value}: {line}" for name, line, value, line in hits[:30])
+    for name, raw in pages.items():
+        assert 'id="niches"' not in raw, name
+        assert "Top niche:" not in raw and "lead the niches" not in raw, name
+        assert "Niche en tête" not in raw and "mène les niches" not in raw, name
+        assert "Lider niş" not in raw and "Nişlerde" not in raw, name
+
+
+def test_balanced_niche_values_render_normally(tmp_path):
+    repo = os.path.join(str(tmp_path), "repo")
+    out = _build(tmp_path, balanced=True)
+    pages = _all_html(out)
+    for prefix in ("", "fr/", "tr/"):
+        assert "niches" in pages[prefix + "movers/index.html"]
+    hits = _value_hits(pages, _niche_values(repo))
+    assert hits
 
 
 def _all_html(out):
