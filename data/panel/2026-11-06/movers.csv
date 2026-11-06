@@ -1,0 +1,11 @@
+rank,shop_name,shop_url,category,sales_7d_delta,sales_total,gain_pct_of_lifetime,days_observed
+1,WarungBeads,https://www.etsy.com/shop/WarungBeads,unknown,7981,1700861,0.47,7
+2,Lamoriea,https://www.etsy.com/shop/Lamoriea,bags & purses > backpacks,5619,556179,1.01,7
+3,SilverRainSilver,https://www.etsy.com/shop/SilverRainSilver,unknown,5183,2207457,0.23,7
+4,SeedCult,https://www.etsy.com/shop/SeedCult,unknown,4615,1047796,0.44,7
+5,OuferJewelry,https://www.etsy.com/shop/OuferJewelry,unknown,4591,756088,0.61,7
+6,CuteLittleFabricShop,https://www.etsy.com/shop/CuteLittleFabricShop,unknown,3946,713908,0.55,7
+7,CaitlynMinimalist,https://www.etsy.com/shop/CaitlynMinimalist,jewellery > jewellery sets,3876,3869408,0.1,7
+8,KindredCraftGiftshop,https://www.etsy.com/shop/KindredCraftGiftshop,unknown,3400,6582,51.66,7
+9,MJsOffTheHookDesigns,https://www.etsy.com/shop/MJsOffTheHookDesigns,unknown,3073,575791,0.53,7
+10,AZsupplies,https://www.etsy.com/shop/AZsupplies,unknown,2868,1314750,0.22,7
