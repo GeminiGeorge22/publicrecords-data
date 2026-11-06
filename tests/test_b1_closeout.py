@@ -60,6 +60,8 @@ def test_held_niche_clause_is_absent_from_all_home_previews(tmp_path, lang, pref
     descriptions = _preview_descriptions(raw)
     assert len(descriptions) == 3
     assert all(CLAUSES[lang] not in desc for desc in descriptions)
+    assert all("mène les niches" not in desc and "nişlerde" not in desc for desc in descriptions)
+    assert all("()" not in desc for desc in descriptions)
 
 
 @pytest.mark.parametrize("lang,prefix", [("en", ""), ("fr", "fr/"), ("tr", "tr/")])
