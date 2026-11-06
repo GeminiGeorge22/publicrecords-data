@@ -1249,6 +1249,11 @@ def loc_home(ctx, P, D, lang):
     preview_nz = [] if niche_window_held(D, dt.date.fromisoformat(ctx["snap"])) else nz
     desc = T["desc"].format(date=short_date(D["day"], lang, T), shop=a["shop_name"], span=span, gain=plus_tr(a["sales_added"]),
                             niche=loc_niche(preview_nz[0], T) if preview_nz else "", niche_gain=plus_tr(preview_nz[0]["sales_added"]) if preview_nz else "")
+    if not preview_nz:
+        if lang == "fr":
+            desc = desc.replace(";  mène les niches ()", "")
+        else:
+            desc = desc.replace("; nişlerde  önde ()", "")
     nv = T["nav"]
     nav = loc_nav(lang, ctx, "index.html", T)   # LANG-2: same tabs as the English nav, all inside /<lang>/
     kpis = ('<div class="kpis">'
