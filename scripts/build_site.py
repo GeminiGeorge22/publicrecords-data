@@ -763,6 +763,20 @@ def cadence_word(kind="panel"):
     return "daily" if c.get("publish") == "daily_on_new_snapshot" else "weekly"
 
 
+def niche_window_held(D, newest):
+    """The producer held the niche ranking when its exact window starts more than one day before the snapshot."""
+    start = D["meta"].get("niche_from_date")
+    return bool(start and (newest - dt.date.fromisoformat(start)).days > 1)
+
+
+def niche_prices_fresh(N, newest):
+    """Publish Niche Prices only through the seven-day capture horizon; an old capture is not buyer-facing."""
+    if not N:
+        return False
+    captured = dt.date.fromisoformat((N["meta"].get("captured_at") or N["cut"])[:10])
+    return (newest - captured).days <= publish_cfg().get("niche_cadence_days", 7)
+
+
 def niche_age_phrase(N, newest, date_txt=None):
     """SITE-UNSTICK-1 (MEMO-1f row 1a, 2026-11-01): the niche line is computed from its capture date. Capture no more than
     niche_cadence_days + 1 days older than the newest snapshot: 'captured <date>, refreshed weekly'; older: 'captured <date>,
@@ -1232,8 +1246,9 @@ def loc_home(ctx, P, D, lang):
     url = SITE_URL + lp
     og = SITE_URL + "og.png?v=" + cut
     title = T["title"].format(date=day)
+    preview_nz = [] if niche_window_held(D, dt.date.fromisoformat(ctx["snap"])) else nz
     desc = T["desc"].format(date=short_date(D["day"], lang, T), shop=a["shop_name"], span=span, gain=plus_tr(a["sales_added"]),
-                            niche=loc_niche(nz[0], T) if nz else "", niche_gain=plus_tr(nz[0]["sales_added"]) if nz else "")
+                            niche=loc_niche(preview_nz[0], T) if preview_nz else "", niche_gain=plus_tr(preview_nz[0]["sales_added"]) if preview_nz else "")
     nv = T["nav"]
     nav = loc_nav(lang, ctx, "index.html", T)   # LANG-2: same tabs as the English nav, all inside /<lang>/
     kpis = ('<div class="kpis">'
@@ -2711,7 +2726,7 @@ def build(out_dir):
     # MOVERS-2: movers.html folded into /movers/. EXACT-1: categories.html -> /movers/#niches, breakouts.html -> /movers/
     # (both were built on the scaled 7-day panel); Rising Shops is rebuilt from exact counter pairs.
     pages = ["index.html", "ai.html", BUILDER] + (["rising.html"] if D["rising"] else [])
-    if N and any((r.get("listings") or 0) >= 20 for r in N["rows"]):
+    if niche_prices_fresh(N, _newest_snap) and any((r.get("listings") or 0) >= 20 for r in N["rows"]):
         pages.append("niche.html")
     if dm_days():
         pages.insert(1, "movers/")
@@ -2806,7 +2821,8 @@ These are not all of Etsy: they are the shops and niches we read.</p>
 <h3>Free top {PUBLIC_N}, your own top {CUSTOM_N}</h3><p>Free reports show the top {PUBLIC_N}. For the top {CUSTOM_N}, or any other niche or category, run your own report: the button under each report opens the report page already set up.</p></section>"""
     # DAILY-1: no shop-coverage count in the description (X shows it under posts; check_public enforces it).
     desc_home = (f"Etsy's biggest movers, {sd_}: {a['shop_name']} {plus(a['sales_added'])} sales {span}"
-                 + (f"; {nz[0]['niche']} lead the niches ({plus(nz[0]['sales_added'])})" if nz else "") + ". From public Etsy sales counters.")
+                 + (f"; {nz[0]['niche']} lead the niches ({plus(nz[0]['sales_added'])})"
+                    if nz and not niche_window_held(D, _newest_snap) else "") + ". From public Etsy sales counters.")
     w = lambda name, html_: open(os.path.join(out_dir, name), "w", encoding="utf-8").write(html_)
     w("index.html", page("index.html", f"Etsy Pulse: Etsy shops and niches on the move ({nice_date(D['day'])})", desc_home, body, ctx, hero, footer_date=D["day"]))
 
