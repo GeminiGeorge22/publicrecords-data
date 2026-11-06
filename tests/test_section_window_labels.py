@@ -104,9 +104,6 @@ def test_every_main_surface_excludes_held_niche_tag(tmp_path, lang, prefix):
         main_surfaces["Movers card"] = re.search(r'<a class="rcard" href="movers/">.*?</a>', home).group(0)
     for name, markup in main_surfaces.items():
         assert tag not in markup, f"{lang} {name}: {markup}"
-    # The held tag is allowed only on the separate two-day niche surfaces.
-    niche_section = re.search(r'<section id="niches">.*?</section>', movers, re.S).group(0)
-    assert tag in niche_section
-    if lang == "en":
-        niche_card = re.search(r'<a class="rcard" href="movers/#niches">.*?</a>', home).group(0)
-        assert tag in niche_card
+    # B-1 fix-3: held niche rankings are withheld everywhere, not relabelled with the main window.
+    assert '<section id="niches">' not in movers
+    assert 'href="movers/#niches"' not in home
