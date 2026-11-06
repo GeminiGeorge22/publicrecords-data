@@ -1,11 +1,8 @@
 """SITE-UNSTICK-1 (MEMO-1f row 1a, 2026-11-01): the niche line is computed from its capture date, and buyer pages carry
 no Apify run IDs and no next-refresh dates.
 
-On 2026-10-28..11-01 every publish was skipped: the 10-31 snapshot made the Oct 19 niche capture 12 days old, past the
-held check's cadence + 1 day, and the home page still said 'refreshed weekly' with no held word (held_check R1). Rules:
-  capture <= niche_cadence_days + 1 (8) days older than the newest snapshot: 'captured <date>, refreshed weekly'
-  older: 'captured <date>, held — refresh paused', with no next-refresh date.
-The held check itself (scripts/held_check.py, build_site.check_public) is unchanged; these tests run it as the publish does."""
+B-1 closeout: a capture at most seven days old renders with its cadence. Older captures and every Niche Prices link
+are unpublished until a fresh capture arrives. The held check itself remains unchanged; these tests run it as the publish does."""
 import datetime as dt, glob, html, json, os, re, subprocess, sys
 
 ROOT = os.path.normpath(os.path.join(os.path.dirname(os.path.abspath(__file__)), ".."))
@@ -53,23 +50,32 @@ def _home_body(out):
     return held_check.vis(open(os.path.join(out, "index.html"), encoding="utf-8").read())[0]
 
 
-def test_9_day_old_niche_renders_held_and_passes_held_check(tmp_path):
+def test_9_day_old_niche_is_unpublished_and_passes_held_check(tmp_path):
     repo, out, snap, cap, r = _build(str(tmp_path), niche_age=9)
     body = _home_body(out)
-    assert f"captured {_nice(cap)}, held — refresh paused" in body, "home niche line does not say held"
-    assert not re.search(r"captured " + re.escape(_nice(cap)) + r", refreshed weekly", body)
-    assert not re.search(r"next refresh", body, re.I)
+    assert "Niche Prices" not in body
+    assert not os.path.exists(os.path.join(out, "niche.html"))
     seen, bad = _held_findings(out, snap)
     assert seen == 9, f"only {seen} of 9 pages built (rc {r.returncode}: {(r.stderr or r.stdout)[-400:]})"
     assert not bad, "\n".join(bad)
     assert r.returncode == 0, (r.stderr or r.stdout)[-400:]
 
 
-def test_8_day_old_niche_renders_refreshed_weekly(tmp_path):
+def test_8_day_old_niche_is_unpublished(tmp_path):
     repo, out, snap, cap, r = _build(str(tmp_path), niche_age=8)
     body = _home_body(out)
-    assert f"captured {_nice(cap)}, refreshed weekly" in body, "home niche line does not say refreshed weekly"
-    assert "held — refresh paused" not in body
+    assert "Niche Prices" not in body
+    assert not os.path.exists(os.path.join(out, "niche.html"))
+    seen, bad = _held_findings(out, snap)
+    assert seen == 9 and not bad, "\n".join(bad)
+    assert r.returncode == 0, (r.stderr or r.stdout)[-400:]
+
+
+def test_7_day_old_niche_renders_refreshed_weekly(tmp_path):
+    repo, out, snap, cap, r = _build(str(tmp_path), niche_age=7)
+    body = _home_body(out)
+    assert f"captured {_nice(cap)}, refreshed weekly" in body, "fresh home niche line missing"
+    assert os.path.exists(os.path.join(out, "niche.html"))
     seen, bad = _held_findings(out, snap)
     assert seen == 9 and not bad, "\n".join(bad)
     assert r.returncode == 0, (r.stderr or r.stdout)[-400:]
