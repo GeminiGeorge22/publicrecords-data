@@ -25,15 +25,21 @@ CLAUSES = {
 
 
 def _fresh_balanced_niches(repo, snap):
+    """Make the snapshot day's movers show niches (not held): niche_from_date = snap-1, niches.csv present."""
     days = sorted(d for d in glob.glob(os.path.join(repo, "data", "daily-movers", "20*")) if os.path.isdir(d))
     new = os.path.join(repo, "data", "daily-movers", snap.isoformat())
     if not os.path.isdir(new):
         shutil.copytree(days[-1], new)
+    # Newest publish days often omit niches.csv (held producer). Copy the latest niches file so balanced tests can render.
+    niches_src = sorted(glob.glob(os.path.join(repo, "data", "daily-movers", "20*", "niches.csv")))
+    if niches_src:
+        shutil.copy2(niches_src[-1], os.path.join(new, "niches.csv"))
     path = os.path.join(new, "meta.json")
     meta = json.load(open(path))
+    frm = (snap - dt.timedelta(days=1)).isoformat()
     meta.update(snapshot_date=snap.isoformat(), to_date=snap.isoformat(),
-                from_date=(snap - dt.timedelta(days=1)).isoformat(),
-                niche_from_date=(snap - dt.timedelta(days=1)).isoformat(), window_days=1)
+                from_date=frm, niche_from_date=frm, window_days=1,
+                niche_window_days=1)
     json.dump(meta, open(path, "w"), indent=2)
 
 
@@ -75,18 +81,36 @@ def test_balanced_niche_clause_remains_in_all_home_previews(tmp_path, lang, pref
 
 
 def _niche_values(repo):
+    """Held-niche sales_added values that are not also a movers/rising/pct sales_added.
+
+    Coincident overlaps (e.g. a mover shop at +111 matching niche sales_added 111) are not niche leaks.
+    """
     path = sorted(glob.glob(os.path.join(repo, "data", "daily-movers", "20*", "niches.csv")))[-1]
     with open(path, newline="", encoding="utf-8") as fh:
-        return [int(row["sales_added"]) for row in csv.DictReader(fh)]
+        niche_vals = {int(row["sales_added"]) for row in csv.DictReader(fh)}
+    movers_day = sorted(d for d in glob.glob(os.path.join(repo, "data", "daily-movers", "20*")) if os.path.isdir(d))[-1]
+    other = set()
+    for fname in ("movers.csv", "rising.csv", "pct.csv"):
+        fp = os.path.join(movers_day, fname)
+        if not os.path.exists(fp):
+            continue
+        with open(fp, newline="", encoding="utf-8") as fh:
+            for row in csv.DictReader(fh):
+                if row.get("sales_added") not in (None, ""):
+                    other.add(int(float(row["sales_added"])))
+    return sorted(niche_vals - other)
 
 
 def _value_hits(pages, values):
     hits = []
     for value in values:
         formats = (f"{value:,}", f"{value:,}".replace(",", " "), f"{value:,}".replace(",", "."))
+        # Whole-number tokens only: "496" must not match inside "167496" (f-maxshops panel size).
+        pats = [re.compile(r"(?<![\d])" + re.escape(tok) + r"(?![\d])") for tok in formats]
         for name, raw in pages.items():
             for line_no, line in enumerate(raw.splitlines(), 1):
-                if any(token in html.unescape(line).replace("\u00a0", " ") for token in formats):
+                plain = html.unescape(line).replace(" ", " ")
+                if any(pat.search(plain) for pat in pats):
                     hits.append((name, line_no, value, line))
     return hits
 
