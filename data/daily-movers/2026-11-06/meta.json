@@ -1,0 +1,17 @@
+{
+  "snapshot_date": "2026-11-06",
+  "window_days": 1,
+  "from_date": "2026-11-05",
+  "to_date": "2026-11-06",
+  "snapshot_sha256": "1c7e25883f94f0e63661ad2b2f2cc70ef0779201831d46d839ce5ce737341ef8",
+  "rows": {
+    "movers": 10,
+    "pct": 10,
+    "niches": 0,
+    "rising": 10
+  },
+  "rising_max_total_sales": 999,
+  "pct_min_base_sales": 1000,
+  "method": "Sales added = a shop's public Etsy sales counter on 2026-11-06 minus the same counter 1 day(s) earlier, both read exactly on those dates. No scaling. Shops without both reads, with rounded counters, a counter that went down, or an implausible jump are left out.",
+  "generated_at": "2026-11-07T11:18:06+00:00"
+}
