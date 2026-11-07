@@ -333,8 +333,8 @@ The badge is awarded by Etsy on listings that sell well lately relative to simil
 
 <h2>Bestseller badges in the niches we read</h2>
 <table>{head}{table_rows}</table>
-<p>Share is listings with a Bestseller badge divided by listings in that read. Same numbers as
-<a href="niche.html">Niche Prices</a> · <a href="etsy-prices.html">Typical Etsy prices</a>.</p>
+<p>Share is listings with a Bestseller badge divided by listings in that read. Same dated niche read as
+<a href="etsy-prices.html">Typical Etsy prices</a> · <a href="reports.html">All reports</a>.</p>
 
 <h2>Listings that carry the badge (top results sample)</h2>
 <p>From the public top results we publish for each keyword, these listings showed a Bestseller badge on that read:</p>
