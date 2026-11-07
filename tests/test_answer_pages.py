@@ -148,3 +148,67 @@ def test_good_sales_page_has_no_prices_or_internal_labels(tmp_path):
     vis = _visible(open(os.path.join(out, PAGE3), encoding="utf-8").read())
     assert not re.search(r"[$¢]|\bcents?\b|free plan", vis), re.findall(r".{40}(?:[$¢]|cents?|free plan).{40}", vis)
     assert not re.search(r"MEMO|ANSWER-\d|\brow \d", vis)
+
+# ANSWER-4 (2026-11-06): "How to get a Bestseller badge on Etsy?" (autocomplete: etsy bestseller badge).
+PAGE4 = "how-to-get-a-bestseller-badge.html"
+SLUG4 = "answer-bestseller-badge"
+
+
+def _niche4():
+    d = sorted(p for p in glob.glob(os.path.join(ROOT, "data", "niche", "20*"))
+               if os.path.exists(os.path.join(p, "summary.csv")))[-1]
+    summary = list(csv.DictReader(open(os.path.join(d, "summary.csv"), encoding="utf-8")))
+    listings = list(csv.DictReader(open(os.path.join(d, "listings.csv"), encoding="utf-8")))
+    return os.path.basename(d), summary, listings
+
+
+def test_bestseller_badge_page_built_linked_and_tracked(tmp_path):
+    out = _site(str(tmp_path))
+    p = os.path.join(out, PAGE4)
+    assert os.path.exists(p), "bestseller-badge answer page not built"
+    raw = open(p, encoding="utf-8").read()
+    assert "<h1>How to get a Bestseller badge on Etsy?</h1>" in raw
+    assert f"workers.dev/r/{SLUG4}" in raw, "tracked Store link missing"
+    assert f"workers.dev/r/{SLUG}" not in raw and f"workers.dev/r/{SLUG2}" not in raw and f"workers.dev/r/{SLUG3}" not in raw, \
+        "page 4 must carry its own link id"
+    assert re.search(r'href="run\.html\?type=niche(?:&amp;q=[^"&]+)?(?:&amp;[^"]*)?&amp;from=answer-bestseller-badge"', raw) or \
+           re.search(r'href="run\.html\?type=niche&amp;q=[^"&]+&amp;[^"]*from=answer-bestseller-badge"', raw), \
+        "prefilled niche builder link missing"
+    assert f"from=answer-bestseller-badge" in raw
+    assert f"https://www.etsypulse.ca/{PAGE4}</loc>" in open(os.path.join(out, "sitemap.xml")).read()
+    idx = open(os.path.join(out, "reports.html")).read()
+    assert f'href="{PAGE4}"' in idx and f'href="{PAGE3}"' in idx and f'href="{PAGE2}"' in idx and f'href="{PAGE}"' in idx
+    assert "Data as of" in raw
+    assert f'href="{PAGE}"' in raw and f'href="{PAGE2}"' in raw and f'href="{PAGE3}"' in raw, "links to answer pages 1–3"
+
+
+def test_bestseller_badge_page_numbers_come_from_published_niche(tmp_path):
+    out = _site(str(tmp_path))
+    raw = open(os.path.join(out, PAGE4), encoding="utf-8").read()
+    vis = _visible(raw)
+    cut, summary, listings = _niche4()
+    assert summary, "newest niche cut has no summary rows"
+    for r in summary:
+        assert r["keyword"] in vis, r["keyword"]
+        n = int(float(r["listings"]))
+        share = float(r["bestseller_share"])
+        nb = int(round(share * n))
+        assert f"{nb} of {n}" in vis or f"{nb} of {n:,}" in vis, (r["keyword"], nb, n)
+        pct = f"{share * 100:.0f}%"
+        assert pct in vis, (r["keyword"], pct)
+    bs = [r for r in listings if r.get("bestseller") == "True"]
+    assert bs, "newest niche cut has no public bestseller listings"
+    # At least a few named bestseller shops from the public top-10 sample appear
+    named = sum(1 for r in bs if r["shop_name"] in vis)
+    assert named >= 3, f"expected bestseller shop names from listings.csv, got {named}"
+    q = re.search(r"type=niche&amp;q=([^\"&]+)", raw)
+    assert q, "builder niche q missing"
+    from urllib.parse import unquote_plus
+    assert unquote_plus(q.group(1)) in {r["keyword"] for r in summary}
+
+
+def test_bestseller_badge_page_has_no_prices_or_internal_labels(tmp_path):
+    out = _site(str(tmp_path))
+    vis = _visible(open(os.path.join(out, PAGE4), encoding="utf-8").read())
+    assert not re.search(r"[$¢]|\bcents?\b|free plan", vis), re.findall(r".{40}(?:[$¢]|cents?|free plan).{40}", vis)
+    assert not re.search(r"MEMO|ANSWER-\d|\brow \d", vis)

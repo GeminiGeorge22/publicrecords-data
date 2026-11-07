@@ -227,9 +227,152 @@ The shops above are shops our tracker reads, not every shop on Etsy.</p>
     return name, title, out
 
 
+
+
+def _niche_cut(H):
+    """Newest published data/niche/<cut>/ with summary.csv (same cut niche.html uses)."""
+    import glob, os
+    root = H["ROOT"]
+    cuts = sorted(d for d in glob.glob(os.path.join(root, "data", "niche", "20*"))
+                  if os.path.exists(os.path.join(d, "summary.csv")))
+    if not cuts:
+        return None
+    cut = os.path.basename(cuts[-1])
+    N = H["load_niche"](cut)
+    if not N or not N.get("rows"):
+        return None
+    listings = H["read_csv"](os.path.join(cuts[-1], "listings.csv"))
+    for r in listings:
+        r["bestseller"] = r.get("bestseller") == "True"
+        r["position"] = int(r.get("position") or 0)
+    return N, listings
+
+
+def bestseller_badge(H, ctx, report_pages):
+    """Q4 (2026-11-06): How to get a Bestseller badge on Etsy? (searched as 'etsy bestseller badge')."""
+    E = H["E"]
+    loaded = _niche_cut(H)
+    if not loaded:
+        return None
+    N, listings = loaded
+    rows = sorted(N["rows"], key=lambda r: -float(r.get("bestseller_share") or 0))
+    rows = [r for r in rows if (r.get("listings") or 0) >= 20]
+    if len(rows) < 2:
+        return None
+    pid = "answer-bestseller-badge"
+    name = "how-to-get-a-bestseller-badge.html"
+    # Same calendar day niche.html / price pages date from this cut's capture
+    day_iso = (N["meta"].get("captured_at") or N["cut"])[:10]
+    day = report_pages.nice(day_iso)
+    cut_day = report_pages.nice(N["cut"])
+    hi = rows[0]
+    kw = hi["keyword"]
+    builder = H["niche_link"](kw, pid)
+    store = f'{H["R"]}{pid}'
+    pct = H["pct"]
+    n = lambda x: f"{int(x):,}"
+
+    def badge_count(r):
+        return int(round(float(r["bestseller_share"]) * float(r["listings"])))
+
+    table_rows = "".join(
+        f"<tr><td>{E(r['keyword'])}</td><td class=r>{n(r['listings'])}</td>"
+        f"<td class=r><b>{badge_count(r)} of {n(r['listings'])}</b></td>"
+        f"<td class=r>{pct(r['bestseller_share'])}</td></tr>"
+        for r in rows)
+    head = ("<tr><th>Search</th><th class=r>Listings read</th>"
+            "<th class=r>With a Bestseller badge</th><th class=r>Share</th></tr>")
+
+    # Public top-10 sample: name a few listings that carry the badge (no prices)
+    bs = [r for r in listings if r.get("bestseller")]
+    # Prefer diversity across keywords, keep short
+    seen_kw, examples = set(), []
+    for r in sorted(bs, key=lambda x: (x["query"], x["position"])):
+        if r["query"] in seen_kw and len(examples) >= 4:
+            continue
+        if r["query"] not in seen_kw or len(examples) < 6:
+            if r["query"] not in seen_kw or sum(1 for e in examples if e["query"] == r["query"]) < 2:
+                examples.append(r)
+                seen_kw.add(r["query"])
+        if len(examples) >= 6:
+            break
+    if len(examples) < 3:
+        examples = bs[:6]
+
+    def _listing_cell(r):
+        title = (r.get("title") or "").strip()
+        if len(title) > 72:
+            title = title[:69].rstrip() + "…"
+        shop = r.get("shop_name") or ""
+        url = r.get("shop_url") or ""
+        shop_html = (f'<a href="{E(url)}" rel="nofollow noopener">{E(shop)}</a>' if url and shop
+                     else E(shop))
+        return f"<tr><td>{E(r['query'])}</td><td>{E(title)}</td><td>{shop_html}</td></tr>"
+
+    ex_rows = "".join(_listing_cell(r) for r in examples)
+    ex_head = "<tr><th>Search</th><th>Listing</th><th>Shop</th></tr>"
+    hi_n, hi_b = int(hi["listings"]), badge_count(hi)
+    lo = rows[-1]
+    lo_n, lo_b = int(lo["listings"]), badge_count(lo)
+
+    title = "How to get a Bestseller badge on Etsy? What the badge looks like in real niches"
+    desc = ("Etsy awards the Bestseller badge on listings that sell well lately relative to similar listings. "
+            "See how many top results carry the badge in dated niche reads, and how to check your own keyword.")
+    lede = ("Etsy puts a Bestseller badge on listings that sell well lately relative to similar listings. "
+            "There is no public scorecard for every listing, but you can see how common the badge is in the niches you sell in: "
+            "read the top search results for your keyword and count how many already have it. Here is what that looked like "
+            "in real niches on one dated read.")
+
+    body = f"""<p class="asof">Data as of {day} · niche read from {cut_day} · not live</p>
+<h2>The short answer</h2>
+<p>Watch which of your listings earn the badge, and compare your niche with others. On the newest niche read we published,
+“{E(hi['keyword'])}” had a Bestseller badge on <b>{hi_b} of {n(hi_n)}</b> listings we counted ({pct(hi['bestseller_share'])}).
+“{E(lo['keyword'])}” had the badge on <b>{lo_b} of {n(lo_n)}</b> ({pct(lo['bestseller_share'])}).
+Fewer badges in a niche can mean the top spots are less crowded; more badges means shoppers already see many bestseller listings first.
+The badge is awarded by Etsy on listings that sell well lately relative to similar listings — the counts below are what our dated search read shows, not Etsy's private score.</p>
+
+<h2>Bestseller badges in the niches we read</h2>
+<table>{head}{table_rows}</table>
+<p>Share is listings with a Bestseller badge divided by listings in that read. Same numbers as
+<a href="niche.html">Niche Prices</a> · <a href="etsy-prices.html">Typical Etsy prices</a>.</p>
+
+<h2>Listings that carry the badge (top results sample)</h2>
+<p>From the public top results we publish for each keyword, these listings showed a Bestseller badge on that read:</p>
+<table>{ex_head}{ex_rows}</table>
+
+<h2>How to check the Bestseller badge in your niche</h2>
+<ol>
+<li>Search Etsy for the keyword you sell under, in the same region your shoppers use.</li>
+<li>On the first results page, count how many listings show a Bestseller badge.</li>
+<li>Note which of those are ads and which are organic results — the mix changes how hard the top spots look.</li>
+<li>Open a few badge listings and a few without the badge in the same search. Compare how they title, photograph and price the offer (without copying).</li>
+<li>Repeat for a second keyword you sell under. Niches differ: the table above is one dated read, not a rule for every category.</li>
+</ol>
+<p>The badge is a listing signal, not a shop-wide sales count. For shop sales counts, see
+<a href="how-many-sales-does-an-etsy-shop-make.html">How many sales does an Etsy shop make?</a> ·
+<a href="how-to-track-a-competitors-etsy-sales.html">How to track a competitor's Etsy sales</a> ·
+<a href="how-many-sales-on-etsy-is-good.html">How many sales on Etsy is good?</a></p>
+
+<div class="cov"><h2 style="margin-top:0">Read Bestseller badges for your own keyword</h2>
+<p>Counting badges by hand works for one search. Our Etsy Search Scraper reads the top results for any keyword you name and flags
+which listings carry a Bestseller badge, in a spreadsheet. The report below opens with “{E(kw)}” filled in: swap in your keyword and press Run.</p>
+<p><a class="btn" href="{builder}">Read Bestseller badges for “{E(kw)}” →</a></p>
+<p>Runs on your own Apify account after a free sign-in. No code. Prefer Apify's own page?
+<a href="{store}" rel="noopener">Open the Etsy Search Scraper on Apify</a>.</p></div>
+
+<div class="cov"><h2 style="margin-top:0">Coverage: where these numbers come from</h2>
+<p>Each row is one dated read of US Etsy search results for that keyword (Etsy's default relevance order), captured with the
+publicrecords Etsy Search Scraper. “Listings read” is how many priced results that run kept for the keyword; the badge count is how many
+of those showed a Bestseller badge. Etsy may show far more total results for the same search, so this is a snapshot of what a shopper
+sees near the top, not every listing. Keywords came from categories tied to top movers around {cut_day}. Our own shops are excluded.</p>
+<p><a href="how-we-measure.html">How we measure</a> · <a href="reports.html">All reports</a></p></div>"""
+    out = report_pages.shell(H, name, title, desc, "How to get a Bestseller badge on Etsy?", lede, body, ctx)
+    out = out.replace(H["cta"](ctx), "")      # no prices on answer pages
+    return name, title, out
+
 def build(H, ctx, report_pages):
     built = []
-    for fn in (shop_sales, competitor_sales, good_sales):
+    for fn in (shop_sales, competitor_sales, good_sales, bestseller_badge):
         r = fn(H, ctx, report_pages)
         if r:
             built.append(r)
