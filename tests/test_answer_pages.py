@@ -212,3 +212,79 @@ def test_bestseller_badge_page_has_no_prices_or_internal_labels(tmp_path):
     vis = _visible(open(os.path.join(out, PAGE4), encoding="utf-8").read())
     assert not re.search(r"[$¢]|\bcents?\b|free plan", vis), re.findall(r".{40}(?:[$¢]|cents?|free plan).{40}", vis)
     assert not re.search(r"MEMO|ANSWER-\d|\brow \d", vis)
+
+
+# ANSWER-5 (2026-11-08): "What are the best-selling items on Etsy?" (autocomplete: etsy best selling / etsy best selling items).
+PAGE5 = "best-selling-items-on-etsy.html"
+SLUG5 = "answer-bestselling-items"
+
+
+def test_bestselling_items_page_built_linked_and_tracked(tmp_path):
+    out = _site(str(tmp_path))
+    p = os.path.join(out, PAGE5)
+    assert os.path.exists(p), "best-selling-items answer page not built"
+    raw = open(p, encoding="utf-8").read()
+    assert "<h1>What are the best-selling items on Etsy?</h1>" in raw
+    assert f"workers.dev/r/{SLUG5}" in raw, "tracked Store link missing"
+    for s in (SLUG, SLUG2, SLUG3, SLUG4):
+        assert f"workers.dev/r/{s}\"" not in raw and f"workers.dev/r/{s}<" not in raw, f"page 5 must carry its own link id, found {s}"
+    assert re.search(r'href="run\.html\?type=niche&amp;q=[^"&]+&amp;[^"]*from=answer-bestselling-items"', raw), \
+        "prefilled niche builder link missing"
+    assert f"https://www.etsypulse.ca/{PAGE5}</loc>" in open(os.path.join(out, "sitemap.xml")).read()
+    idx = open(os.path.join(out, "reports.html")).read()
+    for pg in (PAGE5, PAGE4, PAGE3, PAGE2, PAGE):
+        assert f'href="{pg}"' in idx, pg
+    assert "Data as of" in raw
+    for pg in (PAGE, PAGE2, PAGE3, PAGE4):
+        assert f'href="{pg}"' in raw, f"links to answer page {pg}"
+    assert 'href="etsy-prices.html"' not in raw, "no price-page link on answer pages"
+
+
+def test_bestselling_items_page_numbers_come_from_published_niche(tmp_path):
+    out = _site(str(tmp_path))
+    raw = open(os.path.join(out, PAGE5), encoding="utf-8").read()
+    vis = _visible(raw)
+    cut, summary, listings = _niche4()
+    assert summary, "newest niche cut has no summary rows"
+    for r in summary:
+        assert r["keyword"] in vis, r["keyword"]
+        n = int(float(r["listings"]))
+        share = float(r["bestseller_share"])
+        nb = int(round(share * n))
+        assert f"{nb} of {n}" in vis or f"{nb} of {n:,}" in vis, (r["keyword"], nb, n)
+        assert f"{share * 100:.0f}%" in vis, (r["keyword"], share)
+    bs = [r for r in listings if r.get("bestseller") == "True"]
+    assert bs, "newest niche cut has no public bestseller listings"
+    named = sum(1 for r in bs if r["shop_name"] in vis)
+    assert named >= min(8, len(bs)), f"expected bestseller shop names from listings.csv, got {named}"
+    assert len({r["query"] for r in bs if r["shop_name"] in vis}) >= min(3, len({r["query"] for r in bs})), "examples span keywords"
+    q = re.search(r"type=niche&amp;q=([^\"&]+)", raw)
+    assert q, "builder niche q missing"
+    from urllib.parse import unquote_plus
+    assert unquote_plus(q.group(1)) in {r["keyword"] for r in summary}
+
+
+def test_bestselling_items_page_has_no_prices_or_internal_labels(tmp_path):
+    out = _site(str(tmp_path))
+    vis = _visible(open(os.path.join(out, PAGE5), encoding="utf-8").read())
+    assert not re.search(r"[$¢]|\bcents?\b|free plan", vis), re.findall(r".{40}(?:[$¢]|cents?|free plan).{40}", vis)
+    assert not re.search(r"MEMO|ANSWER-\d|\brow \d", vis)
+
+
+def test_check_reports_requires_data_as_of_on_non_how_answer_page(tmp_path):
+    """The reports check must cover best-selling-items-on-etsy.html even though its name doesn't start with 'how-'."""
+    sys.path.insert(0, os.path.join(ROOT, "scripts"))
+    import pytest
+    import report_pages
+    site = "https://www.etsypulse.ca/"
+    d = str(tmp_path)
+    page = (f'{report_pages.EN_ONLY}<link rel="canonical" href="{site}{PAGE5}"><meta name="description" content="x"><h1>x</h1>')
+    open(os.path.join(d, PAGE5), "w", encoding="utf-8").write(page)
+    open(os.path.join(d, "sitemap.xml"), "w").write(f"<loc>{site}{PAGE5}</loc>")
+    open(os.path.join(d, "reports.html"), "w").write(f'<a href="{PAGE5}">x</a>')
+    with pytest.raises(SystemExit, match="answer page needs a 'Data as of' line"):
+        report_pages.check_reports(d, [PAGE5], site)
+    open(os.path.join(d, PAGE5), "w", encoding="utf-8").write(page + "Data as of Oct 17")
+    open(os.path.join(d, "reports.html"), "w").write("")
+    with pytest.raises(SystemExit, match="answer page needs a 'Data as of' line and a reports.html link"):
+        report_pages.check_reports(d, [PAGE5], site)
