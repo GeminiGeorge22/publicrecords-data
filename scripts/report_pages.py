@@ -287,6 +287,10 @@ def build(out_dir, H, meta, ctx, root):
     return made, lastmod
 
 
+# ANSWER-5: answer pages whose name doesn't start with "how-" get the same 'Data as of' + reports.html-link check
+ANSWER_PAGES_OTHER = {"best-selling-items-on-etsy.html"}
+
+
 def check_reports(out_dir, names, site_url):
     bad = []
     sm = open(os.path.join(out_dir, "sitemap.xml"), encoding="utf-8").read()
@@ -306,7 +310,7 @@ def check_reports(out_dir, names, site_url):
             bad.append(f"{n}: not in sitemap")
         if n.startswith("etsy-shops-gaining") and "Data as of" not in raw:
             bad.append(f"{n}: no 'Data as of' line")
-        if n.startswith("how-") and n != "how-we-measure.html" and ("Data as of" not in raw or f'href="{n}"' not in idx):
+        if ((n.startswith("how-") and n != "how-we-measure.html") or n in ANSWER_PAGES_OTHER) and ("Data as of" not in raw or f'href="{n}"' not in idx):
             bad.append(f"{n}: answer page needs a 'Data as of' line and a reports.html link")
         if (n.startswith("etsy-prices") or n.startswith("etsy-shops-gaining")) and f'href="{n}"' not in idx:
             bad.append(f"{n}: not linked from reports.html")
