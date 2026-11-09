@@ -492,9 +492,76 @@ categories tied to top movers around {cut_day}. Our own shops are excluded.</p>
     out = out.replace(H["cta"](ctx), "")      # no prices on answer pages
     return name, title, out
 
+def sales_history(H, ctx, report_pages):
+    """Q6 (2026-11-09): Can you see an Etsy shop's sales history? (searched as 'etsy shop sales history')."""
+    E = H["E"]
+    D = H["dm_load"](H["dm_days"]()[-1])
+    mv, pc = D["movers"][:3], D["pct"][:3]
+    if len(mv) < 3 or len(pc) < 1:
+        return None
+    pid = "answer-sales-history"
+    name = "can-you-see-an-etsy-shops-sales-history.html"
+    day = report_pages.nice(D["day"])
+    win = H["dm_win"](D)
+    span = H["dm_span"](D)
+    shops = [r["shop_name"] for r in mv[:3]]
+    builder = f'{H["BUILDER"]}?type=velocity&amp;shops={",".join(quote(s, safe="") for s in shops)}&amp;from={pid}'
+    store = f'{H["R"]}{pid}'
+    n = lambda x: f"{x:,}"
+    title = "Can you see an Etsy shop's sales history? What Etsy shows and how to build one"
+    desc = ("Etsy shows a shop's lifetime sales count but not a day-by-day history. Read that count on a schedule and the "
+            "differences become the shop's sales history. A dated example and a step-by-step method.")
+    lede = ("Not directly. A shop page on Etsy shows one number, the shop's lifetime sales count, and no history behind it. "
+            "But if you read that count on a schedule and keep each reading, the differences are the shop's sales history. "
+            "Here is what a few days of history looks like for real shops.")
+    rows = "".join(f"<tr><td>{_shop_cell(H, r)}</td><td class=r>{n(r['sales_before'])}</td><td class=r>{n(r['sales_total'])}</td>"
+                   f"<td class=r><b>+{n(r['sales_added'])}</b></td></tr>" for r in mv)
+    head = "<tr><th>Shop</th><th class=r>Count before</th><th class=r>Count after</th><th class=r>Sales added</th></tr>"
+    top = mv[0]
+    body = f"""<p class="asof">Data as of {day} · {E(win)} · not live</p>
+<h2>The short answer</h2>
+<p>Etsy shows each shop's lifetime sales count, not a history of when those sales happened. To see a shop's sales history you have to
+build it: read the count, save it with the date, and read it again later. On the newest day we published, {_shop_cell(H, top)} went from
+{n(top['sales_before'])} to {n(top['sales_total'])} lifetime sales: <b>+{n(top['sales_added'])} {E(span)}</b>. Line up enough of those readings
+and you have a day-by-day history.</p>
+
+<h2>One window of history for three shops</h2>
+<table>{head}{rows}</table>
+<p>Each row is one window: the count at the start, the count at the end, and the difference. Full list: <a href="movers/">Daily Movers</a>.</p>
+
+<h2>How to build an Etsy shop's sales history</h2>
+<ol>
+<li>Open the shop on Etsy (etsy.com/shop/ShopName) and copy its lifetime sales count.</li>
+<li>Save it in a spreadsheet next to today's date.</li>
+<li>Read it again at the same time every day or week and add a new row each time.</li>
+<li>Subtract each row from the one before it. Each difference is the sales the shop made in that window.</li>
+</ol>
+<p>Limits: history only starts from your first reading, so it can't go back in time. Some large shops show a rounded count, so small changes
+don't show up, and the count says nothing about which listings sold or for how much. It is a count of sales, not money.
+For how to compare shops this way, see <a href="how-to-track-a-competitors-etsy-sales.html">How to track a competitor's Etsy sales</a> ·
+<a href="how-many-sales-does-an-etsy-shop-make.html">How many sales does an Etsy shop make?</a> ·
+<a href="how-many-sales-on-etsy-is-good.html">How many sales on Etsy is good?</a></p>
+
+<div class="cov"><h2 style="margin-top:0">Read the count for shops you choose</h2>
+<p>Doing this by hand works for a couple of shops. Our Etsy Shop Sales Tracker reads the count for every shop you name and gives you
+the sales added between reads, in a spreadsheet. The report below opens with {E(shops[0])}, {E(shops[1])} and {E(shops[2])} filled in:
+swap in the shops you want and press Run.</p>
+<p><a class="btn" href="{builder}">Read these shops' sales →</a></p>
+<p>Runs on your own Apify account after a free sign-in. No code. Prefer Apify's own page?
+<a href="{store}" rel="noopener">Open the Etsy Shop Sales Tracker on Apify</a>.</p></div>
+
+<div class="cov"><h2 style="margin-top:0">Coverage: where these numbers come from</h2>
+<p>Sales added is a shop's public Etsy sales count at the end of the window minus the same count at the start, each read on its own date.
+No scaling or estimates. Shops without both reads, with a rounded count, a count that went down, or an implausible jump are left out.
+The shops above are shops our tracker reads, not every shop on Etsy.</p>
+<p><a href="how-we-measure.html">How we measure</a> · <a href="reports.html">All reports</a></p></div>"""
+    out = report_pages.shell(H, name, title, desc, "Can you see an Etsy shop's sales history?", lede, body, ctx)
+    out = out.replace(H["cta"](ctx), "")      # no prices on answer pages
+    return name, title, out
+
 def build(H, ctx, report_pages):
     built = []
-    for fn in (shop_sales, competitor_sales, good_sales, bestseller_badge, bestselling_items):
+    for fn in (shop_sales, competitor_sales, good_sales, bestseller_badge, bestselling_items, sales_history):
         r = fn(H, ctx, report_pages)
         if r:
             built.append(r)

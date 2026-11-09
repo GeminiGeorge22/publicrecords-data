@@ -288,3 +288,61 @@ def test_check_reports_requires_data_as_of_on_non_how_answer_page(tmp_path):
     open(os.path.join(d, "reports.html"), "w").write("")
     with pytest.raises(SystemExit, match="answer page needs a 'Data as of' line and a reports.html link"):
         report_pages.check_reports(d, [PAGE5], site)
+
+
+# ANSWER-6 (2026-11-09): "Can you see an Etsy shop's sales history?" (autocomplete: etsy shop sales history).
+PAGE6 = "can-you-see-an-etsy-shops-sales-history.html"
+SLUG6 = "answer-sales-history"
+
+
+def test_sales_history_page_built_linked_and_tracked(tmp_path):
+    out = _site(str(tmp_path))
+    p = os.path.join(out, PAGE6)
+    assert os.path.exists(p), "sales-history answer page not built"
+    raw = open(p, encoding="utf-8").read()
+    assert re.search(r"<h1>Can you see an Etsy shop(?:&#x27;|')s sales history\?</h1>", raw)
+    assert f"workers.dev/r/{SLUG6}" in raw, "tracked Store link missing"
+    for s in (SLUG, SLUG2, SLUG3, SLUG4, SLUG5):
+        assert f"workers.dev/r/{s}\"" not in raw and f"workers.dev/r/{s}<" not in raw, f"page 6 must carry its own link id, found {s}"
+    assert re.search(r'href="run\.html\?type=velocity&amp;shops=[^"&]+&amp;from=answer-sales-history"', raw), "prefilled builder link missing"
+    assert f"https://www.etsypulse.ca/{PAGE6}</loc>" in open(os.path.join(out, "sitemap.xml")).read()
+    idx = open(os.path.join(out, "reports.html")).read()
+    for pg in (PAGE6, PAGE5, PAGE):
+        assert f'href="{pg}"' in idx, pg
+    assert "Data as of" in raw
+    for pg in (PAGE, PAGE2, PAGE3):
+        assert f'href="{pg}"' in raw, f"links to answer page {pg}"
+    assert 'href="etsy-prices.html"' not in raw, "no price-page link on answer pages"
+
+
+def test_sales_history_page_numbers_come_from_published_day(tmp_path):
+    out = _site(str(tmp_path))
+    raw = open(os.path.join(out, PAGE6), encoding="utf-8").read()
+    vis = _visible(raw)
+    day, movers, rising = _day()
+    for r in movers[:3]:
+        assert r["shop_name"] in vis and f"+{int(r['sales_added']):,}" in vis, r["shop_name"]
+        assert f"{int(r['sales_before']):,}" in vis and f"{int(r['sales_total']):,}" in vis, r["shop_name"]
+    shops = re.search(r"type=velocity&amp;shops=([^\"&]+)", raw).group(1).split(",")
+    assert shops[0] == movers[0]["shop_name"]
+
+
+def test_sales_history_page_has_no_prices_or_internal_labels(tmp_path):
+    out = _site(str(tmp_path))
+    vis = _visible(open(os.path.join(out, PAGE6), encoding="utf-8").read())
+    assert not re.search(r"[$¢]|\bcents?\b|free plan", vis), re.findall(r".{40}(?:[$¢]|cents?|free plan).{40}", vis)
+    assert not re.search(r"MEMO|ANSWER-\d|\brow \d", vis)
+
+
+def test_check_reports_requires_data_as_of_on_sales_history_page(tmp_path):
+    sys.path.insert(0, os.path.join(ROOT, "scripts"))
+    import pytest
+    import report_pages
+    site = "https://www.etsypulse.ca/"
+    d = str(tmp_path)
+    page = (f'{report_pages.EN_ONLY}<link rel="canonical" href="{site}{PAGE6}"><meta name="description" content="x"><h1>x</h1>')
+    open(os.path.join(d, PAGE6), "w", encoding="utf-8").write(page)
+    open(os.path.join(d, "sitemap.xml"), "w").write(f"<loc>{site}{PAGE6}</loc>")
+    open(os.path.join(d, "reports.html"), "w").write(f'<a href="{PAGE6}">x</a>')
+    with pytest.raises(SystemExit, match="answer page needs a 'Data as of' line"):
+        report_pages.check_reports(d, [PAGE6], site)
