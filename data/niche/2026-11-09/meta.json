@@ -1,0 +1,44 @@
+{
+  "cut_date": "2026-11-09",
+  "captured_at": "2026-11-09T13:04:40.628Z",
+  "actor": "publicrecords/etsy-search-scraper",
+  "run_actor_id": "kFQaVNjukfplrm1kf",
+  "run_id": "Ymje22TQiicMvH3n3",
+  "dataset_id": "5yPJTfWrrNdg7aZdu",
+  "status": "SUCCEEDED",
+  "usage_usd": 0.183,
+  "charged_events": {
+    "actor-start": 1,
+    "listing-row": 295
+  },
+  "extra_run_ids": [],
+  "keywords": [
+    {
+      "keyword": "backpacks",
+      "from_category": "bags & purses > backpacks"
+    },
+    {
+      "keyword": "jewellery sets",
+      "from_category": "jewellery > jewellery sets"
+    },
+    {
+      "keyword": "horse riding",
+      "from_category": "pet supplies > horse riding & farm animals"
+    },
+    {
+      "keyword": "faux plants",
+      "from_category": "home & living > home decor > faux plants & greenery"
+    },
+    {
+      "keyword": "pet storage",
+      "from_category": "pet supplies > pet storage"
+    }
+  ],
+  "rows": {
+    "listings": 295,
+    "keywords": 5,
+    "listings_public": 50
+  },
+  "public_max_rows_per_keyword": 10,
+  "region": "US (Apify residential proxy), sort=relevance, page 1"
+}
