@@ -346,3 +346,59 @@ def test_check_reports_requires_data_as_of_on_sales_history_page(tmp_path):
     open(os.path.join(d, "reports.html"), "w").write(f'<a href="{PAGE6}">x</a>')
     with pytest.raises(SystemExit, match="answer page needs a 'Data as of' line"):
         report_pages.check_reports(d, [PAGE6], site)
+
+
+# ANSWER-7 (2026-11-11): "Why are my Etsy sales down?" (autocomplete: etsy shop sales down).
+PAGE7 = "why-are-my-etsy-sales-down.html"
+SLUG7 = "answer-sales-down"
+
+
+def test_sales_down_page_built_linked_and_tracked(tmp_path):
+    out = _site(str(tmp_path))
+    p = os.path.join(out, PAGE7)
+    assert os.path.exists(p), "sales-down answer page not built"
+    raw = open(p, encoding="utf-8").read()
+    assert re.search(r"<h1>Why are my Etsy sales down\?</h1>", raw)
+    assert f"workers.dev/r/{SLUG7}" in raw, "tracked Store link missing"
+    for s in (SLUG, SLUG2, SLUG3, SLUG4, SLUG5, SLUG6):
+        assert f"workers.dev/r/{s}\"" not in raw and f"workers.dev/r/{s}<" not in raw, f"page 7 must carry its own link id, found {s}"
+    assert re.search(r'href="run\.html\?type=velocity&amp;shops=[^"&]+&amp;from=answer-sales-down"', raw), "prefilled builder link missing"
+    assert f"https://www.etsypulse.ca/{PAGE7}</loc>" in open(os.path.join(out, "sitemap.xml")).read()
+    idx = open(os.path.join(out, "reports.html")).read()
+    for pg in (PAGE7, PAGE6, PAGE5, PAGE):
+        assert f'href="{pg}"' in idx, pg
+    assert "Data as of" in raw
+    assert 'href="etsy-prices.html"' not in raw, "no price-page link on answer pages"
+
+
+def test_sales_down_page_numbers_come_from_published_day(tmp_path):
+    out = _site(str(tmp_path))
+    raw = open(os.path.join(out, PAGE7), encoding="utf-8").read()
+    vis = _visible(raw)
+    day, movers, rising = _day()
+    for r in movers[:3]:
+        assert r["shop_name"] in vis and f"+{int(r['sales_added']):,}" in vis, r["shop_name"]
+        assert f"{int(r['sales_before']):,}" in vis and f"{int(r['sales_total']):,}" in vis, r["shop_name"]
+    shops = re.search(r"type=velocity&amp;shops=([^\"&]+)", raw).group(1).split(",")
+    assert shops[0] == movers[0]["shop_name"]
+
+
+def test_sales_down_page_has_no_prices_or_internal_labels(tmp_path):
+    out = _site(str(tmp_path))
+    vis = _visible(open(os.path.join(out, PAGE7), encoding="utf-8").read())
+    assert not re.search(r"[$¢]|\bcents?\b|free plan", vis), re.findall(r".{40}(?:[$¢]|cents?|free plan).{40}", vis)
+    assert not re.search(r"MEMO|ANSWER-\d|\brow \d", vis)
+
+
+def test_check_reports_requires_data_as_of_on_sales_down_page(tmp_path):
+    sys.path.insert(0, os.path.join(ROOT, "scripts"))
+    import pytest
+    import report_pages
+    site = "https://www.etsypulse.ca/"
+    d = str(tmp_path)
+    page = (f'{report_pages.EN_ONLY}<link rel="canonical" href="{site}{PAGE7}"><meta name="description" content="x"><h1>x</h1>')
+    open(os.path.join(d, PAGE7), "w", encoding="utf-8").write(page)
+    open(os.path.join(d, "sitemap.xml"), "w").write(f"<loc>{site}{PAGE7}</loc>")
+    open(os.path.join(d, "reports.html"), "w").write(f'<a href="{PAGE7}">x</a>')
+    with pytest.raises(SystemExit, match="answer page needs a 'Data as of' line"):
+        report_pages.check_reports(d, [PAGE7], site)
