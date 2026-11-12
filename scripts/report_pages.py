@@ -289,7 +289,7 @@ def build(out_dir, H, meta, ctx, root):
 
 # ANSWER-5: answer pages whose name doesn't start with "how-" get the same 'Data as of' + reports.html-link check
 ANSWER_PAGES_OTHER = {"best-selling-items-on-etsy.html", "can-you-see-an-etsy-shops-sales-history.html",
-                       "why-are-my-etsy-sales-down.html"}
+                       "why-are-my-etsy-sales-down.html", "how-many-etsy-sales-per-month.html"}
 
 
 def check_reports(out_dir, names, site_url):
