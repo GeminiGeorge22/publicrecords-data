@@ -129,7 +129,11 @@ def check_page(url, raw, lg, newest):
         near = body[max(0, s - FRESH_NEAR): e + FRESH_NEAR]
         for m in re.finditer(FRESH[lg], near, re.I):
             bad.append(f"R2 {url}: '{m.group(0)}' next to held date '{txt}': …{near[max(0, m.start() - 50): m.end() + 50]}…")
-    data_max = max((x[2] for x in ds), default=None)
+    # SITE-HELD-1e: a date in a "refreshed weekly" sentence dates its own weekly read (niche prices), not the
+    # daily shop data the footer names, so it does not set the footer's data date.
+    rx = CADENCE.get(lg)
+    daily = [x for x in ds if not (rx and re.search(rx, sentence(body, x[0], x[1]), re.I))]
+    data_max = max((x[2] for x in daily), default=None)
     if data_max and not re.search(HELD[lg], foot, re.I):
         for s, e, d, txt in dates(foot):
             if d != data_max:
