@@ -34,7 +34,7 @@
   "title": "Etsy Pulse : les boutiques et niches Etsy qui vendent le plus ({date})",
   "desc": "Les plus fortes hausses sur Etsy, {date} : {shop}, {gain} ventes {span}; {niche} mène les niches ({niche_gain}). D'après les compteurs de ventes publics d'Etsy.",
   "follow": "Suivre @EtsyPulse",
-  "track_shop": "Suivre les ventes de cette boutique",
+  "track_shop": "Ouvrir cette boutique sur Apify",
   "nav": {
     "home": "Accueil",
     "ai": "✦ IA",
@@ -717,7 +717,7 @@
         }
       },
       "connect_h2": "Connectez-vous en une minute",
-      "connect_sub": "C'est le serveur MCP officiel d'Apify (la façon standard de brancher des outils sur une app d'IA), avec nos deux outils Etsy déjà sélectionnés : l'Etsy Search Scraper et l'Etsy Shop Sales Tracker. Copiez le lien ci-dessous et suivez les étapes.",
+      "connect_sub": "C'est le serveur MCP officiel d'Apify (la façon standard de brancher des outils sur une app d'IA), avec notre outil Etsy déjà sélectionné : l'Etsy Search Scraper. Copiez le lien ci-dessous et suivez les étapes.",
       "other_app": "Une autre app d'IA? {link}, avec nos outils déjà sélectionnés. Nous n'ajoutons une app ici qu'après y avoir fait passer une vraie question.",
       "other_app_link": "Ouvrez la page de configuration d'Apify",
       "uses_h2": "Ce que vous pouvez faire",
@@ -785,7 +785,7 @@
       "c1_t": "Passe par Apify",
       "c1_p": "Apify est la plateforme sur laquelle tournent nos outils. Le lien est le serveur MCP d'Apify avec nos deux outils Etsy sélectionnés. Vous vous connectez avec votre propre compte Apify : gratuit à créer, et le forfait gratuit inclut 5 $ d'utilisation par mois.",
       "c2_t": "Paiement au résultat",
-      "c2_p": "Etsy Search : À partir de 8 ¢ pour 1 mot-clé (les 20 premières annonces). 0,4 ¢ par annonce + 0,005 ¢ par exécution, en date du 28 octobre 2026 (<a href=\"https://publicrecords-redirect.publicrecords.workers.dev/r/site-store-search?t=fr\" rel=\"noopener\">tarifs sur l'Apify Store</a>). Si Etsy bloque une recherche, vous recevez les résultats en cache les plus récents, clairement datés, au même tarif; s'il n'y a rien en cache, vous ne payez rien. Utilisation d'Apify incluse. Avec les réglages par défaut, une recherche renvoie les 20 premières annonces au total, même pour plusieurs mots-clés; votre IA peut en demander plus au même tarif. Shop Sales Tracker : 0,3 ¢ par boutique + 0,005 ¢ par exécution, en date du 28 octobre 2026 (<a href=\"https://publicrecords-redirect.publicrecords.workers.dev/r/site-store-tracker?t=fr\" rel=\"noopener\">tarifs sur l'Apify Store</a>), plus l'utilisation de la plateforme Apify quand votre IA l'appelle (Apify facture l'utilisation de son mode Standby, toujours actif, qu'utilisent les apps d'IA).",
+      "c2_p": "Etsy Search : À partir de 8 ¢ pour 1 mot-clé (les 20 premières annonces). 0,4 ¢ par annonce + 0,005 ¢ par exécution, en date du 28 octobre 2026 (<a href=\"https://publicrecords-redirect.publicrecords.workers.dev/r/site-store-search?t=fr\" rel=\"noopener\">tarifs sur l'Apify Store</a>). Si Etsy bloque une recherche, vous recevez les résultats en cache les plus récents, clairement datés, au même tarif; s'il n'y a rien en cache, vous ne payez rien. Utilisation d'Apify incluse. Avec les réglages par défaut, une recherche renvoie les 20 premières annonces au total, même pour plusieurs mots-clés; votre IA peut en demander plus au même tarif. Pour lancer une recherche vous-même, <a href=\"https://publicrecords-redirect.publicrecords.workers.dev/r/site-store-tracker?t=fr\" rel=\"noopener\">ouvrez l'Etsy Search Scraper dans la console Apify</a>.",
       "c3_t": "Votre compte, vos résultats",
       "c3_p": "Chaque exécution et ses résultats restent dans votre compte Apify. La connexion se fait sur l'écran d'Apify; nous ne voyons jamais votre mot de passe. Retirez l'accès en tout temps dans Apify Console → Settings → API &amp; Integrations.",
       "try_b": "Pas encore de compte? Essayez avec notre fichier gratuit.",

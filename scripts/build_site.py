@@ -36,16 +36,18 @@ assert SITE_URL.startswith("https://") and SITE_URL.endswith("/"), "config/site.
 CTA_URL = "https://publicrecords-redirect.publicrecords.workers.dev/r/site-cta"
 TRACKER_URL = "https://publicrecords-redirect.publicrecords.workers.dev/r/site-tracker"
 R = "https://publicrecords-redirect.publicrecords.workers.dev/r/"
-# FIRST-USERS-ETSY (t840u/t837u): every page links to Velocity via the logged /r/ hand-off
-# (BEACON-1: no direct apify.com Store hrefs). CLICKS-1 site UTM rides on the request;
-# worker withUtm merges utm_* onto the bare site-store-tracker target
-# (https://apify.com/publicrecords/etsy-shop-velocity). Read-back counts utm_content=track-shop.
+# FIRST-USERS-ETSY (t840u/t837u): every page used to link to Velocity via the logged /r/ hand-off
+# (BEACON-1: no direct apify.com Store hrefs). HOLD-VELOCITY (2026-11-27, Mark t1428u): etsy-shop-velocity
+# is unhealthy (66.1% fail), so /r/site-store-tracker now 302s to etsy-search-scraper in Console (same
+# convention as "Or open it on Apify" / site-run). Keep the slug so already-published HTML keeps working.
+# CLICKS-1 site UTM rides on the request; worker withUtm merges utm_* onto the target.
+# Read-back counts utm_content=track-shop. Button copy no longer promises sales tracking.
 TRACK_SHOP_SLUG = "site-store-tracker"
 TRACK_SHOP_UTM = "utm_source=site&utm_medium=web&utm_campaign=etsypulse&utm_content=track-shop"
 TRACK_SHOP_LABEL = {
-    "en": "Track this shop's sales",
-    "fr": "Suivre les ventes de cette boutique",
-    "tr": "Bu mağazanın satışlarını izle",
+    "en": "Open this shop on Apify",
+    "fr": "Ouvrir cette boutique sur Apify",
+    "tr": "Bu mağazayı Apify'de aç",
 }
 
 
@@ -993,7 +995,7 @@ def og_image(out_dir, D):
 # docs.apify.com/platform/integrations/claude-desktop (custom connector; direct "Add custom connector" dialog link),
 # docs.apify.com/platform/integrations/chatgpt (Developer mode -> Create app, OAuth), mcp.apify.com configurator
 # (Cursor cursor:// and VS Code vscode:mcp/install buttons, ?tools= and ?client= prefill), cursor.com/docs/context/mcp/install-links.
-MCP_TOOLS = "publicrecords/etsy-search-scraper,publicrecords/etsy-shop-velocity"
+MCP_TOOLS = "publicrecords/etsy-search-scraper"
 MCP_URL = "https://mcp.apify.com?tools=" + MCP_TOOLS
 MCP_SETUP = "https://mcp.apify.com/?tools=" + MCP_TOOLS          # Apify's own setup page, our tools preselected
 CLAUDE_ADD = "https://claude.ai/new?modal=add-custom-connector#settings/customize-connectors"
@@ -1108,7 +1110,7 @@ aria-label="Demo: connect Etsy Pulse, sign in with Apify, ask AI who the top sel
     cards_html = "\n".join(cards[k] for k in TESTED_CLIENTS if k in cards)
     apps = f"""<section id="connect"><h2>Connect in a minute</h2>
 <p class="sub">It's Apify's official MCP server (the standard way AI apps plug into tools) with our two Etsy tools already picked:
-the Etsy Search Scraper and the Etsy Shop Sales Tracker. Copy the link below and follow the steps.</p>
+the Etsy Search Scraper. Copy the link below and follow the steps.</p>
 <div class="urlbox"><code>{E(MCP_URL)}</code>{copy()}</div>
 <div class="apps" style="margin-top:14px">
 {cards_html}
@@ -1193,7 +1195,7 @@ Answers in your chat will be worded by your AI and use the data from your own ru
     costs = f"""<section id="cost"><h2>How it works, and what it costs</h2>
 <div class="costs">
 <div><b>Runs through Apify</b><p>Apify is the platform our tools run on. The link is Apify's MCP server with our two Etsy tools picked. You sign in with your own Apify account: free to create, and the free plan includes $5 of usage a month.</p></div>
-<div><b>Pay per result</b><p>Etsy Search: From 8¢ for 1 keyword (top 20 listings). 0.4¢ per listing + 0.005¢ per run, as of Oct 28, 2026 (<a href="https://publicrecords-redirect.publicrecords.workers.dev/r/site-store-search?from=price" rel="noopener">Store pricing</a>). If Etsy blocks a search, you get the most recent cached results, clearly dated, at the same rate; if there's nothing cached, you pay nothing. Apify usage included. On default settings one search returns the top 20 listings in total, even for several keywords; your AI can ask for more at the same rate. Shop Sales Tracker: 0.3¢ per shop + 0.005¢ per run, as of Oct 28, 2026 (<a href="https://publicrecords-redirect.publicrecords.workers.dev/r/site-store-tracker?from=price" rel="noopener">Store pricing</a>), plus Apify platform usage when your AI calls it (Apify bills usage for its always-on Standby mode, which AI apps use).</p></div>
+<div><b>Pay per result</b><p>Etsy Search: From 8¢ for 1 keyword (top 20 listings). 0.4¢ per listing + 0.005¢ per run, as of Oct 28, 2026 (<a href="https://publicrecords-redirect.publicrecords.workers.dev/r/site-store-search?from=price" rel="noopener">Store pricing</a>). If Etsy blocks a search, you get the most recent cached results, clearly dated, at the same rate; if there's nothing cached, you pay nothing. Apify usage included. On default settings one search returns the top 20 listings in total, even for several keywords; your AI can ask for more at the same rate. To run a search yourself, <a href="https://publicrecords-redirect.publicrecords.workers.dev/r/site-store-tracker?from=price" rel="noopener">open the Etsy Search Scraper in the Apify Console</a>.</p></div>
 <div><b>Your account, your results</b><p>Every run and its results stay in your Apify account. Sign-in happens on Apify's own screen; we never see your password. Remove access any time in Apify Console → Settings → API &amp; Integrations.</p></div>
 </div></section>"""
 
@@ -1284,7 +1286,7 @@ def loc_home(ctx, P, D, lang):
 <ol><li><b>{T['how_1_t']}</b><p>{T['how_1_p']}</p></li><li><b>{T['how_2_t']}</b><p>{T['how_2_p']}</p></li><li><b>{T['how_3_t']}</b><p>{T['how_3_p']}</p></li></ol>
 <p class="note">{T['how_note']}</p>
 <p><a class="btn" href="{loc_builder(L)}?from={L}-how">{T['how_btn']}</a></p>
-<p class="note">{T['how_store']} <a href="{R}site-store-search?t={L}">Etsy Search Scraper</a> · <a href="{R}site-store-tracker?t={L}">Etsy Shop Sales Tracker</a></p>
+<p class="note">{T['how_store']} <a href="{R}site-store-search?t={L}">Etsy Search Scraper</a> · <a href="{R}site-store-tracker?t={L}">Open in Apify Console</a></p>
 <p class="note">{T['how_ai']} <a href="/{lp}ai.html?from={L}-how-ai">{T['how_ai_link']}</a></p>
 </div></section>"""
     rl = "".join(f'<a href="/{lp}{h}">{E(t)}</a>' for h, t in T["reports"].items() if h in ctx["pages"])
@@ -1597,7 +1599,7 @@ def loc_run(ctx, lang):
     hero = (f'<div class="hero">{PULSE_SVG}<div class="wrap" style="padding-bottom:52px"><div class="eyebrow">{P["eyebrow"]}</div>'
             f'<h1>{P["h1"]}</h1><p class="lede">{P["lede"]}</p></div></div>')
     body = f"""<div id="builder" class="bld"><noscript><div class="berr">{P["noscript"]}
-<a href="{R}site-store-search?t={lang}">Etsy Search Scraper</a> · <a href="{R}site-store-tracker?t={lang}">Etsy Shop Sales Tracker</a>.</div></noscript></div>
+<a href="{R}site-store-search?t={lang}">Etsy Search Scraper</a> · <a href="{R}site-store-tracker?t={lang}">Open in Apify Console</a>.</div></noscript></div>
 <div id="progress" hidden></div>
 <div id="report" hidden></div>
 <section class="how-sec"><h2>{P["how_h2"]}</h2><p class="sub">{P["how_sub"]}</p>
@@ -2903,7 +2905,7 @@ These are not all of Etsy: they are the shops and niches we read.</p>
                     '<h1>Make your own Etsy report</h1><p class="lede">Pick a report, type a niche or a few shops, press Run. '
                     'Charts, plain-English takeaways and a spreadsheet in a few minutes. No code, no API keys.</p></div></div>')
     body = """<div id="builder" class="bld"><noscript><div class="berr">The report page needs JavaScript. You can still run our tools directly on Apify:
-<a href="https://publicrecords-redirect.publicrecords.workers.dev/r/site-store-search">Etsy Search Scraper</a> · <a href="https://publicrecords-redirect.publicrecords.workers.dev/r/site-store-tracker">Etsy Shop Sales Tracker</a>.</div></noscript></div>
+<a href="https://publicrecords-redirect.publicrecords.workers.dev/r/site-store-search">Etsy Search Scraper</a> · <a href="https://publicrecords-redirect.publicrecords.workers.dev/r/site-store-tracker">Open in Apify Console</a>.</div></noscript></div>
 <div id="progress" hidden></div>
 <div id="report" hidden></div>
 <section class="how-sec"><h2>How it works</h2><p class="sub">Three steps. Your results and your spend stay in your own Apify account.</p>
