@@ -71,7 +71,7 @@ the sales added between reads, in a spreadsheet. The report below opens with {E(
 your own competitors and press Run.</p>
 <p><a class="btn" href="{builder}">Count sales for these shops →</a></p>
 <p>Runs on your own Apify account after a free sign-in. No code. Prefer Apify's own page?
-<a href="{store}" rel="noopener">Open the Etsy Shop Sales Tracker on Apify</a>.</p></div>
+<a href="{store}" rel="noopener">Open the Etsy Search Scraper on Apify</a>.</p></div>
 
 <div class="cov"><h2 style="margin-top:0">Coverage: where these numbers come from</h2>
 <p>Sales added is a shop's public Etsy sales count at the end of the window minus the same count at the start, each read on its own date.
@@ -137,7 +137,7 @@ the sales added between reads, in a spreadsheet. The report below opens with {E(
 swap in your competitors and press Run.</p>
 <p><a class="btn" href="{builder}">Track these shops' sales →</a></p>
 <p>Runs on your own Apify account after a free sign-in. No code. Prefer Apify's own page?
-<a href="{store}" rel="noopener">Open the Etsy Shop Sales Tracker on Apify</a>.</p></div>
+<a href="{store}" rel="noopener">Open the Etsy Search Scraper on Apify</a>.</p></div>
 
 <div class="cov"><h2 style="margin-top:0">Coverage: where these numbers come from</h2>
 <p>Sales added is a shop's public Etsy sales count at the end of the window minus the same count at the start, each read on its own date.
@@ -215,7 +215,7 @@ the sales added between reads, in a spreadsheet. The report below opens with {E(
 put in your own shop and a few shops your size, and press Run.</p>
 <p><a class="btn" href="{builder}">Compare these shops' sales →</a></p>
 <p>Runs on your own Apify account after a free sign-in. No code. Prefer Apify's own page?
-<a href="{store}" rel="noopener">Open the Etsy Shop Sales Tracker on Apify</a>.</p></div>
+<a href="{store}" rel="noopener">Open the Etsy Search Scraper on Apify</a>.</p></div>
 
 <div class="cov"><h2 style="margin-top:0">Coverage: where these numbers come from</h2>
 <p>Sales added is a shop's public Etsy sales count at the end of the window minus the same count at the start, each read on its own date.
@@ -548,7 +548,7 @@ the sales added between reads, in a spreadsheet. The report below opens with {E(
 swap in the shops you want and press Run.</p>
 <p><a class="btn" href="{builder}">Read these shops' sales →</a></p>
 <p>Runs on your own Apify account after a free sign-in. No code. Prefer Apify's own page?
-<a href="{store}" rel="noopener">Open the Etsy Shop Sales Tracker on Apify</a>.</p></div>
+<a href="{store}" rel="noopener">Open the Etsy Search Scraper on Apify</a>.</p></div>
 
 <div class="cov"><h2 style="margin-top:0">Coverage: where these numbers come from</h2>
 <p>Sales added is a shop's public Etsy sales count at the end of the window minus the same count at the start, each read on its own date.
@@ -614,7 +614,7 @@ new or edited listings, prices, titles, photos, shipping, or a listing that sold
 The report below opens with {E(shops[0])}, {E(shops[1])} and {E(shops[2])} filled in: swap in your shop and the ones you compare against, then press Run.</p>
 <p><a class="btn" href="{builder}">Compare these shops' sales →</a></p>
 <p>Runs on your own Apify account after a free sign-in. No code. Prefer Apify's own page?
-<a href="{store}" rel="noopener">Open the Etsy Shop Sales Tracker on Apify</a>.</p></div>
+<a href="{store}" rel="noopener">Open the Etsy Search Scraper on Apify</a>.</p></div>
 
 <div class="cov"><h2 style="margin-top:0">Coverage: where these numbers come from</h2>
 <p>Sales added is a shop's public Etsy sales count at the end of the window minus the same count at the start, each read on its own date.
@@ -679,7 +679,7 @@ The report below opens with {E(shops[0])}, {E(shops[1])} and {E(shops[2])} fille
 Run it again a month later to get monthly sales.</p>
 <p><a class="btn" href="{builder}">Count sales for these shops →</a></p>
 <p>Runs on your own Apify account after a free sign-in. No code. Prefer Apify's own page?
-<a href="{store}" rel="noopener">Open the Etsy Shop Sales Tracker on Apify</a>.</p></div>
+<a href="{store}" rel="noopener">Open the Etsy Search Scraper on Apify</a>.</p></div>
 
 <div class="cov"><h2 style="margin-top:0">Coverage: where these numbers come from</h2>
 <p>Sales added is a shop's public Etsy sales count at the end of the window minus the same count at the start, each read on its own date.

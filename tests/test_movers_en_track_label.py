@@ -8,7 +8,7 @@ ROOT = os.path.normpath(os.path.join(os.path.dirname(os.path.abspath(__file__)),
 sys.path.insert(0, os.path.join(ROOT, "scripts"))
 import build_site  # noqa: E402
 
-EN = "Track this shop's sales"
+EN = "Open this shop on Apify"
 OTHER = ["Bu mağazanın satışlarını izle", "Suivre les ventes de cette boutique"]
 
 

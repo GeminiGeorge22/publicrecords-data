@@ -1,5 +1,6 @@
-"""FIRST-USERS-ETSY (t840u): every public page links to Velocity Store with CLICKS-1 site UTM;
-shop rows carry a localized 'track this shop's sales' link. R1/R2/R3 stay strict.
+"""HOLD-VELOCITY (2026-11-27, Mark t1428u): every public page still uses the /r/site-store-tracker
+hand-off (CLICKS-1 site UTM; no direct Store hrefs). The worker 302s that slug to etsy-search-scraper
+in Console. Shop rows carry a localized 'Open this shop on Apify' link. R1/R2/R3 stay strict.
 """
 import glob, os, re, shutil, subprocess, sys
 
@@ -12,9 +13,9 @@ R_TRACK = "https://publicrecords-redirect.publicrecords.workers.dev/r/site-store
 UTM = "utm_source=site&utm_medium=web&utm_campaign=etsypulse&utm_content=track-shop"
 MARKER = "utm_content=track-shop"
 LABELS = {
-    "en": "Track this shop's sales",
-    "fr": "Suivre les ventes de cette boutique",
-    "tr": "Bu mağazanın satışlarını izle",
+    "en": "Open this shop on Apify",
+    "fr": "Ouvrir cette boutique sur Apify",
+    "tr": "Bu mağazayı Apify'de aç",
 }
 
 

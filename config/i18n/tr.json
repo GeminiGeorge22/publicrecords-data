@@ -19,7 +19,7 @@
   "title": "Etsy Pulse: Etsy'de satışı en çok artan mağazalar ve nişler ({date})",
   "desc": "Etsy'de en çok satış ekleyenler, {date}: {shop} {span} {gain} satış; nişlerde {niche} önde ({niche_gain}). Herkese açık Etsy satış sayaçlarından.",
   "follow": "Takip et: @EtsyPulse",
-  "track_shop": "Bu mağazanın satışlarını izle",
+  "track_shop": "Bu mağazayı Apify'de aç",
   "nav": {
     "home": "Ana sayfa",
     "ai": "✦ Yapay zekâ",
@@ -699,7 +699,7 @@
         }
       },
       "connect_h2": "Bir dakikada bağla",
-      "connect_sub": "Bu, Apify'ın resmi MCP sunucusu (yapay zekâ uygulamalarının araçlara bağlanmasının standart yolu); iki Etsy aracımız zaten seçili: Etsy Search Scraper ve Etsy Shop Sales Tracker. Aşağıdaki bağlantıyı kopyala ve adımları izle.",
+      "connect_sub": "Bu, Apify'ın resmi MCP sunucusu (yapay zekâ uygulamalarının araçlara bağlanmasının standart yolu); Etsy aracımız zaten seçili: Etsy Search Scraper. Aşağıdaki bağlantıyı kopyala ve adımları izle.",
       "other_app": "Başka bir yapay zekâ uygulaması mı? {link}; araçlarımız zaten seçili. Bir uygulamayı buraya ancak onunla gerçek bir soru çalıştırdıktan sonra ekliyoruz.",
       "other_app_link": "Apify'ın kurulum sayfasını aç",
       "uses_h2": "Neler yapabilirsin",
@@ -767,7 +767,7 @@
       "c1_t": "Apify üzerinden çalışır",
       "c1_p": "Apify, araçlarımızın çalıştığı platform. Bağlantı, iki Etsy aracımızın seçili olduğu Apify MCP sunucusu. Kendi Apify hesabınla giriş yaparsın: hesap açmak ücretsiz ve ücretsiz planda ayda $5 kullanım dahil.",
       "c2_t": "Sonuç başına ödeme",
-      "c2_p": "Etsy Search: 1 anahtar kelime (ilk 20 ilan) 8¢'den başlar. İlan başına 0.4¢ + çalıştırma başına 0.005¢, 28 Ekim 2026 itibarıyla (<a href=\"https://publicrecords-redirect.publicrecords.workers.dev/r/site-store-search?t=tr\" rel=\"noopener\">Store fiyatları</a>). Etsy bir aramayı engellerse önbellekteki en güncel sonuçları, tarihi açıkça yazılı olarak, aynı ücretle alırsın; önbellekte bir şey yoksa hiçbir şey ödemezsin. Apify kullanımı dahil. Varsayılan ayarlarla bir arama, birden fazla anahtar kelime olsa bile toplamda ilk 20 ilanı döndürür; yapay zekân aynı ücretle daha fazlasını isteyebilir. Shop Sales Tracker: mağaza başına 0.3¢ + çalıştırma başına 0.005¢, 28 Ekim 2026 itibarıyla (<a href=\"https://publicrecords-redirect.publicrecords.workers.dev/r/site-store-tracker?t=tr\" rel=\"noopener\">Store fiyatları</a>), artı yapay zekân onu çağırdığında Apify platform kullanımı (Apify, yapay zekâ uygulamalarının kullandığı sürekli açık Standby modu için kullanım ücreti alır).",
+      "c2_p": "Etsy Search: 1 anahtar kelime (ilk 20 ilan) 8¢'den başlar. İlan başına 0.4¢ + çalıştırma başına 0.005¢, 28 Ekim 2026 itibarıyla (<a href=\"https://publicrecords-redirect.publicrecords.workers.dev/r/site-store-search?t=tr\" rel=\"noopener\">Store fiyatları</a>). Etsy bir aramayı engellerse önbellekteki en güncel sonuçları, tarihi açıkça yazılı olarak, aynı ücretle alırsın; önbellekte bir şey yoksa hiçbir şey ödemezsin. Apify kullanımı dahil. Varsayılan ayarlarla bir arama, birden fazla anahtar kelime olsa bile toplamda ilk 20 ilanı döndürür; yapay zekân aynı ücretle daha fazlasını isteyebilir. Kendin bir arama çalıştırmak için <a href=\"https://publicrecords-redirect.publicrecords.workers.dev/r/site-store-tracker?t=tr\" rel=\"noopener\">Etsy Search Scraper'ı Apify Console'da aç</a>.",
       "c3_t": "Senin hesabın, senin sonuçların",
       "c3_p": "Her çalıştırma ve sonuçları Apify hesabında kalır. Giriş Apify'ın kendi ekranında olur; şifreni asla görmeyiz. Erişimi istediğin zaman Apify Console → Settings → API &amp; Integrations bölümünden kaldırabilirsin.",
       "try_b": "Henüz hesabın yok mu? Ücretsiz dosyamızla dene.",
